@@ -205,7 +205,8 @@ def cue_pass(sfx_cues, voice_m, mus_m, sfx_m, Lv, gdb, n_blocks, line_spans, sho
         speaking = any(a - 0.05 <= tl <= e_ + 0.05 for a, e_ in line_spans)
         row.update(L_rel_voice=round(Lc - Lv, 1), voice_here=round(Lvh - Lv, 1), music_here=round(Lmh - Lv, 1),
                    vs_mask=round(vs_mask, 1), onset_ms=round(1000 * on), phone_db=round(ph, 1), speaking=speaking)
-        scare = name in HIT_NAMES or bool(c.get('scare')) or bool(params.get('boost'))
+        scare = (name in HIT_NAMES and not (name == 'door_slam' and params.get('soft'))) or bool(c.get('scare')) or \
+            bool(params.get('boost'))
         ev, why_ev = event_check(y, t, pre, voice_m, Lv, lambda x: any(a - 0.05 <= x <= e_ + 0.05 for a, e_ in line_spans),
                                  gdb, scare, hard_end)
         row.update(ev)

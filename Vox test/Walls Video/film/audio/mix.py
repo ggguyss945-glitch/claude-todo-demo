@@ -1232,7 +1232,7 @@ DUCK_HOLD_S = 0.12   # the Bunnyman's final mix: the music / beds duck holds 0.1
                      # sentence gaps still breathe (a 0.35 s hold kept the duck on 97 % of the film and the bed came up
                      # only 0.6 LU in the gaps; the references come up 2.5-3 LU)
 CLARITY_MARGIN_LU = 6.0   # the voice always clear: while a line is spoken the bed stays this far under the narration's own
-CLARITY_MAX_CUT_DB = 10.0  # 400 ms level (measure_mix.py flags < 4 LU); the excess is cut, at most this much
+CLARITY_MAX_CUT_DB = 14.0  # the Walls full mix: 10 left the in-wall lines (394-397 s) under the bed  # 400 ms level (measure_mix.py flags < 4 LU); the excess is cut, at most this much
 SCORE_ONLY = False   # mix.py --score-only: render the score into MIX_SCORE_CACHE and stop
 SCORE_SEED = 1987    # score.py's random choices (track offsets, voicings, jitter) from a fixed seed: by default the seed was
                      # the hash of the cue sheets, so any cue change re-rolled the whole score and moved every weak spot
@@ -1256,7 +1256,8 @@ BOOST_ATT_S, BOOST_REL_S = 0.010, 0.75   # sound fix r3: 0.35 s read as a hard-e
 # in 1-4.5 kHz are cut BOOST_VCUT_DB under the voice (keyed to it), so the words the scares ride over still read
 BOOST_SAT_DB = 24.0   # Ice Cream first mix: 14 dB left the boosted scares +5.3..+7.6 LU over the mix (target +6..+10);
                       # sound fix: 24 (the hits now have only the 0.15-0.45 s scare beat before the next word)
-BOOST_TARGET_LU = {1.0: 10.5, 0.75: 10.5, 0.5: 9.5}   # final remix: grade 1.0 11.5 -> 10.5 (the skull glimpse and the face
+BOOST_TARGET_LU = {1.0: 9.0, 0.75: 9.0, 0.5: 8.5}   # the Walls full mix: 10.5 measured 10.4-10.5 LU over the voice (rule +6..+10)
+_OLD_BOOST_TARGET_LU = {1.0: 10.5, 0.75: 10.5, 0.5: 9.5}   # final remix: grade 1.0 11.5 -> 10.5 (the skull glimpse and the face
                      # at the glass reached +10.7 / +10.6 LU over the integrated level; the spec is +6..+10)
 #   # Ice Cream first mix: +1.5 (the master limiter takes about 2 LU)
 BOOST_VCUT_DB = 10.0  # the extra 1-4.5 kHz cut keyed to the voice on the saturated hits (was 16 dB and the ONLY

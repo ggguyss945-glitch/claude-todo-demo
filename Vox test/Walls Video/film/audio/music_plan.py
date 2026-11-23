@@ -241,7 +241,7 @@ IDENTITY = [
     ('Mom and Dad looked at each other -0.3', 'jingle', 0.35, None,
      dict(version='hush', inst='box', amount=0.3, until="Dad's old Halloween mask -0.2", stop='fade', fade=0.4)),
     # rule 5: after Theo sings it, the toy piano keeps singing it "fifty times a day"
-    ('He sang it fifty times a day -0.25', 'jingle', 0.45, None,
+    ('He sang it fifty times a day +0.05', 'jingle', 0.45, None,
      dict(version='toy', tempo=112.0, until='That night, I heard it through the wall -0.4', stop='fade', fade=0.05)),
     # "...through the wall by my bed. But not in Theo's voice. In a man's voice. Slow. Low. Wrong.": he hums it
     # inside the wall ("Fourteen Larkspur Lane..."), and stops before his own line
@@ -264,7 +264,8 @@ IDENTITY = [
      dict(version='warm', short=True, until="So here's the real list -0.3", stop='fade', fade=0.3)),
     # the very end: warm, resolving on the hush-a-bye lullaby; its home note just after "Believe him."
     ('If this story made you go check', 'jingle', 0.4, None,
-     dict(version='warm', phrases='CDH1H2H3', gap_at='end:Believe him +0.7', stop='fade', fade=1.0)),
+     dict(version='warm', phrases='CDH1H2H3', gap_at='end:Believe him +0.7', until='end:Believe him +3.6', stop='fade',
+          fade=1.0)),   # the Walls full mix: its tail rang to the last frame (-39 dB): it ends 1 s before the card's end
 ]
 
 

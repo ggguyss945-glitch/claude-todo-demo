@@ -36,7 +36,16 @@ import music_plan as MP                                   # noqa: E402
 # (name, t0, t1, match params (subset), change, why). t0 / t1: anchors or seconds (the window the cue's t falls in).
 # change: {'add_db': x} | {'gain_db': x} | {'min_db': x} | {'params': {...}} | {'space': s} | {'drop': True}
 # Names here are the names AFTER the picture pass (the recipes).
-EDIT = []          # the Walls film: filled from the first full mix's measures (the picture is not built yet)
+EDIT = [           # the Walls film: from the first full mix's measures (measure_mix.py + --events)
+    # only the 7 planned scares (music_plan boosts) are hits: the picture's other impact_hit frames go (the score's
+    # hits and rule stings carry those beats)
+    ('impact_hit', 148.6, 149.6, {}, {'drop': True}, 'not a planned scare ("Nobody checked.")'),
+    ('impact_hit', 197.8, 198.8, {}, {'drop': True}, 'not a planned scare (the deadbolt sounds carry "Click.")'),
+    ('impact_hit', 486.1, 487.1, {}, {'drop': True}, 'not a planned scare'),
+    ('impact_hit', 694.3, 695.3, {}, {'drop': True}, 'not a planned scare (the outro)'),
+    ('knock_door', 386.0, 387.2, {}, {'add_db': -4.0}, 'everyday knocking: +1.4 LU over the voice speaking there'),
+    ('keypad_beep', 184.0, 186.0, {}, {'add_db': -4.0}, 'the garage code at night: a beep +0.7 LU over the voice'),
+]
 THIN_MIN_GAP = 0.26
 THIN_GAIN = {None: -10.0}
 THIN_QUIET = []

@@ -429,6 +429,27 @@ def n_(sec):
     return max(1, int(round(sec * SR)))
 
 
+def no_pop_in(y, head_db=-20.5, body_db=-14.0):
+    """The owner's pop-in test (measure_mix.py: first 10 ms > -20 dB re peak AND still > -14 dB at 50-150 ms, i.e. cut
+    into a sustained sound): ease such an event in with the shortest raised-cosine fade-in (8-60 ms) that passes."""
+    def hb(z):
+        m = np.abs(mono(st(z))).astype(np.float64); pk = float(m.max()) + 1e-12
+        r = lambda x: float(20 * np.log10(np.sqrt(np.mean(x ** 2)) / pk + 1e-12)) if len(x) else -120.0
+        return r(m[:int(0.01 * SR)]), r(m[int(0.05 * SR):int(0.15 * SR)])
+    if len(y) < int(0.16 * SR):
+        return y
+    h, b = hb(y)
+    if h <= head_db or b <= body_db:
+        return y
+    z = y
+    for ms in (8, 12, 16, 20, 25, 30, 40, 50, 60):
+        n = int(ms * SR / 1000); r = (0.5 - 0.5 * np.cos(np.linspace(0, np.pi, n))).astype(np.float32)
+        z = np.array(y, np.float32, copy=True); z[:n] *= (r[:, None] if z.ndim == 2 else r)
+        if hb(z)[0] <= head_db:
+            break
+    return z
+
+
 def fade(y, fi=0.002, fo=0.015):
     """Fade the edges. Owner, 23 Nov: a sound must never pop in or stop dead in the middle of itself. If the cut lands
     while the sound is still going (first ms already loud = cut into it; last 50 ms still above -30 dB of the peak =
@@ -6366,6 +6387,7 @@ def render_event(name, seed=0, space=None, level=0.0, **params):
         y = phone_presence(y)
     if not params.get('hard_end'):                        # owner, 23 Nov: no sound pops in or stops dead mid-sound,
         y = fade(y, 0.0, 0.0)                             # whichever path the recipe took (fade() eases loud edges)
+        y = no_pop_in(y)                                  # the Walls full mix: a sample cut into its body eases in
     target = REF + LEVEL_LU[name] + SPACE_LU.get(sp, 0.0) + offs + float(level)
     bed = name in BEDS or (params.get('dur') and name in DUR_BEDS)
     L = lufs_int(y) if bed else mom_max(y)
