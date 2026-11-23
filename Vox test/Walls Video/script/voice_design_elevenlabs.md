@@ -1,35 +1,130 @@
-# Night Policy narrator: ElevenLabs Voice Design
+# Walls film: ElevenLabs Voice Design for every voice
 
-Goal: a new, original narrator voice (designed from a text description, not cloned) as close as possible to the voice of our earlier films.
+For each voice:
 
-## What we measured on the current narrator (Ice Cream film, raw voiceover)
+1. Paste the DESCRIPTION into "Describe the voice" and the PREVIEW into the text box.
+2. Use the newest Voice Design model.
+3. Set guidance high (about 8 to 12).
+4. Generate a few rounds and save the best preview.
+5. Then generate that voice's lines from its file in `script/voices/`. Keep speed normal and leave pauses as they are: we clean, cut and place everything ourselves.
 
-- Male voice: formants F1 491 Hz, F2 1497 Hz, F3 2641 Hz, F4 3404 Hz.
-- Pitch: a light baritone, middle-high for a man (median 166 Hz, from 115 to 228 Hz).
-- Very expressive: about 15 semitones of range.
-- Texture: breathy and slightly husky (HNR 7.9 dB, with a little rasp) and close to the mic. Crisp, airy highs (spectral centroid about 3 kHz).
-- Pace: brisk, about 160 words per minute including pauses, with about a quarter of the time in pauses.
-- Accent: we cannot measure it. Assumed General American; change that word if ours is different.
+The descriptions ask for clean studio audio. We add the phone, wall, vent and mask effects ourselves.
 
-## Voice description (paste into "Describe the voice")
+| Voice | Lines file |
+|---|---|
+| Narrator (Sam, grown up) | `voices/narrator_part1.txt` ... `narrator_part5.txt`, in that order |
+| Dad | `voices/dad.txt` (11 lines, includes reading Mr. Pell's note aloud) |
+| Mom | `voices/mom.txt` (2 lines) |
+| Theo, 6 | `voices/theo.txt` (5 lines; the address lines are sung) |
+| Sam, 12 | `voices/sam.txt` (4 lines) |
+| Mrs. Dabrowski | `voices/dabrowski.txt` (2 lines) |
+| Mr. Pell / "Hushabye" | `voices/pell.txt` (8 lines) |
+| 911 dispatcher | `voices/dispatcher.txt` (3 lines) |
+| Officer Reyes | `voices/officer.txt` (1 line) |
 
-Male narrator in his late twenties to early thirties, General American accent. A light baritone, mid-to-high for a man, with a warm, slightly husky, breathy texture, recorded very close to the microphone so quiet words feel spoken right next to your ear. An intimate late-night storyteller telling a true scary story to one friend: sincere, uneasy, never theatrical. Wide, natural pitch movement: drops to a soft, tense near-whisper on creepy lines, tightens and speeds up with real fear when things go wrong, then turns warm, calm and kind when giving advice. Brisk conversational pace with deliberate pauses before reveals. Clear diction, crisp consonants. Not an announcer, not a movie-trailer voice, no growl, no exaggerated acting. Studio-quality recording, perfect audio quality: dry, clean, no reverb, no background noise, no music.
+Each line in a lines file is separated by an empty line. Generate them all in one go, or one line at a time if a line comes out wrong.
 
-## Preview text (paste into the text box)
+---
 
+## 1. Narrator (Sam, grown up): no breathiness, no breaths
+
+DESCRIPTION
+```
+Male narrator in his late twenties to early thirties, General American accent. A light baritone, mid-to-high for a man, with a smooth, clear, warm and fully voiced tone: no breathiness, no audible breaths, no rasp. Recorded close to the microphone, so even quiet lines feel spoken right next to your ear. An intimate late-night storyteller telling a true scary story to one friend: sincere, uneasy, never theatrical. Wide, natural pitch movement: goes soft, low and tense on creepy lines (quiet but clearly voiced, never a breathy whisper), tightens and speeds up with real fear when things go wrong, then turns warm, calm and kind when giving advice. Brisk conversational pace with deliberate pauses before reveals. Clear diction, crisp but gentle consonants. Not an announcer, not a movie-trailer voice, no growl, no exaggerated acting. Studio-quality recording, perfect audio quality: dry, clean, no reverb, no background noise, no music.
+```
+PREVIEW
+```
 If you hear scratching inside your walls at night... don't knock back. My dad said it was the old house settling. Mice, maybe. Pipes. But mice don't breathe. And pipes don't stop when you stop. I pressed my ear to the wall above my bed... and something on the other side pressed back. Okay. Breathe. You can turn a light on now. If something in your home feels wrong, say it out loud to someone you trust. And keep saying it, until someone listens.
+```
 
-## How to pick the voice
+## 2. Dad
 
-1. Use the newest Voice Design model offered (v3 if available). Leave loudness at its default; we level the voice in the mix.
-2. If there is a guidance or prompt-strength slider, set it high (about 8 to 12) so the result follows the description closely.
-3. Every generation gives several previews. Generate a few rounds and compare each preview, by ear, with our reference clip `film/_work/ref/current_narrator_reference_40s.m4a`. Check four things: how deep it is, how breathy, the whisper on the scary lines, and the warmth on the last two sentences.
-4. If one is close but off in one way, use Remix on it with a short note at medium strength, for example:
-   - "slightly deeper and calmer"
-   - "more breathy and closer to the mic"
-   - "less bright, softer s sounds"
-   - "faster, more urgent"
-5. Save the best one and give it a name (for example "Night Policy Narrator"). Use only this voice for every part of the film.
-6. When you generate the narration, keep speed at normal. We remove breaths, clicks and long gaps ourselves, so do not edit them out.
+DESCRIPTION
+```
+A man in his early forties, General American accent. A warm, easygoing baritone with a relaxed, friendly smile in his voice: a practical, cheerful dad who always has a sensible explanation and wants everyone to calm down. Casual, reassuring, a little amused, gently teasing his kids, never angry. In his last line he has just been woken up and is starting to worry. Natural and conversational, not theatrical. Clear voice, no breathiness. Studio-quality recording, perfect audio quality: dry, no reverb, no background noise.
+```
+PREVIEW
+```
+Handy. Well, that's every noise explained. It's a nightmare, buddy. The mask is in the garage. Taped shut. Mice. The note said. Vent's right under it. Old wiring, Sam. Go back to bed, champ, I'll check it in the morning.
+```
 
-Note: Voice Design creates a new synthetic voice that belongs to your account. It sounds like ours in style but is not a copy. A near-identical copy would need cloning, and cloning the current TTS voice could break that voice's terms. The designed voice is the safer, original choice.
+## 3. Mom
+
+DESCRIPTION
+```
+A woman in her late thirties, General American accent. A clear, warm mid-range voice, organized and practical, a little tired after a long move but kind. Speaks plainly and politely, slightly puzzled when something does not add up. Natural and conversational, no theatrical acting, no breathiness. Studio-quality recording, perfect audio quality: dry, no reverb, no background noise.
+```
+PREVIEW
+```
+We don't have an attic light. It's sealed. Front door, back door, garage door, all locked. Theo, you checked behind me, right? Good. Okay, everybody, lights out.
+```
+
+## 4. Theo, six years old
+
+DESCRIPTION
+```
+A six-year-old boy, General American accent. A small, high, bright child's voice, sweet and earnest. He says strange things in a matter-of-fact way, as if they are obvious. When he sings his made-up address song it is simple and sing-song, a little off-key, like a kindergartner. Natural child timing, short phrases. A real child, not a cartoon voice and not an adult imitating a child. Clear voice, no breathiness. Studio-quality recording, perfect audio quality: dry, no reverb, no background noise.
+```
+PREVIEW
+```
+He lives in the wall. He sings hush-a-bye, hush-a-bye. He has a sad dog face. Fourteen Larkspur Lane. Maple Falls. That's my house. That's my name.
+```
+
+## 5. Sam, twelve years old
+
+DESCRIPTION
+```
+A twelve-year-old boy, General American accent. A clear young voice just before it breaks, mid-high pitch, smart and observant. Speaks quietly and seriously, trying hard to stay brave; in his last line he is scared but firm and very clear. A believable real kid, not a cartoon and not an adult imitating a child. Clear voice, no breathiness. Studio-quality recording, perfect audio quality: dry, no reverb, no background noise.
+```
+PREVIEW
+```
+Night, Dad. Mice don't twist the bread bag shut. Dad. Your shirt is upstairs. He's wearing it. I'm not dreaming. I saw his eye in the wall.
+```
+
+## 6. Mrs. Dabrowski, the neighbour across the street
+
+DESCRIPTION
+```
+A woman in her late sixties, General American accent. Friendly, chatty and a bit nosy: a bright, slightly reedy older voice with a smile in it, gossiping over a pie dish. Unhurried, warm, a little conspiratorial, as if she is telling you something you really should know. Natural, not a caricature. Clear voice, no breathiness. Studio-quality recording, perfect audio quality: dry, no reverb, no background noise.
+```
+PREVIEW
+```
+Welcome to the street! I brought you a cherry pie. Your attic light's on every night, you know. Right around two. I see it from my kitchen window.
+```
+
+## 7. Mr. Pell, "Hushabye" (the man in the walls)
+
+DESCRIPTION
+```
+An old man in his late sixties, General American accent. A soft, gentle, very slow voice that is unsettlingly tender, like someone singing a lullaby to a child who is not his. Low and close, mostly hushed and murmured, patient and polite, with long pauses; he never shouts and never growls. Creepy because he is so calm and so kind. In his last two lines, unmasked, he sounds tired, plain and lonely. Studio-quality recording, perfect audio quality: dry, no reverb, no background noise.
+```
+PREVIEW
+```
+Off. Hush-a-bye. Shhh. Just the pipes. Old houses settle. It's only mice. Go back to sleep. Fourteen Larkspur Lane... that's my house. That was my room. When I was a boy.
+```
+
+## 8. 911 dispatcher
+
+DESCRIPTION
+```
+A 911 dispatcher, a woman in her forties, General American accent. Calm, steady, warm and completely in control: clear, firm and quick without sounding rushed, every word easy to understand. A reassuring authority that makes a scared family feel safe. Natural and professional, not robotic. Clear voice, no breathiness. Studio-quality recording, perfect audio quality: dry, no reverb, no background noise.
+```
+PREVIEW
+```
+Nine-one-one, what's the address of your emergency? Okay. Stay in that room. Keep the door locked. Officers are two minutes away. Stay on the line with me.
+```
+
+## 9. Officer Reyes
+
+DESCRIPTION
+```
+A police officer, a woman in her thirties, General American accent. Confident, steady and matter-of-fact, kind with children, the calm voice of someone used to tense nights. Clear, mid-low pitch, no drama. Clear voice, no breathiness. Studio-quality recording, perfect audio quality: dry, no reverb, no background noise.
+```
+PREVIEW
+```
+Lawrence Pell. You're safe now, all of you. You did everything right. You stayed in the room, you kept the door locked, and you called. That's exactly how it's done.
+```
+
+---
+
+Note: each designed voice is new and belongs to your account; none of them copies a real person. If a child voice comes out sounding too old, generate again; if it still does, we can fix the pitch in post.
