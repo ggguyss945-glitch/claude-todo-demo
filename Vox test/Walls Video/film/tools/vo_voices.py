@@ -43,7 +43,7 @@ UNV = 0.35                                             # share of the formant wa
 # speed) playback slowed from that share of the speech to its end, down to that speed (the word gets longer).
 _B = dict(f0=None, rng=1.0, comp=None, smooth=0.0, alpha=1.0, breath=0.0, trem=None, jit=0.0, under=None, eq=None,
           lu=0.0, wow=None, sag=None, morph=None, tape=None)
-_KID = dict(_B, rng=0.95, comp=0.42, breath=0.12, jit=0.004, unv=0.35, fric=True, ease=40.0)
+_KID = dict(_B, rng=0.95, comp=0.42, breath=0.12, jit=0.004, unv=0.35, fric=True, ease=0.0)
 VOICES = {
     'theo': dict(_KID, f0=285.0, alpha=1.38, lu=-0.5, eq=[('ls', 220, -4.0, 0.7), ('peak', 3200, 1.0, 1.0)],
                  desc="Theo, 6: a small boy (285 Hz; a child's vocal tract, formants x1.38), a lively melody (x0.95), "
