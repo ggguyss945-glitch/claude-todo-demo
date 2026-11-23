@@ -177,3 +177,21 @@ Read this whole file first.
   - its first and last 10 ms against its own peak (no loud edge);
   - its momentary loudness against the voice at the same time;
   - list and fix every outlier.
+
+## Owner, 23 Nov: nothing sinks into the floor, floats, or passes through anything (seen in almost every film so far)
+- Problems seen:
+  - characters, props and cars sank into floors or roads;
+  - objects stood inside each other.
+- Tiny ones nobody notices are tolerated. The obvious ones were not, and they are now a hard rule.
+- Every figure, prop and vehicle stands on its surface:
+  - feet on the floor, wheels on the road, a cup on the table;
+  - seated figures on the seat;
+  - lying figures on the bed or floor.
+- Nothing passes through anything: furniture, walls, door frames, beds, cars, other people.
+- Place everyone on the set's own anchors and ground lines, never on loose coordinates.
+- `tools/validate.py` already checks floors, levels, furniture footprints and body overlap, but only in sets with a floor plan. The film teammate extends it to EVERY shot type, sampled at 8 fps:
+  - flat sets and close shots get the set's ground line at that x, for feet, wheels and prop bases (tolerance a few design px);
+  - figure-against-furniture and vehicle rectangles;
+  - a held prop that is not in its hand.
+- Every ERROR is fixed before a preview goes to review.
+- The review round also looks specifically for this on full-size wide shots and on 4 fps strips of every action shot.
