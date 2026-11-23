@@ -4,8 +4,8 @@
 # Same delivery audio and checks as tools/encode_chain.sh: frame count, a full decode, loudness of the decoded file.
 set -e
 cd "$(dirname "$0")/.."
-W=_work; S=${S:-$W/deliver/segments_crf20}; K=${K:-24}; MIX=$W/mix/final/mix_en.wav
-B=If_The_Ice_Cream_Truck_Plays_In_Winter; H=$W/deliver/${B}_EN_1440p60_HEVC.mp4
+W=_work; S=${S:-$W/deliver/segments}; K=${K:-24}; MIX=$W/mix/final/mix_en.wav
+B=If_Your_Little_Brother_Says_Someone_Lives_In_The_Walls; H=$W/deliver/${B}_EN_1440p60_HEVC.mp4
 n_ok=$(ls "$S"/s*/OK 2>/dev/null | wc -l)
 [ "$n_ok" -eq "$K" ] || { echo "== only $n_ok of $K segments done"; exit 1; }
 NT=$(awk '{s+=$4} END {print s}' "$S/ranges.txt")
@@ -17,7 +17,7 @@ ffmpeg -v error -nostdin -y -i "$MIX" -af lowpass=f=16500:poles=2,aresample=1920
   -c:a aac -b:a 192k -cutoff 18000 -ar 48000 "$S/audio.m4a"
 ffmpeg -v error -nostdin -y -f concat -safe 0 -i "$S/list.txt" -i "$S/audio.m4a" -map 0:v -map 1:a -c copy \
   -tag:v hvc1 -metadata:s:a:0 language=eng \
-  -metadata title="If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE" \
+  -metadata title="If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH" \
   -t "$DUR" -movflags +faststart "$H.tmp.mp4"
 mv "$H.tmp.mp4" "$H"
 echo "== joined $(date -u +%H:%M)"

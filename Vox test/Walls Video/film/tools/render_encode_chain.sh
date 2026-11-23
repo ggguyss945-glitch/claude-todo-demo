@@ -1,5 +1,5 @@
 #!/bin/bash
-# Final picture for the ice cream film, rendered AND encoded chunk by chunk (run from film/):
+# Final picture for the Walls film, rendered AND encoded chunk by chunk (run from film/):
 #   P=3 bash tools/render_encode_chain.sh > _work/logs/render_encode.log 2>&1
 # Then, once the final mix exists:  bash tools/join_chain.sh > _work/logs/join_chain.log 2>&1
 #
@@ -13,7 +13,7 @@
 # Run it as a harness-tracked background task, never with nohup.
 set -e
 cd "$(dirname "$0")/.."
-W=_work; C=$W/picture/chunks; S=${S:-$W/deliver/segments_crf20}; K=${K:-24}; P=${P:-3}
+W=_work; C=$W/picture/chunks; S=${S:-$W/deliver/segments}; K=${K:-24}; P=${P:-3}
 export RC=${RC:--crf 20}
 mkdir -p "$C" "$S" $W/logs
 echo "== start $(date -u +%H:%M), $K chunks, $P at a time, rate control: $RC"
@@ -26,8 +26,17 @@ set_render_size(640, 360)
 from film import Film
 f = Film(json.load(open('_work/align/timeline.json')))
 NT = int(round(float(f.duration) * 60)); K = int(sys.argv[1])
+# chunk joins snap to the nearest shot cut (within 1.5 s): a shot rendered by two processes can jump in texture at
+# the join (tex() seeds per process), so no shot is ever split between chunks
+def sid(F): return id(f.shot_at(F / 60))
+B = [0]
+for k in range(1, K):
+    t = k * NT // K
+    cuts = [F for F in range(max(B[-1] + 60, t - 90), min(NT - 60, t + 91)) if sid(F - 1) != sid(F)]
+    B.append(min(cuts, key=lambda F: abs(F - t)) if cuts else t)
+B.append(NT)
 for k in range(K):
-    f0, f1 = k * NT // K, (k + 1) * NT // K
+    f0, f1 = B[k], B[k + 1]
     print(f'{k:02d} {f0 / 60:.10f} {f1 / 60:.10f} {f1 - f0}')
 EOF
 if [ -s "$S/ranges.txt" ] && ! cmp -s "$S/ranges.txt" "$S/ranges.now"; then
@@ -35,6 +44,7 @@ if [ -s "$S/ranges.txt" ] && ! cmp -s "$S/ranges.txt" "$S/ranges.now"; then
 fi
 mv "$S/ranges.now" "$S/ranges.txt"
 echo "== $(wc -l < "$S/ranges.txt") chunks, $(awk '{s+=$4} END {print s}' "$S/ranges.txt") frames"
+[ -n "$RANGES_ONLY" ] && exit 0        # RANGES_ONLY=1: only write the chunk ranges
 export C S
 set +e
 # ONLY="00 03 17" limits this run to those chunks (a background task has a 2 h limit: split long runs).
