@@ -157,3 +157,9 @@ Read this whole file first.
   - Test renders as stills or short low-res clips only.
   - Delete intermediates at once.
   - Never copy samples; they are symlinks in `W/samples`.
+
+## Owner, 23 Nov: no dialogue tags
+- The narrator's "Dad said.", "I said.", "Mom said." and similar tags are cut from the voice track, the line map and the captions.
+  - The full list of 17 is in `W/narration/drop_tags.json`.
+  - Every character speaks in their own voice, so the picture shows who is talking.
+- Keep "Dad read it out loud, and laughed." and "'Night, Dad,' I almost said."
