@@ -26,11 +26,11 @@ Each line in a lines file is separated by an empty line. Generate them all in on
 
 ---
 
-## 1. Narrator (Sam, grown up): no breathiness, no breaths
+## 1. Narrator (Sam, grown up): full, steady, energetic voice; no breathiness, no breaths
 
 DESCRIPTION
 ```
-Male narrator in his late twenties to early thirties, General American accent. A light baritone, mid-to-high for a man, with a smooth, clear, warm and fully voiced tone: no breathiness, no audible breaths, no rasp. Recorded close to the microphone, so even quiet lines feel spoken right next to your ear. An intimate late-night storyteller telling a true scary story to one friend: sincere, uneasy, never theatrical. Wide, natural pitch movement: goes soft, low and tense on creepy lines (quiet but clearly voiced, never a breathy whisper), tightens and speeds up with real fear when things go wrong, then turns warm, calm and kind when giving advice. Brisk conversational pace with deliberate pauses before reveals. Clear diction, crisp but gentle consonants. Not an announcer, not a movie-trailer voice, no growl, no exaggerated acting. Studio-quality recording, perfect audio quality: dry, clean, no reverb, no background noise, no music.
+Male narrator in his late twenties to early thirties, General American accent. A light baritone, mid-to-high for a man, with a clear, bright, fully voiced tone: no breathiness, no audible breaths, no rasp. An energetic, confident YouTube horror storyteller who grabs you from the first word: projected, punchy and animated, always at a full, steady speaking level, never quiet and never whispering. The opening hook is delivered with raised pitch and urgency. Very expressive, wide pitch movement and strong emphasis on key words; tension comes from intensity, pace and sharp pauses, not from dropping the volume. Brisk pace, around 160 words per minute. Turns warm, sincere and kind when giving advice at the end. Clear diction, crisp consonants. Not an announcer or movie-trailer voice, no growl, no cartoon acting. Studio-quality recording, perfect audio quality: dry, clean, no reverb, no background noise, no music.
 ```
 PREVIEW
 ```
@@ -136,7 +136,7 @@ Note: each designed voice is new and belongs to your account; none of them copie
 The same words as `voices/`, with Eleven v4 audio tags: short directions in square brackets at the start of a paragraph or line. The model follows them; it does not read them aloud.
 
 - Generate with the Eleven v4 model. If there is a stability setting, start with Natural.
-- The narrator has delivery tags only. There is no whispering, no sighs and no breaths, so his voice stays clean and fully voiced. Mr. Pell is the only voice that whispers.
+- The narrator has delivery tags only, and none of them makes him quiet: like our earlier films, he stays at a full, steady level the whole time and is at his most energetic in the opening. Tension comes from intensity, pace and pauses. There is no whispering, no sighs and no breaths. Mr. Pell is the only voice that whispers.
 - There are no sound-effect tags. We add every sound ourselves.
 - The narrator is in 6 parts, each under 2,400 characters. Generate them in order with the same voice.
 - If a tag is ever read out loud or makes a line sound wrong, delete that tag and generate the line again.

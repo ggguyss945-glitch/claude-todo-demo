@@ -1,12 +1,12 @@
-[quiet, tense] That night, at three, I woke up.
+[intense, tense] That night, at three, I woke up.
 
 [slow, eerie] Dad was standing in our doorway. Red flannel. Head tilted. Watching us sleep.
 
-[quiet, almost saying it] "Night, Dad," I almost said.
+[intense, almost saying it] "Night, Dad," I almost said.
 
-[dread, very quiet] And then, from down the hall, through my parents' open door... I heard my dad snore.
+[dread, intense] And then, from down the hall, through my parents' open door... I heard my dad snore.
 
-[terrified, quiet] The man in the doorway stepped into our room.
+[terrified, intense] The man in the doorway stepped into our room.
 
 [horrified, slow] The moonlight hit his face. Long, droopy ears. Heavy, sad eyes. A wet, black, rubber nose. And under it, a mouth that wasn't rubber at all. Human teeth.
 
@@ -20,7 +20,7 @@ He whispered.
 
 [steady, determined] I did not scream. I did not follow him. I didn't look for him.
 
-[urgent, quiet, fast] I picked Theo up, blanket and all, with my hand over his mouth, and I walked down that hall, past the closet, where the door had opened just a crack. Just enough to watch me go.
+[urgent, intense, fast] I picked Theo up, blanket and all, with my hand over his mouth, and I walked down that hall, past the closet, where the door had opened just a crack. Just enough to watch me go.
 
 [tight, controlled] I didn't look. I kept walking.
 
@@ -42,8 +42,8 @@ The dispatcher said.
 
 [tense] So we stayed. And the man in the walls came looking for us.
 
-[frightened, quiet] Scratching, inside the bedroom wall. Moving around the room. Behind the dresser. Behind the headboard. Then the vent by the floor rattled, and through the grille, very softly, a voice sang,
+[frightened, intense] Scratching, inside the bedroom wall. Moving around the room. Behind the dresser. Behind the headboard. Then the vent by the floor rattled, and through the grille, very softly, a voice sang,
 
 [relief building] Then sirens. Blue light on the ceiling. Heavy boots on the stairs.
 
-[calmer, sober] The officers found him in a space between my closet and Theo's. Dead space, they called it. A gap the builders left, sixty years ago. A hidden space, a foot and a half wide, with a sleeping bag, Dad's flashlight, our bread bags folded in a neat pile, and a box from our garage that said GONE FOREVER. Empty.
+[steadier, sober] The officers found him in a space between my closet and Theo's. Dead space, they called it. A gap the builders left, sixty years ago. A hidden space, a foot and a half wide, with a sleeping bag, Dad's flashlight, our bread bags folded in a neat pile, and a box from our garage that said GONE FOREVER. Empty.

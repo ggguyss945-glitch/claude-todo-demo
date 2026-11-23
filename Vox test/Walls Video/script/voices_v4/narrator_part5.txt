@@ -1,4 +1,4 @@
-[quiet] He was wearing the mask, and my dad's red flannel shirt.
+[intense] He was wearing the mask, and my dad's red flannel shirt.
 
 [sober, sad] When Officer Reyes pulled the mask off, there was no monster under it. Just a tired old man with grey stubble, blinking in the flashlight.
 
@@ -6,15 +6,15 @@ She said.
 
 [explaining, dark] He never walked away. He walked out the front door for the movers, and right back in through the garage. With the key under the frog. And his old code on the keypad. He had lived in our walls for four months.
 
-[quiet, eerie] On the way to the car, he looked up at my window.
+[intense, eerie] On the way to the car, he looked up at my window.
 
 He said.
 
 [slow, chilled] The next morning, I found the pencil marks on my doorframe. L, age four. L, age eight. L, age twelve.
 
-[slow, very quiet] And one more, higher than all of them. Fresh pencil.
+[slow, intense] And one more, higher than all of them. Fresh pencil.
 
-[dead quiet] Dated last week.
+[grave, heavy] Dated last week.
 
 [firm, deliberate] Rule number seven.
 
@@ -22,9 +22,9 @@ He said.
 
 [regretful] Theo told it to me that first night, and I didn't write it down. I said we ran out of room. Every night, Theo tapped the empty line at the bottom of the page, and I never asked him why.
 
-[soft] Rule seven was two words.
+[warm] Rule seven was two words.
 
-[soft, emotional] Believe me.
+[warm, emotional] Believe me.
 
 [warm, calm, relieved] Okay. Breathe. You can turn a light on now.
 

@@ -16,19 +16,19 @@ Ghost, or pipes?
 
 [reading it carefully] Lock every door, every night. Even the garage door. Even the little basement window.
 
-[conversational] So Mom did. Front door. Back door. The door from the garage into the kitchen. Every night, she checked every lock, and Theo checked behind her.
+[brisk, storytelling] So Mom did. Front door. Back door. The door from the garage into the kitchen. Every night, she checked every lock, and Theo checked behind her.
 
 [uneasy] And every morning, one door was unlocked. Always the same one. The door from the garage into the kitchen.
 
 Dad told Mom.
 
-[quiet, tense, slowing down] On the fifth night, I went down for water at two in the morning. The kitchen was dark. And I watched the deadbolt on the garage door turn. Slowly. All by itself.
+[intense, tense, slowing down] On the fifth night, I went down for water at two in the morning. The kitchen was dark. And I watched the deadbolt on the garage door turn. Slowly. All by itself.
 
-[very quiet] Click.
+[intense] Click.
 
-[quiet, chilled] Unlocked.
+[intense, chilled] Unlocked.
 
-[quiet, chilled] From the kitchen side.
+[intense, chilled] From the kitchen side.
 
 [shaken] There was nobody in the kitchen. Nobody I could see.
 
@@ -44,15 +44,15 @@ I said.
 
 [unsettled] Because that's what we found, every time. The bag, folded neatly, twisted shut again. Like someone polite had been eating our food.
 
-[quiet, tense] That night, I heard chewing. Inside the pantry wall. Slow. Careful.
+[intense, tense] That night, I heard chewing. Inside the pantry wall. Slow. Careful.
 
 [slow, careful] There was a crack in the plaster, behind the cereal boxes. Just wide enough for light. I leaned in.
 
-[sudden fear, quiet] An eye leaned in on the other side.
+[sudden fear, intense] An eye leaned in on the other side.
 
-[horrified, quiet] A heavy, droopy, sad eye. In a face made of rubber.
+[horrified, intense] A heavy, droopy, sad eye. In a face made of rubber.
 
-[frozen] It blinked.
+[stunned] It blinked.
 
 [fast, panicked] And then it was gone, and something was crawling away inside the wall, fast, along the whole kitchen, up toward the ceiling.
 

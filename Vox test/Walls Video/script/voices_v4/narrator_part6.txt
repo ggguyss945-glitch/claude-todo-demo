@@ -1,4 +1,4 @@
-[quiet, pointed] Person.
+[intense, pointed] Person.
 
 [warm, encouraging] Edit your comment. Change it to "person." And under it, write the name of someone who always believed you.
 
@@ -6,6 +6,6 @@
 
 [warm] And subscribe. On Night Policy, the next story comes to you. You'll never have to go looking for it in the walls.
 
-[soft, warm, a little ominous] Sleep well. And if your little brother tells you something tonight...
+[warm, a little ominous] Sleep well. And if your little brother tells you something tonight...
 
-[soft, sincere] Believe him.
+[warm, sincere] Believe him.

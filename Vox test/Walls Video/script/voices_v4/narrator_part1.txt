@@ -1,12 +1,12 @@
-[quiet, ominous, close] If your little brother says someone lives in the walls... don't laugh.
+[punchy, ominous, raised energy, full voice] If your little brother says someone lives in the walls... don't laugh.
 
-[quiet, ominous] If the armchair is warm in the morning, and nobody sat in it... don't say it's the heater.
+[punchy, ominous, raised energy, full voice] If the armchair is warm in the morning, and nobody sat in it... don't say it's the heater.
 
-[low, slow, tense] And if your dad stands in your bedroom doorway at three in the morning, in his red flannel shirt, head tilted, just watching you sleep... don't say goodnight.
+[punchy, ominous, raised energy, full voice] And if your dad stands in your bedroom doorway at three in the morning, in his red flannel shirt, head tilted, just watching you sleep... don't say goodnight.
 
-[very quiet, deadly serious] Your dad is asleep.
+[deadly serious, firm, full voice] Your dad is asleep.
 
-[conversational storytelling] My little brother Theo had seven rules for our new house. He was six. He couldn't spell yet, so he made me write them down, word for word, in his dinosaur notebook. I was twelve. I thought they were the silliest rules I had ever written.
+[energetic storytelling] My little brother Theo had seven rules for our new house. He was six. He couldn't spell yet, so he made me write them down, word for word, in his dinosaur notebook. I was twelve. I thought they were the silliest rules I had ever written.
 
 [dry] Every grown-up in our house had an explanation for every one of them.
 
@@ -14,7 +14,7 @@
 
 [building, ominous] By morning, there would be three police cars on our lawn, a hole in my closet wall, and a man with a dog's face sitting on our curb in handcuffs, telling the officers that we were the ones living in his house.
 
-[warm, conversational] We moved into fourteen Larkspur Lane in August. A heat wave. Fans in every window.
+[warm, energetic] We moved into fourteen Larkspur Lane in August. A heat wave. Fans in every window.
 
 [light, curious] The old owner, Mr. Pell, had just walked away from the place. Left everything. His big green armchair. His curtains. A stone frog by the front step, with a key under it.
 
@@ -26,7 +26,7 @@ Dad said, and left it there.
 
 Dad read it out loud, and laughed.
 
-[quiet, slow, tense] That first night, I woke up at three. Dad was standing in our doorway. Red flannel. Head tilted. Just watching us sleep.
+[intense, slow, tense] That first night, I woke up at three. Dad was standing in our doorway. Red flannel. Head tilted. Just watching us sleep.
 
 I said.
 
@@ -34,7 +34,7 @@ I said.
 
 [light, offhand] In the morning, Dad couldn't find his red flannel shirt. He said it got lost in the move.
 
-[quiet, curious] The next night, Theo told us about Hushabye.
+[intense, curious] The next night, Theo told us about Hushabye.
 
 Theo said.
 
