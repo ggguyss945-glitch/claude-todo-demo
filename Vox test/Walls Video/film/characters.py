@@ -7616,6 +7616,10 @@ exec(compile(open(_BUS_SRC).read(), _BUS_SRC, 'exec'))
 # this film's cast (Mister Shiver, Adam, Lina, Dad, Mr. Kessler, 1958, the medics) lives in characters_ice.py
 _ICE_SRC = os.path.join(_HERE, 'characters_ice.py')
 exec(compile(open(_ICE_SRC).read(), _ICE_SRC, 'exec'))
+# the walls film's cast (Sam, Theo, Mom, Dad, Mr. Pell masked / unmasked, Mrs. Dabrowski, Officer Reyes) lives in
+# characters_walls.py, run here the same way (see WALLS_API / CAST.md)
+_WALLS_SRC = os.path.join(_HERE, 'characters_walls.py')
+exec(compile(open(_WALLS_SRC).read(), _WALLS_SRC, 'exec'))
 
 
 if __name__ == '__main__' and '--selftest' in sys.argv:
