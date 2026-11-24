@@ -122,7 +122,10 @@ def _loop_tile(y, loop_len, loops):
 
 
 def render(version, anchors=None, tempo=None, seed=0, loops=None, amount=None, phrases=None, n=None, short=False,
-           **_):
+           follow=None, **_):
+    """follow (detuned): one sung pitch per note (MIDI float, None = the written note), measured from the singer's
+    take, so the box plays under her IN TUNE (her own notes and cents, two octaves up); only the tines' wear and the
+    wow stay 'detuned' (no sag, no random tine errors)."""
     v = str(version)
     if v not in VERSIONS:
         raise KeyError(f'unknown motif version {version!r}')
@@ -145,6 +148,15 @@ def render(version, anchors=None, tempo=None, seed=0, loops=None, amount=None, p
     T = tm(total) + 5.0
     buf = np.zeros((int(T * SR) + 2 * SR, 2), np.float32)
     out_notes = []
+    fol = [None if f is None else float(f) for f in (follow or [])]
+    if fol and v == 'detuned':                              # her notes replace the written ones (same rhythm)
+        notes = [(b, d, (int(round(fol[k])) if k < len(fol) and fol[k] is not None else m), s, last)
+                 for k, (b, d, m, s, last) in enumerate(notes)]
+
+    def fcents(m, k):
+        if k < len(fol) and fol[k] is not None:
+            return (fol[k] - int(round(fol[k]))) * 100.0 + WORN.get(m, 0) * 1.5 + rng.uniform(-6, 6)
+        return None
 
     def cents(m, k):
         c = TUNE_CENTS
@@ -174,8 +186,10 @@ def render(version, anchors=None, tempo=None, seed=0, loops=None, amount=None, p
                 J._put(buf, t, _chime_note(m + tr, 0.8 * vv, 0.9 if k == nn - 1 else 0.45, rng, TUNE_CENTS), 1.0,
                        0.0)
             elif v == 'detuned':
+                fc = fcents(m, k) if fol else None
+                c = c if fc is None else fc
                 J._put(buf, t, _box(m + tr, 0.8 * vv, rng, c, 0.9), 1.0, rng.uniform(-0.2, 0.2))
-                J._put(buf, t + 0.01, _box(m + 12, 0.32 * vv, rng, c + 23.0, 0.8), 1.0, 0.0)   # a beating low twin
+                J._put(buf, t + 0.01, _box(m + 12, 0.32 * vv, rng, c + (9.0 if fol else 23.0), 0.8), 1.0, 0.0)   # a beating low twin
             elif v in ('real', 'cardigan'):
                 J._put(buf, t, _box(m + tr, 0.8 * vv, rng, c, 1.3, 0.55), 1.0, rng.uniform(-0.1, 0.1))
             else:                                               # box, winddown, sill
@@ -185,7 +199,7 @@ def render(version, anchors=None, tempo=None, seed=0, loops=None, amount=None, p
         if v != 'chime':                                        # oom-pah-pah: the bass tine, then the chord tines
             for b, bs, ch, starts in harm:
                 t = tm(b) + rng.uniform(0, 0.015)
-                g = {'cardigan': 0.0, 'winddown': 0.7, 'detuned': 0.8}.get(v, 1.0)
+                g = {'cardigan': 0.0, 'winddown': 0.7, 'detuned': 0.45 if fol else 0.8}.get(v, 1.0)
                 if not g:
                     continue
                 bright = 0.55 if v == 'real' else 1.0

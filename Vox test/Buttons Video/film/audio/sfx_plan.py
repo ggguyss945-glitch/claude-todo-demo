@@ -36,7 +36,10 @@ import music_plan as MP                                   # noqa: E402
 # (name, t0, t1, match params (subset), change, why). t0 / t1: anchors or seconds (the window the cue's t falls in).
 # change: {'add_db': x} | {'gain_db': x} | {'min_db': x} | {'params': {...}} | {'space': s} | {'drop': True}
 # Names here are the names AFTER the picture pass (the recipes).
-EDIT = []          # the Buttons film: filled from the first full mix's measures (measure_mix.py + --events)
+EDIT = [           # the Buttons film (measure_mix.py + --events on the full mix)
+    ('ping', 'Face down on the bed', 'Okay. Breathe', {}, {'params': {'kind': 'muffled'}},
+     'the tablet face down on the bed pings once: muffled'),
+]
 THIN_MIN_GAP = 0.26
 THIN_GAIN = {None: -10.0}
 THIN_QUIET = []
@@ -86,8 +89,6 @@ ADD = [
     ('Under FRI, I wrote', 'marker_squeak', -3.0, None, {'strokes': 6}, 'MOM IT\'S OWEN I\'M HERE'),
     ('The marker squeaked -0.45', 'marker_squeak', 0.0, None, {'strokes': 1}, 'the squeak the Blank lunges at'),
     ('So I wrote everything', 'marker_squeak', -4.0, None, {'strokes': 8}, 'he writes everything'),
-    ('end:The Blank folded in on herself, down to a flat, empty cardigan -0.2', 'cardigan_fall', 0.0, None,
-     {'dur': 1.6}, 'down to a flat, empty cardigan'),
     ('Two black buttons rolled', 'buttons_roll', 0.0, None, {'dur': 2.2}, 'two buttons roll and stop at her slippers'),
     ('Lid on tight', 'jar_lid', 0.0, None, {'turns': 2}, 'the lid screwed tight'),
     ('She wound the music box#wound', 'music_box_wind', -2.0, None, {'dur': 1.6}, 'she winds the real music box'),
@@ -107,12 +108,35 @@ PICTURE = {
     # the motif and every sung line are not SFX: the score's identity layer and the voice track carry them (the
     # son's tablet chime is the motif's 'chime' version)
     'chime': None, 'jingle': None, 'music_box': None, 'humming': None, 'singing': None, 'song': None, 'hum': None,
-    'tablet_chime': None,
+    'tablet_chime': None, 'music_box_four_notes': None,
+    # film.py's names (W/cues/sfx_cues.json, 24 Nov picture) onto this film's recipes; 'name@who' rows win over 'name'
+    'apartment_night': ('house_night', {'clock': 0.0, 'rain': 0.0, 'creaks': 0.15}, None,
+                        'the flat at night: room tone, the fridge from the kitchen (no crickets, no clock)'),
+    'apartment_day': ('room_tone_house', {'hum': 0.3}, None, 'the flat by day (the help-line bed rides on top)'),
+    'key_tap': ('typing', {'dur': 0.05, 'cps': 7.0}, -18.0, 'one laptop key on the drawn frame'),
+    'key_tap@owen_pj': ('touch_tap', {'n': 1}, -20.0, 'his thumb on the tablet glass: no key clack'),
+    'key_tap@son': ('touch_tap', {'n': 1}, -20.0, 'the son\'s thumb on the tablet glass'),
+    'fingertip_tap': ('tik', {'kind': 'tap'}, None, 'the Blank\'s button fingertips: tapping like buttons on glass'),
+    'phone_shutter': ('camera_shutter', {'kind': 'tablet'}, -14.0, 'Mom lifts her phone: the photo (her lock screen)'),
+    'closet_door_creak': ('door_creak', {'slow': 0.8}, -16.0, 'the closet door opening on the Brave List'),
+    'knock_door': ('palms_glass', {'n': 1}, -10.0, 'palms on the lobby glass: never a knock'),
+    'cardboard_open': ('box_open', {}, -10.0, 'the box on the doormat opened'),
+    'button_click': ('closet_clicks', {'n': 1}, None, 'click. Click. Click. (one per drawn frame)'),
+    'coat_button_close': ('coat_buttons', {'n': 1}, None, 'one red-coat button closing on her sung beat'),
+    'phone_ring_out': ('phone_ring', {'n': 1}, -14.0, 'he calls Mom: one ring in his ear'),
+    'car_drive_off': ('tires_snow', {'dur': 4.0}, -8.0, 'the car pulls away on snow: just tire tracks'),
+    'microwave_hum': None,
+    'b3_unfold': ('his_unfold', {'n': 4, 'spacing': 0.5}, -10.0, 'up, and up: the long joints unfolding behind the fridge'),
+    'b3_ceiling': None,
+    'ceiling_creak': ('wood_creak', {'kind': 'grind', 'dur': 2.0}, -12.0, 'her head bending along the ceiling'),
+    'b3_collapse': None,
+    'door_open_soft': ('door_creak', {'slow': 1.2}, -14.0, 'his son\'s door down the hall'),
 }
 WHO_HUM = {}
 FAMILY = {'footsteps_wood_inside': 'steps', 'footsteps_porch': 'steps', 'footsteps_grass': 'steps',
           'doorknob': 'knob', 'light_switch': 'switch', 'helpline_kitchen': 'kitchen', 'fridge_hum': 'kitchen',
-          'phone_ring': 'call', 'police_radio': 'radio', 'walkie': 'radio'}
+          'phone_ring': 'call', 'police_radio': 'radio', 'walkie': 'radio', 'house_night': 'kitchen',
+          'deadbolt': 'lock', 'lock_turn': 'lock'}
 
 
 def _t(a, lines):
@@ -210,8 +234,8 @@ def picture_pass(out, lines, log):
             q = dict(extra); q['dur'] = p.get('dur', 10.0)
             c = dict(c, name=rn, params=q, gain_db=float(c.get('gain_db', 0.0) or 0.0) + g)
             why = f'room tone {p["kind"]} -> {rn}'
-        elif nm in PICTURE:
-            m = PICTURE[nm]
+        elif f"{nm}@{p.get('who')}" in PICTURE or nm in PICTURE:
+            m = PICTURE.get(f"{nm}@{p.get('who')}", PICTURE.get(nm))
             if m is None:
                 log.append(f'PIC  {nm:18s} {t:7.2f} dropped'); continue
             rn, extra, g, why = m
@@ -223,8 +247,8 @@ def picture_pass(out, lines, log):
                 c['gain_db'] = g
         if c.get('name') in INDOOR_STEPS and c.get('space') in OUTDOOR_SPACES:      # wood steps outdoors: the lawn
             q = {k: v for k, v in (c.get('params') or {}).items() if k in ('n', 'rate', 'dur')}
-            c = dict(c, name='footsteps_grass', params=q, space='outside')
-            why = (why + '; ' if why else '') + 'an indoor step outdoors -> a step on the August lawn'
+            c = dict(c, name='snow_walk', params=q, space='outside')
+            why = (why + '; ' if why else '') + 'an indoor step outdoors -> a step in the snow'
         if why:
             log.append(f'PIC  {nm:18s} {t:7.2f} -> {c["name"]} {c.get("params")} {c.get("gain_db", 0):+.1f} dB  ({why})')
         res.append(c)

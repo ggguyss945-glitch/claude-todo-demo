@@ -56,10 +56,22 @@ def merge(sfx_cues, beats=None, window=0.35):
                 have.setdefault(c['name'], []).append(float(c['t']))
             except (KeyError, TypeError, ValueError):
                 pass
-    log, out = [], list(sheet)
+    log, out = [], [dict(c) if isinstance(c, dict) else c for c in sheet]
+    used = set()
     for c in cues(beats):
         near = [t for t in have.get(c['name'], []) if abs(t - c['t']) <= window]
         if near:
+            # the picture's frame wins; the beat's voicing (kind, seed, pan) goes onto the nearest unused picture cue
+            cand = sorted((abs(float(x['t']) - c['t']), k) for k, x in enumerate(out)
+                          if isinstance(x, dict) and x.get('name') == c['name'] and k not in used
+                          and x.get('src') != 'beats' and abs(float(x['t']) - c['t']) <= window)
+            if cand:
+                k = cand[0][1]; used.add(k); x = out[k]
+                q = dict(x.get('params') or {}) if isinstance(x.get('params'), dict) else {}
+                for kk, vv in c['params'].items():
+                    q.setdefault(kk, vv)
+                out[k] = dict(x, params=q, seed=x.get('seed', c['seed']), pan=c['pan'] or x.get('pan', 0.0),
+                              tag=c['tag'])
             log.append(f"beat {c['name']} {c['t']:.2f} ({c['tag']}): the picture's cue at {near[0]:.2f} wins")
             continue
         out.append(c)

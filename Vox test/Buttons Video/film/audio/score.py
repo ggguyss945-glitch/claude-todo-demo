@@ -1688,7 +1688,7 @@ class Score:
         ver = str(e.get('version') or ('landline' if hold else 'musicbox'))
         keys = ('tempo', 'loops', 'phrases', 'who', 'transpose', 'n', 'minor', 'wind_down', 'speed', 'pass_at', 'far',
                 'cut', 'phrase3_only', 'wind', 'speeds', 'sag_to', 'hum_transpose', 'stop_beat',
-                'amount', 'hang', 'fall', 'short', 'dur', 'hush', 'inst')   # (the chime's and the motif's keys)
+                'amount', 'hang', 'fall', 'short', 'dur', 'hush', 'inst', 'follow')   # (the chime's and the motif's keys)
         kw = {k: e[k] for k in keys if k in e and e[k] is not None}
         if 'phrases' in kw and not isinstance(kw['phrases'], str):    # the motif's phrases are a string ('AC')
             kw['phrases'] = tuple(int(p) for p in kw['phrases'])
