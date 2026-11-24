@@ -508,7 +508,7 @@ class BtStreet(Room):
 
     def pieces(self, o):
         return [Piece('lobby_bay', (5.0, 1.5, -1.3), lambda pen, v: bt_lobby_bay(pen, v, o), block=_r4p(BT_BAY)),
-                Piece('streetlight', (BT_LAMP[0], 3.0, BT_LAMP[1]), lambda pen, v: dr_streetlight(pen, v, BT_LAMP[0], BT_LAMP[1], 1.0, arm=1.0, h=BT_LAMP_H, G=BT_G),
+                Piece('streetlight', (BT_LAMP[0], 3.0, BT_LAMP[1]), lambda pen, v: _bt_pole(pen, v, o),
                       block=_circ(BT_LAMP[0], BT_LAMP[1], 0.15)),
                 Piece('bus_stop', (BT_STOP[0], 1.2, BT_STOP[1]), lambda pen, v: bt_bus_stop(pen, v), block=_r4p((2.05, 3.75, -3.95, -3.45)))]
 
@@ -527,6 +527,13 @@ class BtStreet(Room):
         return S
 
 
+def _bt_pole(pen, v, o):
+    """The streetlight, lit softly (its own lamp would blow its pole out to a neon tube)."""
+    day = _tod(o) == 'day'
+    with lighting('#9a948a' if day else '#58607e', [Lamp(kind='dir', c='#ffd8a8', k=0.35, d=_norm3((0.2, -0.9, 0.3)))], 1.0):
+        dr_streetlight(pen, v, BT_LAMP[0], BT_LAMP[1], 1.0, arm=1.0, h=BT_LAMP_H, G=BT_G)
+
+
 def _bt_window_out_layer(clip=(170, 70, 1580, 940)):
     """Screen-space foreground for a POV out of a window: the dark frame and the sash cross, soft."""
     def draw(pen, t):
@@ -535,8 +542,8 @@ def _bt_window_out_layer(clip=(170, 70, 1580, 940)):
     return Layer(0.3, draw, 'window_frame', blur=8)
 
 
-_bcam('bt_ext_from_window', 900, 420, BT_UP + 1.35, -1.7, -0.05, 192, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)),
-      "POV out of Owen's window: the streetlight, the bus stop, Barlow's corner across the street", 'street', pitch=24.0)
+_bcam('bt_ext_from_window', 700, 470, BT_UP + 1.35, -1.7, -0.05, 186, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)),
+      "POV out of Owen's window: the streetlight, the bus stop, Barlow's corner across the street", 'street', pitch=13.0)
 _bcam('bt_ext_lobby_pov', 900, 400, BT_UP + 1.4, -1.5, -0.05, 128, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)),
       "POV down-left out of Owen's window to the lobby door (she is at the glass)", 'street', pitch=34.0)
 _bcam('bt_ext_lamp', 880, 640, BT_G + 1.6, -0.2, -12.2, 4, _env(f=(1.0, 2.4)),
@@ -577,6 +584,9 @@ def _bt_outside(o):
             bt_ext_draw(pen, v, o)
             for P in sorted(R.pieces(o), key=lambda P: -v.d(P.ref[0], P.ref[2])):
                 if v.d(P.ref[0], P.ref[2]) > 0.6: P.draw(pen, v)
+            if _tod(o) != 'day':                                            # the lit windows across the street, Barlow's sign glow
+                bx, by = v.p(-7.3, 1.5, BT_FAR)
+                if v.d(-7.3, BT_FAR) > 1.0: pen.glow(bx, by, 2.4 * v.s(-7.3, BT_FAR), '#ffcf8a', 60)
         if _tod(o) != 'day':
             dr_streetlight_glow(pen, v, BT_LAMP[0], BT_LAMP[1], 1.0, BT_SODIUM, 1.0, BT_LAMP_H, BT_G, rain=False, t=0.0)
     return f
@@ -641,9 +651,9 @@ def _bt_board_art(p_, W, H, state='birthday', k=1.0, ink=1.0):
     p_.fill(rect(0, 0, W, H), '#f6f8f6'); p_.line(rect(0, 0, W, H), 1.2 * u, '#b8bcc4')
     p_.fill(rect(0, 0, W, H), '#ffffff', 30); p_.linear(rect(0, 0, W, H), 0, 0, W, H, [(0, '#ffffff', 0), (0.4, '#ffffff', 60), (0.55, '#ffffff', 0)])
     p_.fill(rect(W * 0.08, H - 1.6 * u, W * 0.3, 1.2 * u), '#3a3a42')        # the marker tray's marker
-    btext(p_, "FRI.", 3.0 * u, 7.0 * u, 'hand', 5.8 * u, '#c8262a', 245)
-    btext(p_, "O'S BIRTHDAY", 15.5 * u, 7.0 * u, 'hand', 5.0 * u, '#c8262a', 245)
-    hx, hy = 42.0 * u, 5.0 * u
+    btext(p_, "FRI.", 2.5 * u, 7.0 * u, 'hand', 5.6 * u, '#c8262a', 245)
+    btext(p_, "O'S BIRTHDAY", 13.5 * u, 7.0 * u, 'hand', 4.8 * u, '#c8262a', 245)
+    hx, hy = 42.6 * u, 3.2 * u
     p_.fill(smooth([(hx, hy + 2.0 * u), (hx - 1.8 * u, hy), (hx - 1.0 * u, hy - 1.5 * u), (hx, hy - 0.6 * u), (hx + 1.0 * u, hy - 1.5 * u), (hx + 1.8 * u, hy)]), '#c8262a', 230)
     if state == 'birthday': return
     def kid(s, x, y, size, frac):
@@ -656,13 +666,13 @@ def _bt_board_art(p_, W, H, state='birthday', k=1.0, ink=1.0):
     kid("MOM IT'S OWEN", 3.0 * u, 13.8 * u, 4.6 * u, clamp(kh * 2.0))
     kid("I'M HERE", 3.0 * u, 19.6 * u, 4.6 * u, clamp(kh * 2.0 - 1.0))
     if state != 'all': return
-    items = [("THE CHAT.", 3.0, 26.0), ("THE PHOTO.", 22.0, 26.0), ("THE COAT.", 3.0, 31.6), ("THE CAR.", 22.0, 31.6), ("2 A.M.", 3.0, 37.2),
-             ("I WISHED FOR A", 3.0, 42.8), ("DIFFERENT MOM.", 3.0, 48.2)]
+    items = [("THE CHAT.", 2.5, 26.0), ("THE PHOTO.", 24.5, 26.0), ("THE COAT.", 2.5, 31.6), ("THE CAR.", 24.5, 31.6), ("2 A.M.", 2.5, 37.2),
+             ("I WISHED FOR A", 2.5, 42.8), ("DIFFERENT MOM.", 2.5, 48.2)]
     kk = k * 6.0 / 6.0
     for i, (s, x, y) in enumerate(items):
         j = min(i, 5)
         frac = clamp(k - j) if i < 5 else clamp((k - 5.0) * 2.0 - (i - 5))
-        kid(s, x * u, y * u, 3.9 * u, frac)
+        kid(s, x * u, y * u, 3.5 * u, frac)
 
 
 def _bt_laptop(pen, v, x, Y, y, face=(-1.0, 0.0), on=1.0, open_=1.0, c='#3a3c44'):
@@ -851,7 +861,7 @@ def _bt_clock_layer(v, o):
             pen.fill(rrect(px - 0.07 * s * sz / 0.045, py - 0.03 * s * sz / 0.045, 0.14 * s * sz / 0.045, 0.06 * s * sz / 0.045, 0.006 * s), '#060806')
             pen.glow(px, py, 0.08 * s * sz / 0.045, '#5af08a', 60)
             btext(pen, s_, px, py + 0.016 * s * sz / 0.045, 'vhs', sz * s, '#6aff9a', 245, 'center')
-    lay = Layer(1.0, draw, 'oven_clock', blur=None); lay.order = max(0.3, v.d(7.5, BT_STOVE.cy)) - 0.05
+    lay = Layer(1.0, draw, 'oven_clock', blur=None); lay.order = max(0.25, v.d(BT_STOVE.cx - 0.45, BT_STOVE.cy))
     return lay
 
 
@@ -1123,7 +1133,7 @@ def _bt_owen_cfg(o):
     tod = _tod(o)
     def lights(o):
         amb = _bt_amb(o, '#1a2036')
-        steady = [_bt_win_lamp(o, BT_OWIN[0], BT_OWIN[1], BT_OWIN[2], BT_OWIN[3], 0.0, 1.35, (0.06, -0.42, 1.0))]
+        steady = [_bt_win_lamp(o, BT_OWIN[0], BT_OWIN[1], BT_OWIN[2], BT_OWIN[3], 0.0, 2.1, (0.06, -0.36, 1.0))]
         TA = o.get('tablet_at', (-0.55, BT_UP + 0.62, 0.75))
         var = [('lamp', [Lamp(-2.0, BT_UP + 1.1, 3.25, 3.0, BT_WARM, 1.3, (1.0, 0.6, 0.3), fall=1.4)], _kfn(o.get('lamp', 0.0), 821)),
                ('ceil', [Lamp(-1.8, BT_UP + 2.4, 1.8, 6.0, '#fff0d8', 1.15, (1.0, 0.5, 0.2), fall=1.3)], _kfn(o.get('ceil', 0.0), 822)),
@@ -1265,26 +1275,26 @@ def _bt_lobby_cfg(o):
 
 # ====================================================================================================== cameras + builders
 _bcam('bt_apt_wide', 640, 500, BT_UP + 1.6, 0.45, 0.7, 60, _env(), 'the kitchen + living room from the living room\'s front corner: the table and lamp, Mom\'s door, the gap and the fridge, the counter and the microwave', 'apt')
-_bcam('bt_apt_living', 660, 500, BT_UP + 1.6, 6.3, 1.0, -66, _env(), 'from the kitchen to the living room: the couch facing the front door, Owen\'s door, the living window', 'apt')
+_bcam('bt_apt_living', 620, 500, BT_UP + 1.6, 4.3, 0.55, -42, _env(), 'from the kitchen to the living room: the couch facing the front door, Owen\'s door, the living window', 'apt')
 _bcam('bt_apt_table', 860, 520, BT_UP + 1.3, 6.1, 1.85, -80, _env(), "the table from Owen's end: Mom's chair and laptop at the far end (the Blank sits there at dinner)", 'apt')
 _bcam('bt_apt_table_back', 820, 520, BT_UP + 1.45, 2.55, 1.7, 75, _env(), "from behind Mom's chair (2 a.m.: her back, the laptop glow), Owen's end and the kitchen beyond", 'apt')
-_bcam('bt_apt_fridge', 640, 600, BT_UP + 1.3, 5.6, 1.45, 4, _env(), 'the fridge and its board, the GAP beside it to the ceiling, the tall cabinet, Mom\'s door left', 'apt', pitch=-6.0)
-_bcam('bt_apt_board', 2100, 540, BT_UP + 1.35, 5.95, 3.55, 0, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)), 'close on the whiteboard', 'apt')
-_bcam('bt_apt_micro', 1500, 560, BT_UP + 1.42, 6.32, 3.02, 84, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)), 'over Owen\'s shoulder on the stool into the black microwave door', 'apt', pitch=12.0)
+_bcam('bt_apt_fridge', 560, 640, BT_UP + 1.25, 5.5, 1.75, 3, _env(), 'the fridge and its board, the GAP beside it to the ceiling, the tall cabinet, Mom\'s door left', 'apt', pitch=-6.0)
+_bcam('bt_apt_board', 1350, 540, BT_UP + 1.35, 5.95, 3.55, 0, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)), 'close on the whiteboard', 'apt')
+_bcam('bt_apt_micro', 1150, 520, BT_UP + 1.36, 5.95, 3.12, 86, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)), 'over Owen\'s shoulder on the stool into the black microwave door', 'apt', pitch=7.0)
 _bcam('bt_apt_window', 900, 520, BT_UP + 1.35, 5.3, 1.9, 182, _env(), 'the kitchen window, the button jar on its sill, the street beyond', 'apt')
 _bcam('bt_apt_momdoor', 820, 520, BT_UP + 1.2, 5.6, 2.3, -38, _env(), "from Owen's seat to Mom's bedroom door (the Blank in front of it)", 'apt')
-_bcam('bt_apt_clock', 2600, 540, BT_UP + 1.05, 6.85, BT_STOVE.cy, 90, _env(x=(930, 990), y=(510, 570), zoom=(1.0, 1.05)), 'close on the oven clock (11:58 -> 12:00)', 'apt')
+_bcam('bt_apt_clock', 1300, 540, BT_UP + 1.05, 6.55, BT_STOVE.cy, 90, _env(x=(930, 990), y=(510, 570), zoom=(1.0, 1.05)), 'close on the oven clock (11:58 -> 12:00)', 'apt')
 _bcam('bt_apt_door', 820, 520, BT_UP + 1.55, 1.75, 2.45, -58, _env(), 'the front door from the living room (the box was outside it)', 'apt')
 _bcam('bt_apt_couch', 760, 540, BT_UP + 1.35, 0.7, 3.55, 96, _env(), 'from the front door: the headset lady on the couch facing us, the kitchen behind (the officer, the fridge)', 'apt')
 _bcam('bt_owen_wide', 640, 470, BT_UP + 1.6, -0.35, 3.3, -150, _env(), "Owen's room from the door: the window over the streetlight, the window seat, the bed, the closet", 'owen')
 _bcam('bt_owen_window', 880, 500, BT_UP + 1.2, -1.5, 2.4, 178, _env(), 'the window seat and the window, the streetlight right outside', 'owen')
 _bcam('bt_owen_closet', 900, 520, BT_UP + 1.35, -1.3, 1.62, -90, _env(), 'the closet door face-on (open: the Brave List inside the door, the red coat)', 'owen')
 _bcam('bt_owen_bed', 700, 500, BT_UP + 1.45, -2.9, 0.55, 52, _env(), 'from the window corner to the bed and the door', 'owen')
-_bcam('bt_owen_sill_pov', 760, 560, BT_UP + 0.85, -0.6, 1.35, -158, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)), 'from his pillow to the window seat (her head tilted to his breathing)', 'owen', pitch=-4.0)
+_bcam('bt_owen_sill_pov', 640, 560, BT_UP + 0.95, -0.5, 1.6, -150, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)), 'from his pillow to the window seat (her head tilted to his breathing)', 'owen', pitch=-2.0)
 _bcam('bt_lobby_door', 760, 520, 1.6, 6.5, -0.9, -92, _env(), 'inside the lobby looking at the glass door (the street, the streetlight beyond)', 'lobby')
 _bcam('bt_lobby_close', 1100, 520, 1.55, 4.5, -1.35, -90, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)), 'close on the glass door from inside (palms on the glass)', 'lobby')
 
-_BT_DEF = dict(tod='night')
+_BT_DEF = dict(tod='night', no_veil=True)
 
 
 def _bt_o(kw, extra=None):
@@ -1371,8 +1381,9 @@ def bt_owen(view='wide', **kw):
             k = sash(t) if callable(sash) else sash
             Yb = BT_UP + BT_OWIN[2] + 0.04 + k * 0.6; Yt = Yb + (BT_OWIN[3] - BT_OWIN[2]) * 0.5
             q = [v_.p(BT_OWIN[0] + 0.05, Yb, 0.03), v_.p(BT_OWIN[1] - 0.05, Yb, 0.03), v_.p(BT_OWIN[1] - 0.05, Yt, 0.03), v_.p(BT_OWIN[0] + 0.05, Yt, 0.03)]
-            pen.line(poly(q), max(2.0, 0.045 * v_.s(-1.7, 0.03)), '#e8e2d4')
-            pen.fill(poly(q), '#c8d8f0', 18)
+            w_ = max(1.5, 0.035 * v_.s(-1.7, 0.03))
+            pen.line(poly(q), w_ + 2, '#1a1a20', 160); pen.line(poly(q), w_, '#cfc9bb')
+            pen.seg(q[0], q[1], w_ * 1.6, '#cfc9bb')                         # the meeting rail
         dyn.append(live_layer('sash', v, (-1.7, BT_UP + 1.2, 0.03), sfn, amb, steady, var))
     sp = build_view('bt_owen_' + view, v, main, o, far=far, outside=_bt_outside(o), grade=_bt_grade(o, ('lamp', 'ceil')), dyn=dyn)
     sp.info['note'] = "Owen's room: bed / pillow, sill_seat (the Blank sings there), window, closet / closet_in / coat / list, door_in, desk."
@@ -1651,7 +1662,7 @@ class BtSchool(Room):
 _bcam('bt_sch_wide', 760, 540, SC_G + 1.6, 2.2, -7.2, -4, _env(f=(1.0, 2.2)), 'across the lane: the school, the silver car at the kerb (its passenger side), Mr. Dunn\'s post, the snow', 'school')
 _bcam('bt_sch_curb', 900, 520, SC_G + 1.5, -0.9, 2.5, 162, _env(), "from the sidewalk behind Owen: the car's driver side, the OPEN window, the rear door, the dent", 'school')
 _bcam('bt_sch_window', 1150, 520, SC_G + 1.3, 1.25, 1.6, 182, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)), 'close on the open driver window (sunglasses lowered: buttons; the arm comes out)', 'school')
-_bcam('bt_sch_dunn', 800, 520, SC_G + 1.55, 1.2, 2.6, 104, _env(), "along the sidewalk to Mr. Dunn's post (Owen runs to him), the car at the right", 'school')
+_bcam('bt_sch_dunn', 800, 520, SC_G + 1.55, 1.2, 2.6, 104, _env(), "along the sidewalk to Mr. Dunn's post (Owen runs to him; the car is behind us)", 'school')
 _bcam('bt_sch_back', 900, 520, SC_G + 1.45, 6.0, 2.4, -112, _env(), "from Mr. Dunn's post back toward the car (the arm folds back in; then just tracks)", 'school')
 
 
@@ -1795,7 +1806,8 @@ def _bt_chat_draw(pen, t, msgs, show, head, typing, name, draft, draft_k, accoun
     ty = typing(t) if callable(typing) else typing
     dk = draft_k(t) if callable(draft_k) else draft_k
     light = account == 'mom' or theme == 'now'
-    bg, panel, ink, sub_ = ('#f2f3f6', '#ffffff', '#1a1c22', '#7a7e88') if light else ('#121830', '#1c2440', '#eef0f6', '#8a92b0')
+    bg, panel, ink, sub_ = ('#ffffff', '#eef0f4', '#1a1c22', '#6a6e78') if light else ('#121830', '#1c2440', '#eef0f6', '#8a92b0')
+    fs = 50 if account == 'mom' else 40
     pen.fill(rect(-400, -300, 2720, 1700), bg)
     pen.fill(rect(-400, -300, 2720, 340), '#0e1226' if not light else '#e4e6ec')
     btext(pen, '9:41 PM' if account != 'mom' else '2:04 AM', 70, 30, 'sans_b', 26, sub_, 255)
@@ -1851,18 +1863,18 @@ def _bt_chat_draw(pen, t, msgs, show, head, typing, name, draft, draft_k, accoun
                 pen.fill(oval(X0 + (0 if account == 'mom' else 70) + 50 + j * 36, yy, 11), sub_, int(255 * a))
             if account != 'mom': bt_avatar(pen, X0 + 28, y + 52, 28, hd, t, icons=False)
             continue
-        lines = _wrap(txt, 'sans', 40, maxw)
-        bh = 30 + 52 * len(lines)
-        bw = max(btext_width(l_, 'sans', 40) for l_ in lines) + 64
+        lines = _wrap(txt, 'sans', fs, maxw)
+        bh = 30 + int(fs * 1.3) * len(lines)
+        bw = max(btext_width(l_, 'sans', fs) for l_ in lines) + 64
         y -= bh + 22
         dy = 30 * (1 - a)
         if who == 'me':
             bx = X1 - bw; c_, tc = '#3a7ae8', '#ffffff'
         else:
-            bx = X0 + (0 if account == 'mom' else 70); c_, tc = ('#e8eaf0', '#1a1c22')
+            bx = X0 + (0 if account == 'mom' else 70); c_, tc = ('#dfe2ea', '#1a1c22') if light else ('#e8eaf0', '#1a1c22')
             if account != 'mom': bt_avatar(pen, X0 + 28, y + bh - 22 + dy, 28, hd, t, icons=False)
         pen.fill(rrect(bx, y + dy, bw, bh, 34), c_, int(255 * a))
-        for j, l_ in enumerate(lines): btext(pen, l_, bx + 32, y + dy + 60 + j * 52, 'sans', 40, tc, int(255 * a))
+        for j, l_ in enumerate(lines): btext(pen, l_, bx + 32, y + dy + 15 + int(fs * 1.12) + j * int(fs * 1.3), 'sans', fs, tc, int(255 * a))
         if y < 200: break
     if banner:                                                              # a notification sliding down: (title, text, k)
         ttl, txt, kb = banner
@@ -2194,8 +2206,8 @@ def _bti_card_flat(pen, cx, cy, s, rot):
     pen.fill(rect(-420 + 14, -250 + 20, 840, 500), '#000000', 100, blur=18)
     pen.fill(rect(-420, -250, 840, 500), '#f8f4ea'); pen.texture(rect(-420, -250, 840, 500), 'paper', 0.35, 'multiply', 1.0)
     pen.line(rect(-390, -220, 780, 440), 2.0, '#c8b8a0')
-    btext(pen, BT_CARD[0], 0, -30, 'cursive', 62, '#2a2a3a', 245, 'center')
-    btext(pen, BT_CARD[1], 0, 80, 'cursive', 62, '#2a2a3a', 245, 'center')
+    btext(pen, BT_CARD[0], 0, -30, 'cursive', 54, '#2a2a3a', 245, 'center')
+    btext(pen, BT_CARD[1], 0, 80, 'cursive', 54, '#2a2a3a', 245, 'center')
     _bt_button(pen, 300, 170, 16)
     pen.cv.restore()
 
@@ -2360,7 +2372,7 @@ def _bti_laptop(pen, t, state='line', typed=1.0, **kw):
         pen.fill(oval(230, 290, 40), '#3aa85a'); pen.line(smooth([(210, 290), (226, 306), (254, 274)], False), 10, '#ffffff')
         btext(pen, 'Delivered', 300, 310, 'sans_b', 64, '#1a1a22', 250)
         btext(pen, 'Tuesday 3:12 PM  -  Left on the mat', 300, 380, 'sans', 40, '#5a5e68', 245)
-        btext(pen, 'Music box, crank, custom song strip', 300, 470, 'sans', 36, '#2a2c34', 240)
+        btext(pen, 'Order #4471  -  1 item  -  for: Nadia', 300, 470, 'sans', 36, '#2a2c34', 240)
         pr = rect(1240, 230, 460, 340); pen.fill(pr, '#5a4a52'); pen.fill(rect(1330, 300, 280, 200), '#c8a070'); pen.fill(rect(1330, 390, 280, 22), '#d8c8a0')
         btext(pen, 'Photo at delivery', 1470, 610, 'sans', 26, '#7a7e88', 230, 'center')
     else:
@@ -2369,9 +2381,10 @@ def _bti_laptop(pen, t, state='line', typed=1.0, **kw):
         msg = 'Come to the kitchen, baby.'
         k = typed(t) if callable(typed) else typed
         shown = msg[:int(round(len(msg) * clamp(k)))]
-        pen.fill(rrect(140, 860, 1640, 110, 55), '#ffffff'); pen.line(rrect(140, 860, 1640, 110, 55), 2, '#d0d2da')
-        btext(pen, shown, 200, 930, 'sans', 48, '#1a1a22', 250)
-        if int(t * 2.2) % 2 == 0: pen.fill(rect(206 + btext_width(shown, 'sans', 48), 890, 4, 54), '#3a7ae8')
+        pen.fill(rrect(140, 820, 1640, 150, 75), '#ffffff'); pen.line(rrect(140, 820, 1640, 150, 75), 3, '#b0b4c0')
+        btext(pen, shown, 210, 918, 'sans', 72, '#1a1a22', 250)
+        if int(t * 2.2) % 2 == 0: pen.fill(rect(218 + btext_width(shown, 'sans', 72), 850, 5, 84), '#3a7ae8')
+        pen.fill(rect(80, 110, 1760, 930), '#000000', 40)
     pen.fill(minus(rect(-500, -400, 2900, 1900), sc), '#16181e')
     pen.linear(rect(80, 40, 1760, 1000), 80, 40, 1840, 1040, [(0, '#ffffff', 0), (0.4, '#ffffff', 14), (0.45, '#ffffff', 0)])
 
