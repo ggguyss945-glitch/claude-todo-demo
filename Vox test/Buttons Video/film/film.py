@@ -623,6 +623,8 @@ def figure(F, sh, sp, q, k=0, rim=None):
     kind = q.get('kind') or {'seat': 'seat', 'kneel': 'kneel', 'lie': 'lie', 'floor_sit': 'floor'}.get(s0.kind, 'stand')
     Yf = s0.Y if s0.kind != 'seat' else s0.Y
     h0 = CH.height_px(who, s0.ppm) * q.get('hk', 1.0)
+    if who == 'blank3' and abs(s0.Y - ST.BT_UP) < 0.05:     # review 1 B1: form 3 is floor to CEILING at her own plan point
+        h0 = max(0.8 * h0, s0.y - v.p(s0.X, s0.Y + ST.BT_CEIL, s0.Yp)[1])
     a = CH.Acting(who, seed=q.get('seed', 0) + k * 11 + sh.idx * 3, height=h0, expr=q.get('expr', 'neutral'), blink=q.get('blink'))
     a.place(s0.x, s0.y + q.get('dy', 0.0))
     tr = q.get('turn')
@@ -3305,10 +3307,10 @@ def plan_rule6(F):
     # 237-242 Behind the fridge, something unfolded. Up, and up, until her head bent along the ceiling. Long fingers, tapping like buttons on glass.
     #         A smile far too wide. Holding open... the red coat. "Happy birthday. She can't hear you. Only me. Button up. We're going home."
     tu = T(237) + 0.2
-    B3 = lambda **k: P('blank3', 'fridge_gap', id='blank', expr='too_wide', blink=False, order=lambda t: 2.84, **k)
+    B3 = lambda **k: P('blank3', 'fridge_gap', id='blank', expr='too_wide', blink=False, order=lambda t: 2.77, **k)   # in front of the fridge (2.79): she comes out of the gap BESIDE it
     unfold = lambda a, s: (a.set(-1e9, None, 0.0, b3_face=1.0), a.b3_unfold(tu, dur=max(3.0, F.e(238) - tu - 0.3)))
-    S(T(237), 'apt', 'fridge', st=K_MID, ppl=[B3(act=_A(unfold))], c=Z(1.6, 0.012, 914, 760))
-    S(T(238), 'apt', 'fridge', st=K_MID, ppl=[B3(act=_A(unfold))], c=Z(1.35, 0.012, 914, 560), sfx=[(E(238) - 0.5, 'ceiling_creak', -8, 0, 'inside')])
+    S(T(237), 'apt', 'fridge', st=K_MID, ppl=[B3(act=_A(unfold))], c=Z(1.25, 0.012, 914, 640))
+    S(T(238), 'apt', 'fridge', st=K_MID, ppl=[B3(act=_A(unfold))], c=Z(1.3, 0.012, 930, 600), sfx=[(E(238) - 0.5, 'ceiling_creak', -8, 0, 'inside')])
     tap = lambda t: (scr_cache['cnt'][0] - 40 * math.sin(t * 7.0), scr_cache['cnt'][1])
     BU(T(239), 'blank3', 'apt', 'fridge', K_MID, cx=960, cy=520, scale=1.0, turn=0.0, expr='too_wide', blink=False, light=NIGHT, c=BZ(0.02),
        sfx=[(T(239) + 0.3 + 0.28 * k, 'fingertip_tap', -12, 0, 'close') for k in range(8)])

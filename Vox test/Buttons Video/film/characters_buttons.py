@@ -258,8 +258,8 @@ CAST['blank2'] = dict(CAST['blank1'], bun='neat', freckles=0.0, glasses=False, s
                       mouth_w=28, micro=0.25, breath=0.4, lock=0.6,
                       cloth=dict(_OAT, button=_BTN_BLACK, btn_shiny=True, top='#dccfb2', top_hi='#f2e8d2'))
 # Form 3 (drawn by _draw_blank3; this entry is her head and the Acting bookkeeping): paler, a far too wide smile.
-CAST['blank3'] = dict(CAST['blank2'], blank3=True, m=2.45, mouth_w=31, skin='#d9cbc2', skin_sh='#a89c96', skin_dp='#686060',
-                      blush='#c8aaa6', head_ws=[0, 46, 68, 84, 88, 86, 80, 66, 47, 25, 0])
+CAST['blank3'] = dict(CAST['blank2'], blank3=True, m=2.45, mouth_w=58, skin='#dcc2ae', skin_sh='#ae9282', skin_dp='#6c5a50',
+                      blush='#d0a49a', head_ws=[0, 46, 68, 84, 88, 86, 80, 66, 47, 25, 0])
 # Mr. Dunn, late 60s, crossing guard: white hair and moustache, kind weathered face, navy jacket under a hi-vis vest.
 CAST['dunn'] = _v3cast(outfit='hivis', feet='shoes', hair='thin', sex='m', hh=176.0, m=1.74,
                        head_ws=[0, 51, 75, 91, 97, 96, 89, 75, 54, 29, 0], eye_dx=41, eye_y=-6, eye_r=17.0, iris_c='#5d7488',
@@ -287,7 +287,7 @@ _BTN_NEW = {k: CAST[k] for k in ('mom', 'owen', 'son')}
 EXPR.update({
     'puzzled': dict(brow_in=0.35, brow_up=0.25, brow_asym=0.55, m_side=0.45, smile=-0.12, squint=0.18),
     'too_sweet': dict(smile=1.0, teeth=0.7, grin=0.3, brow_up=0.35, lock=1.0),
-    'too_wide': dict(smile=1.0, grin=0.75, teeth=0.85, brow_up=0.5, m_open=0.06, lock=1.0),
+    'too_wide': dict(smile=1.0, grin=0.0, teeth=0.0, m_press=0.35, brow_up=0.4, m_open=0.0, lock=1.0),   # review 1 M1: closed lips, far too wide
     'quiet_sure': dict(smile=0.08, m_press=0.3, brow_sad=0.25, brow_up=0.12, pupil=1.05),
     'listening_soft': dict(brow_sad=0.6, brow_up=0.35, smile=0.12, wide=0.12),
     'busy': dict(brow_in=0.2, brow_angry=0.08, m_press=0.25, eye_open=0.9, h_nod=0.12),
@@ -310,7 +310,7 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
     X, Y, V = hm.map1(ex0, ey0, 2.0)
     if V < 0.12: return None
     fs = hm.sx(ex0, ey0)
-    r = sp['eye_r'] * 1.16
+    r = sp['eye_r'] * (1.0 if sp.get('blank3') else 1.16)          # form 3: smaller buttons (review 1 M1: not skull sockets)
     c.fill(oval(X, Y + 2, r * 1.1 * fs, r * 1.08), sh, 70)          # the faint socket shadow it sits in
     _button_disc(c, X, Y, r * fs, r, det)
     return (X, Y, r, fs, X, Y, 1.0)
@@ -666,9 +666,11 @@ def _b3_geom(x, y, H, P, t):
     hem = (hip[0] - math.sin(at) * 70 * u, hip[1] + math.cos(at) * 70 * u)
     head_h = 0.142 * H
     ceil = y - H
-    yb = ceil + 14 * u + 42 * u
+    R_ = 70 * u                                               # the bend: a soft wide curve, never an elbow
+    yrun = ceil + 9.5 * u                                     # the run along the ceiling: its top edge ON the ceiling
+    yb = yrun + R_
     vert = max(0.0, sh[1] - yb)
-    Lfull = max(0.0, (y - 0.83 * H) - yb) + PI / 2 * 42 * u + 150 * u
+    Lfull = max(0.0, (y - 0.83 * H) - yb) + PI / 2 * R_ + 150 * u
     Ln = 28 * u + (Lfull - 28 * u) * uN
     neck = [sh]
     look = P.__dict__.get('b3_look', 0.0)
@@ -676,13 +678,14 @@ def _b3_geom(x, y, H, P, t):
         end = (sh[0], sh[1] - Ln); neck.append(end)
         kbend = 0.0
     else:
+        if vert > 60 * u: neck.append((sh[0] - f * 7 * u, sh[1] - vert * 0.5))
         neck.append((sh[0], yb))
         rest = Ln - vert
-        arc = min(rest, PI / 2 * 42 * u)
-        cxa, cya = sh[0] + f * 42 * u, yb
-        for k in range(1, 5):
-            a_ = arc / (42 * u) * k / 4
-            neck.append((cxa - f * 42 * u * math.cos(a_), cya - 42 * u * math.sin(a_)))
+        arc = min(rest, PI / 2 * R_)
+        cxa, cya = sh[0] + f * R_, yb
+        for k in range(1, 7):
+            a_ = arc / R_ * k / 6
+            neck.append((cxa - f * R_ * math.cos(a_), cya - R_ * math.sin(a_)))
         run = max(0.0, rest - arc)
         end = (neck[-1][0] + f * run, neck[-1][1]) if run > 0 else neck[-1]
         if run > 0: neck.append(end)
@@ -691,7 +694,7 @@ def _b3_geom(x, y, H, P, t):
         hc = (end[0] + f * 6 * u, end[1] - head_h * 0.42); hrot = f * 8.0
     else:
         up = (end[0] + f * 6 * u, end[1] - head_h * 0.42)
-        dn = (end[0] + f * head_h * 0.34, ceil + head_h * 0.5 + 2 * u)
+        dn = (end[0] + f * head_h * 0.36, ceil + head_h * 0.47)          # the crown pressed to the ceiling
         hc = (up[0] + (dn[0] - up[0]) * kbend, up[1] + (dn[1] - up[1]) * kbend); hrot = f * 8.0 - f * 30.0 * kbend
     hc = (hc[0] + look * 10 * u, hc[1])
     arms = {}
@@ -722,7 +725,7 @@ def _b3_geom(x, y, H, P, t):
         E, W = ik(tgt)
         arms[side] = (S, E, W)
     return dict(u=u, f=f, feet=feet, knees=knees, hip=hip, hem=hem, sh=sh, neck=neck, head=hc, hrot=hrot, head_h=head_h,
-                arms=arms, ceil=ceil, kbend=kbend)
+                arms=arms, ceil=ceil, kbend=kbend, nr=7.5 * u)
 
 
 _B3_TIP = 112.0                                              # wrist to fingertip (body units)
@@ -777,22 +780,34 @@ def _draw_blank3(pen, x, y, H, P, t, light=None, detail=None):
     hip, sh, hem = G['hip'], G['sh'], G['hem']
     axd = (sh[0] - hem[0], sh[1] - hem[1]); Lt = math.hypot(*axd) or 1.0
     nx, ny = -axd[1] / Lt, axd[0] / Lt
-    mid = ((hip[0] + sh[0]) / 2 - nx * f * 9 * u, (hip[1] + sh[1]) / 2 - ny * f * 9 * u)
-    torso = _tube([hem, hip, mid, sh], [70 * u, 64 * u, 54 * u, 58 * u])
+    KS = [0.0, 0.17, 0.45, 0.76, 1.0]; WS = [66 * u, 54 * u, 44 * u, 58 * u, 62 * u]         # hem, hip, waist, chest, shoulder
+    def wk(k): return float(np.interp(k, KS, WS))
+    def at_(k, off=0.0): return (hem[0] + axd[0] * k + nx * off, hem[1] + axd[1] * k + ny * off)
+    torso = _tube([at_(k, -f * (6 * u if 0.3 < k < 0.9 else 0.0)) for k in KS], WS)
     c.fill(torso, _B3_SLEEVE)
-    c.grad(torso, hip[0] - f * 40 * u, 0, hip[0] + f * 40 * u, 0, [(0, _B3_SLEEVE_SH, 200), (0.5, _B3_SLEEVE, 0), (1, '#f2e8d2', 90)])
-    if det >= 1: c.texture(torso, 'fabric', 0.08, 0.6)
+    c.grad(torso, hip[0] - f * 34 * u, 0, hip[0] + f * 34 * u, 0, [(0, _B3_SLEEVE_SH, 190), (0.5, _B3_SLEEVE, 0), (1, '#f2e8d2', 80)])
+    if det >= 1: c.texture(torso, 'fabric', 0.1, 0.7)
+    for s_ in (-0.62, -0.3, 0.3, 0.62):                       # knit ribs following the taper
+        rib = [at_(k, s_ * wk(k) / 2 - f * (6 * u if 0.3 < k < 0.9 else 0.0)) for k in np.linspace(0.06, 0.97, 9)]
+        c.line(smooth(rib, False, 0.6), c.lw * 0.35, _B3_SLEEVE_SH, 110)
     c.line(torso, c.lw)
-    pl = [(hem[0] + axd[0] * k / 12 + nx * f * 9 * u, hem[1] + axd[1] * k / 12 + ny * f * 9 * u) for k in range(13)]
-    c.line(poly(pl, False), c.lw * 0.6, _B3_SLEEVE_SH)
-    for k in range(1, 12):
-        bx, by = pl[k]
-        _button_disc(c, bx + nx * f * 9 * u, by + ny * f * 9 * u, 7.5 * u, 7.5 * u, det)
-    for k_ in (0.025, 0.05):                                  # the ribbed hem: two lines round the tube
-        p_ = (hem[0] + axd[0] * k_, hem[1] + axd[1] * k_)
-        c.line(poly([(p_[0] - nx * 33 * u, p_[1] - ny * 33 * u), (p_[0] + nx * 33 * u, p_[1] + ny * 33 * u)], False), c.lw * 0.6, _B3_SLEEVE_SH)
+    band = _tube([at_(0.0), at_(0.06)], [WS[0] * 1.02, WS[0] * 0.97])              # the ribbed hem band
+    c.fill(band, '#cbbd9a'); c.line(band, c.lw * 0.6)
+    for j in range(7):
+        q_ = at_(0.03, (j - 3) * WS[0] / 8.0); c.line(poly([(q_[0] - axd[0] * 0.025, q_[1] - axd[1] * 0.025), (q_[0] + axd[0] * 0.025, q_[1] + axd[1] * 0.025)], False), c.lw * 0.3, _B3_SLEEVE_SH, 120)
+    pl = [at_(k, f * 6 * u - f * (6 * u if 0.3 < k < 0.9 else 0.0)) for k in np.linspace(0.06, 0.98, 14)]
+    c.line(smooth(pl, False, 0.5), c.lw * 0.6, _B3_SLEEVE_SH)      # the button band (buttoned to the throat)
+    for k in np.linspace(0.12, 0.93, 9):                          # a longer row of buttons than Mom's: small, shiny
+        bx, by = at_(k, f * 6 * u - f * (6 * u if 0.3 < k < 0.9 else 0.0))
+        _button_disc(c, bx, by, 5.6 * u, 5.6 * u, det)
     # neck along the ceiling, then the head under it
     nk = smooth(G['neck'], False, 0.6) if len(G['neck']) > 2 else poly(G['neck'], False)
+    if G['kbend'] > 0.02 and cl_ < 0.01:                      # her shadow on the ceiling, thrown up by the lamp below
+        pen.cv.save(); pen.cv.clipRect(skia.Rect.MakeLTRB(-1e5, -1e5, 1e5, G['ceil']))
+        sh_pts = smooth(G['neck'][-5:] + [G['head']], False, 0.6)
+        for w_, a_ in ((95, 40), (62, 55), (34, 80)):
+            c.line(sh_pts, w_ * u, '#000000', int(a_ * clamp(G['kbend'] * 1.5)))
+        pen.cv.restore()
     c.line(nk, 15 * u + c.lw * 2, LINE); c.line(nk, 15 * u, skin); c.line(nk, 5 * u, skin_sh, 80)
     col = _tube([(sh[0], sh[1] + 6 * u), (sh[0], sh[1] - 16 * u)], [36 * u, 28 * u])
     c.fill(col, '#cbbd9a'); c.line(col, c.lw * 0.7)
