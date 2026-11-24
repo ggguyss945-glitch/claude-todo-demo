@@ -36,7 +36,7 @@ for _o, _n in (('mom', 'mom_walls'), ('owen', 'owen_dummy'), ('son', 'son_old'))
 
 POSE_DEFAULTS.update(faded=0.0, refl_hide=0.0, pgrey=0.0, glare=0.0, circles=0.0, hs_off=0.0, shades=0.0, shades_dn=0.0,
                      default_head=0.0, crank=0.0, b3_unfold=1.0, b3_collapse=0.0, b3_face=1.0, b3_lean=0.0, b3_look=0.0,
-                     b3_tap=0.0, b3_lx=0.0, b3_ly=0.0, b3_lw=0.0, b3_rx=0.0, b3_ry=0.0, b3_rw=0.0)
+                     b3_tap=0.0, b3_lx=0.0, b3_ly=0.0, b3_lw=0.0, b3_rx=0.0, b3_ry=0.0, b3_rw=0.0, eye_shade=0.0, b3_elbow_out=0.0)
 BLANK_TALL = {'r1': 0.0, 'r3': 0.03, 'r4': 0.05, 'r4_micro': 0.07, 'r5': 0.10, 'sill': 0.12}
 _BTN_BLACK = '#121216'
 
@@ -313,6 +313,8 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
     r = sp['eye_r'] * (1.0 if sp.get('blank3') else 1.16)          # form 3: smaller buttons (review 1 M1: not skull sockets)
     c.fill(oval(X, Y + 2, r * 1.1 * fs, r * 1.08), sh, 70)          # the faint socket shadow it sits in
     _button_disc(c, X, Y, r * fs, r, det)
+    es = P.__dict__.get('eye_shade', 0.0)                          # the brow's shadow under an overhead light hides them
+    if es > 0.01: c.fill(oval(X, Y - r * 0.1, r * 1.45 * fs, r * 1.35), mix(sh, '#000000', 0.55), int(240 * clamp(es)))
     return (X, Y, r, fs, X, Y, 1.0)
 
 
@@ -660,7 +662,7 @@ def _b3_geom(x, y, H, P, t):
     feet = [(x - f * 16 * u, y), (x + f * 20 * u, y)]
     knees = [((fx + hip[0]) / 2 + kx, y - hh / 2) for fx, _ in feet]
     lean = P.__dict__.get('b3_lean', 0.0)
-    at = math.radians(f * (40.0 * (1 - uT) + 6.0 * lean) + sway * 0.05)    # folded: bent over the crouched legs
+    at = math.radians(f * (40.0 * (1 - uT) + 14.0 * lean) + sway * 0.05)       # review 1 M6: the lunge reads    # folded: bent over the crouched legs
     T = 335.0 * u
     sh = (hip[0] + math.sin(at) * T, hip[1] - math.cos(at) * T)
     hem = (hip[0] - math.sin(at) * 70 * u, hip[1] + math.cos(at) * 70 * u)
@@ -712,7 +714,7 @@ def _b3_geom(x, y, H, P, t):
             al = math.acos(clamp((A * A + D * D - B_ * B_) / (2 * A * D), -1.0, 1.0))
             ea = a0 - al * f * side_k                         # elbows bend the WRONG way (forward / up)
             return (S[0] + math.cos(ea) * A, S[1] + math.sin(ea) * A), (S[0] + math.cos(a0) * D, S[1] + math.sin(a0) * D)
-        side_k = 1.0
+        side_k = -1.0 if P.__dict__.get('b3_elbow_out', 0.0) > 0.5 else 1.0      # elbows out, away from him (climax)
         if w > 0.001:                                          # the target is the FINGERTIPS: solve the wrist behind them
             tx, ty = P.__dict__.get(pre + 'x', 0.0) / max(w, 1e-3), P.__dict__.get(pre + 'y', 0.0) / max(w, 1e-3)
             E, W = ik((tx, ty))

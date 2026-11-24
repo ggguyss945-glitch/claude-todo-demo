@@ -266,3 +266,7 @@ have a dark-red interior and one flat upper tooth band. Dad's flaps are knit tra
   renders are the measure. `sh_lean_down_reach` keeps a ~55 px glove-to-hand gap at the end of the reach on purpose (she never touches him).
   `lina_hug_kessler` is a real hug now (pressed to him, both arms round his hips).
 - Truck, door glass, hatch and under-door scenery in the clips are stand-ins (sets own the snowflake and the mitten bunting).
+- Review 1 (picture): form 3 is floor to CEILING at her own plan point (film.figure: the set's ceiling projected there), her
+  neck runs along the ceiling with a wide bend and her shadow is thrown up onto it; tapered knit cardigan tube, 9 small shiny
+  buttons, warmer skin, `too_wide` is now a closed-lips far-too-wide smile; `eye_shade` (pose) hides button eyes in the
+  brow's shadow; `b3_elbow_out` bends her elbows away from Owen in the climax.

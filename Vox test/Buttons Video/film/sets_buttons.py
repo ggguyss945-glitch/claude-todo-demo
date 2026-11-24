@@ -65,7 +65,7 @@ BT_LWIN = (1.15, 2.55, 0.85, 2.1)
 BT_KWIN = (4.75, 6.05, 0.95, 2.1)
 BT_JAR = (5.05, 0.1)                   # the button jar on the kitchen sill board (x, y; Y = BT_UP + 0.95)
 BT_TABLE = Box(4.6, 2.35, 1.3, 0.84, BT_UP, BT_UP + 0.75, 0)
-BT_LAMPP = (4.3, 2.35)                 # the pendant lamp over the table's west half (its shade bottom 1.62 above the floor)
+BT_LAMPP = (4.05, 2.35)                # the pendant lamp over the table's west end, by Mom's chair (its shade bottom 1.52 above the floor)
 BT_FRIDGE = Box(5.95, 4.82, 0.8, 0.74, BT_UP, BT_UP + 1.82, 0)
 BT_TALL = Box(4.82, 4.9, 0.56, 0.6, BT_UP, BT_UP + 2.2, 0)       # the tall broom cabinet: the GAP is between it and the fridge
 BT_GAP = (5.1, 5.55)
@@ -769,7 +769,7 @@ def _flat(v, x, y):
 def bt_pendant(pen, v, swing=0.0, k=0.0):
     """The pendant lamp over the table: cord from the ceiling, a cone shade (bottom 1.62 m above the floor); swing (deg)
     rocks it along the table's long axis (x)."""
-    cx, cy = BT_LAMPP; Ytop = BT_UP + BT_CEIL; L = 0.88
+    cx, cy = BT_LAMPP; Ytop = BT_UP + BT_CEIL; L = 0.98
     a = math.radians(swing)
     sx = cx + math.sin(a) * L; sY = Ytop - math.cos(a) * L                  # the shade's top centre
     if v.d(cx, cy) < 0.3: return
@@ -1132,7 +1132,7 @@ def _bt_main_cfg(o):
         S['officer'] = _mk_spot(v, 'officer', 1.55, 3.6, U, 'stand', 'Officer Mensah standing by the couch, notebook out (facing +x, the kitchen)', face=(1, 0.2))
         S['frontdoor'] = _mk_spot(v, 'frontdoor', 0.55, 4.6, U, 'stand', 'just inside the front door (facing -x)', face=(-1, 0))
         S['owendoor'] = _mk_spot(v, 'owendoor', 0.45, 2.97, U, 'stand', "outside Owen's door in the living room (facing -x)", face=(-1, 0))
-        S['lamp'] = _mk_spot(v, 'lamp', BT_LAMPP[0], BT_LAMPP[1], U + 1.62, 'point', 'the pendant lamp (shade bottom); swing it with swing=f(t) deg')
+        S['lamp'] = _mk_spot(v, 'lamp', BT_LAMPP[0], BT_LAMPP[1], U + 1.52, 'point', 'the pendant lamp (shade bottom); swing it with swing=f(t) deg')
         S['laptop'] = _mk_spot(v, 'laptop', 4.12, 2.35, U + 0.75, 'surface', "Mom's laptop (screen toward her chair)")
         S['tablet_carton'] = _mk_spot(v, 'tablet_carton', 5.12, 2.35, U + 0.75, 'surface', "Owen's tablet on the milk carton")
         S['table_top'] = _mk_spot(v, 'table_top', 4.6, 2.35, U + 0.75, 'surface', 'the table top (centre)')
@@ -1193,6 +1193,7 @@ def _bt_owen_cfg(o):
         S = {}; U = BT_UP
         S['bed'] = _mk_spot(v, 'bed', BT_OBED.cx, BT_OBED.cy - 0.05, U + 0.5, 'lie', 'Owen in bed (head at the front wall by the window)')
         S['pillow'] = _mk_spot(v, 'pillow', BT_OBED.cx, 0.38, U + 0.62, 'point', 'his head on the pillow')
+        S['bed_hem'] = _mk_spot(v, 'bed_hem', BT_OBED.cx, 0.72, U + 0.64, 'point', "the quilt's top hem over his chest (lying figures clip here)")
         S['bed_edge'] = _mk_spot(v, 'bed_edge', -1.1, 1.2, U, 'seat', 'sitting on the edge of the bed (facing -x, the closet)', face=(-1, 0), seat_Y=0.5)
         S['sill_seat'] = _mk_spot(v, 'sill_seat', -1.7, 0.2, U, 'seat', 'ON the window seat, back to the window, facing the room (+y): the Blank singing at night', face=(0, 1), seat_Y=0.68)
         S['window'] = _mk_spot(v, 'window', -1.7, 0.55, U, 'stand', 'at the window, facing out (-y): he looks down at the street (leaning on the seat)', face=(0, -1))
@@ -1662,7 +1663,7 @@ class BtSchool(Room):
         cx, cy = SC_CAR
         S['kerb_owen'] = _mk_spot(v, 'kerb_owen', cx - 0.3, 0.75, SC_G, 'stand', 'Owen on the kerb by the car (facing the car, -y)', face=(0, -1))
         S['step_back'] = _mk_spot(v, 'step_back', cx - 0.5, 1.9, SC_G, 'stand', 'one step back from the kerb (he steps back, calls Mom)', face=(0, -1))
-        S['driver'] = _mk_spot(v, 'driver', cx + 0.1, cy + 0.45, SC_ROAD + 0.45, 'seat', 'the driver at the wheel (driver side toward the kerb; facing +x)', face=(1, 0), seat_Y=0.0)
+        S['driver'] = _mk_spot(v, 'driver', cx + 0.1, cy + 0.45, SC_ROAD + 0.22, 'seat', 'the driver at the wheel (driver side toward the kerb; facing +x)', face=(1, 0), seat_Y=0.0)
         S['car_window'] = _mk_spot(v, 'car_window', cx + 0.42, cy + 0.9, SC_ROAD + 1.18, 'point', 'the OPEN driver window (the arm slides out here)')
         S['hood_reach'] = _mk_spot(v, 'hood_reach', cx - 0.3, 0.75, SC_G + 1.4, 'point', "Owen's hood (her fingers stop an inch short)")
         S['rear_door'] = _mk_spot(v, 'rear_door', cx - 0.5, cy + 0.9, SC_ROAD + 0.8, 'point', 'the rear door that swings open (rear_door 0..1)')
@@ -1835,7 +1836,7 @@ def _bt_chat_draw(pen, t, msgs, show, head, typing, name, draft, draft_k, accoun
         X0, X1 = 120, 1800
     else:
         btext(pen, 'STARFORT' if theme != 'now' else 'PLAYSPACE', 70, 112, 'head', 50, '#e8d860' if theme != 'now' else '#3a6ae8', 255, 'left', 0.06)
-        btext(pen, 'chat', 330 if theme != 'now' else 380, 112, 'sans', 40, sub_, 255)
+        btext(pen, 'chat', 330 if theme != 'now' else 440, 112, 'sans', 40, sub_, 255)      # review 1: clear of the wider PLAYSPACE title
         pen.fill(rect(0, 160, 1920, 2), '#2a3458' if not light else '#d8dae0')
         card = rrect(60, 200, 640, 820, 28)
         pen.fill(card, panel)

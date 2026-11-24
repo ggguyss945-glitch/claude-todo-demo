@@ -25,6 +25,11 @@ can be checked without looking at pixels. EVERY shot type is covered (the owner'
   LIEFRAME a lying figure in a wide shot
   VANISH   a person in the shots before AND after (same room) missing from a people shot between them
   NEAR     a strong push (f >= 2) on a perspective set with people: WARN
+  CEILING  form 3 (unfolded) touches the apartment ceiling at her plan point: neck / crown not through it, not in mid-air
+  ROOF     the driver's head top under the silver car's roof (1.43 m above the road)
+  BUSTLIE  a bust turned >= 45 degrees used as a lying figure (lying figures are drawn lying, on the bed)
+  PROPGONE the red coat missing from a set shot of the Blank between two shots that show it (it never pops away / back)
+  HANDFACE the Blank's hand (any form) within 2.5 cm of Owen's face or neck (kid-safe; < 0.5 cm is an ERROR)
   CUTPOS   the same person jumping > 0.8 m across a cut on the same plan
   STATE    the story's states (see states()): who wears what (Owen in pyjamas at night, the green coat outdoors), which
            form of the Blank in which beat, Mom's glasses (glare until L277, the two circles only L195-L197), the headset
@@ -369,6 +374,72 @@ def extra_checks(k, sh, ts, acts, held):
             add('ERROR', k, 'GROUND', '%s %s %.0f px %s its floor line' % (sh.kind, name, abs(bottom - line), 'below' if bottom > line else 'above'))
 
 
+def extra_checks2(k, sh, ts, acts):
+    """Review round 1 (Buttons): CEILING, ROOF, BUSTLIE, HANDFACE (see the module doc)."""
+    p = sh.p
+    if sh.kind == 'bust' and abs(float(p.get('rot', 0.0) or 0.0)) >= 45.0:
+        add('ERROR', k, 'BUSTLIE', 'a %s bust turned %.0f deg stands in for a lying figure' % (p.get('who'), float(p['rot'])))
+    if sh.kind != 'set': return
+    sp = sh.sp; A = getattr(sh, 'A', None) or {}
+    for q in p.get('ppl', []):
+        ident = q.get('id', q['who']); a_ = A.get(ident)
+        if a_ is None: continue
+        if q['who'] == 'blank3' and p.get('room') == 'apt' and not q.get('path'):
+            s0 = FM.spot_of(sp, q['at'])
+            ceil = sp.view.p(s0.X, ST.BT_UP + ST.BT_CEIL, s0.Yp)[1]
+            tol = 3.0 + 0.012 * a_.height
+            for t in ts[::2]:
+                P_ = a_.at(t)
+                if getattr(P_, 'b3_collapse', 0.0) > 0.02 or getattr(P_, 'b3_unfold', 1.0) < 0.99: continue
+                G = CH._b3_geom(a_.x0 + P_.dx, a_.y0, a_.height, P_, t)
+                top = min(min(y for _, y in G['neck']) - G['nr'], G['head'][1] - 0.5 * G['head_h'])
+                if top < ceil - tol:
+                    add('ERROR', k, 'CEILING', "form 3's head / neck %.0f px through the ceiling at %.2f s" % (ceil - top, t), t); break
+                if top > ceil + tol:
+                    add('ERROR', k, 'CEILING', "form 3's head stops %.0f px under the ceiling at %.2f s (it must touch it)" % (top - ceil, t), t); break
+        if q.get('at') == 'driver' and p.get('room') == 'school':
+            s0 = FM.spot_of(sp, 'driver')
+            roof = sp.view.p(s0.X, ST.SC_ROAD + 1.43, s0.Yp)[1]
+            for t in ts[::3]:
+                hy = a_.where(t, 'head')[1] - 0.075 * a_.height
+                if hy < roof - 2.0:
+                    add('ERROR', k, 'ROOF', "the driver's head is %.0f px above the car roof line at %.2f s" % (roof - hy, t), t); break
+    kids = [a_ for a_ in acts if a_.who in ('owen', 'owen_pj', 'owen_coat') and not getattr(a_, '_mirror', False)]
+    blanks = [a_ for a_ in acts if a_.who in ('blank1', 'blank1_shades', 'blank2', 'blank3') and not getattr(a_, '_mirror', False)]
+    for b in blanks:
+        for o in kids:
+            ppc = o.height / 145.0; worst = None
+            for t in ts:
+                if b.who == 'blank3':
+                    if getattr(b.at(t), 'b3_collapse', 0.0) > 0.05: continue
+                    hands = [CH.b3_point(b, t, n) for n in ('tips_l', 'tips_r', 'hand_l', 'hand_r')]
+                else:
+                    hands = [b.where(t, n) for n in ('hand_l', 'hand_r')]
+                for (hx, hy) in hands:
+                    for part, r in (('head', 0.09), ('neck', 0.035)):
+                        px, py = o.where(t, part)
+                        d = (math.hypot(hx - px, hy - py) - r * o.height) / ppc
+                        if worst is None or d < worst[0]: worst = (d, t, part)
+            if worst and worst[0] < 2.5:
+                why_ = allowed('HANDFACE', sh)
+                add('INFO' if why_ else ('ERROR' if worst[0] < 0.5 else 'WARN'), k, 'HANDFACE', "the Blank's hand is %.1f cm from Owen's %s at %.2f s" % (worst[0], worst[2], worst[1]), worst[1])
+
+
+_PROPS = {}
+
+
+def check_propgone():
+    """PROPGONE: the red coat in a set shot with the Blank before AND after (< 20 s apart, same room) must be in the
+    set shots of the Blank between them (it never vanishes and comes back within a scene)."""
+    rows = sorted((k, v) for k, v in _PROPS.items())
+    for i, (k, (room, t0, t1, has_b, coat)) in enumerate(rows):
+        if not has_b or coat: continue
+        prev = next((r for r in reversed(rows[:i]) if r[1][0] == room and r[1][3] and r[1][4]), None)
+        nxt = next((r for r in rows[i + 1:] if r[1][0] == room and r[1][3] and r[1][4]), None)
+        if prev and nxt and t0 - prev[1][2] < 20.0 and nxt[1][1] - t1 < 20.0:
+            add('ERROR', k, 'PROPGONE', 'the red coat is in shots %d and %d but not here (the Blank holds it)' % (prev[0], nxt[0]))
+
+
 _CANON = {'owen_pj': 'owen', 'owen_coat': 'owen', 'blank1': 'blank', 'blank1_shades': 'blank', 'blank2': 'blank', 'blank3': 'blank'}
 
 
@@ -525,6 +596,12 @@ def check_shot(k):
                 d = math.hypot(after[0] - before[0], after[1] - before[1])
                 if d > 40: add('ERROR', k, 'PROP', '%s jumps %.0f design px when it changes state (%s) at %.2f s' % (tr.name, d, stt[0], tk), tk)
     extra_checks(k, sh, ts, acts, held)
+    extra_checks2(k, sh, ts, acts)
+    if sh.kind == 'set':
+        nms = [getattr(l, 'name', '') or '' for l in (spec.layers or [])]
+        has_b = any(q['who'] == 'blank3' for q in p.get('ppl', []))
+        coat = any(n.startswith('coat') or n == 'fallen_coat' for n in nms)
+        _PROPS[k] = (p.get('room'), sh.t0, sh.t1, has_b, coat)
     # ---- length
     if sh.d < 0.6 and sh.kind not in ('black',) and not p.get('flash'):
         add('WARN', k, 'LEN', 'a %.2f s shot (too short to read?)' % sh.d)
@@ -665,6 +742,7 @@ for k in KS:
     F._built.clear()
 check_cuts()
 check_vanish()
+check_propgone()
 states()
 if not a.no_lip: check_lips()
 
