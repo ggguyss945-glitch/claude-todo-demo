@@ -12,6 +12,7 @@
 #   ... final_mix.sh --no-preview                                        skip the preview mux
 # Steps (each one is also fine to run by hand from film/):
 #   1. python3 film.py --cues                       cue sheets from the picture -> _work/cues/{sfx,music}_cues.json
+#                                                    (skipped with --no-cues: the sheets already match the picture)
 #   2. python3 audio/mix.py ... _work/mix/final      the police mix (about 14 min, peaks at 12 GB: no render running);
 #                        the voice track has every character voice and place-effect BAKED in (timeline fx_baked):
 #                        mix.py adds no voice effect; no --who-fx
@@ -35,28 +36,29 @@
 set -euo pipefail
 FILM="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$FILM"
-W=_work; OUT=$W/mix/final
-mkdir -p "$OUT"
-# memory: if RAM runs out, the kernel kills this mix first, never the picture render running beside it
+W=_work; FINAL=$W/mix/final
+# disk (about 0.4 GB free on /): the whole mix is rendered in RAM (/dev/shm/buttons, tmpfs) and only the 24-bit FLAC,
+# the reports and the cue sheets as mixed come back to _work/mix/final; the RAM copy is deleted at the end
+RAM=${MIX_RAM:-/dev/shm/buttons_mix}; OUT=$RAM/final      # its own tmpfs folder (teammates clear /dev/shm/buttons)
+mkdir -p "$FINAL" "$OUT/stems"
 echo 1000 > /proc/self/oom_score_adj 2>/dev/null || true
-python3 film.py --cues
-# the score is rendered first in its own process (it alone peaks at about 7 GB) into a RAM cache, then the mix loads
-# it (bit-identical to rendering it inside the mix, which peaked at 9.5 GB with the voice and SFX buses held)
-export MIX_SCORE_CACHE=${MIX_SCORE_CACHE:-/dev/shm/buttons_score_cache}
-# disk (about 0.5 GB free): the float stems (about 0.8 GB) live in RAM; delete them after the measures
-mkdir -p /dev/shm/buttons_stems; [ -e "$OUT/stems" ] || ln -s /dev/shm/buttons_stems "$OUT/stems"
-rm -rf "$MIX_SCORE_CACHE"; trap 'rm -rf "$MIX_SCORE_CACHE"' EXIT      # the cache is RAM: never leave it behind
-MIXARGS="../$W/align/timeline.json ../$W/align/vo_en.wav - ../$W/cues ../$OUT --langs en --plan full --hits-db 6 --voice-ride 1.0 --bed-p50 -14 --write-cues"
+case " $* " in *" --no-cues "*) ;; *) python3 film.py --cues ;; esac
+export MIX_SCORE_CACHE=${MIX_SCORE_CACHE:-$RAM/score_cache}
+rm -rf "$MIX_SCORE_CACHE"; trap 'rm -rf "$MIX_SCORE_CACHE"' EXIT
+MIXARGS="../$W/align/timeline.json ../$W/align/vo_en.wav - ../$W/cues $OUT --langs en --plan full --hits-db 6 --voice-ride 1.0 --bed-p50 -14 --write-cues"
 ( cd audio && python3 mix.py $MIXARGS --score-only ) 2>&1 | tee "$OUT/score.log"
 ( cd audio && python3 mix.py $MIXARGS ) 2>&1 | tee "$OUT/mix.log"
 rm -rf "$MIX_SCORE_CACHE"
+# the end card (818.78-822.98, the last word ends at 818.38): the music tail dies away by the last frame, never cut
+python3 audio/end_fade.py "$OUT" 818.9 0.15
 ln -f "$OUT/mix_en.wav" "$OUT/mix.wav"
 python3 audio/measure_mix.py "$OUT" | tee "$OUT/measure.txt"
-# the owner's per-event check on every cue as mixed (_work/mix/final/events_measure.json)
-python3 audio/mk_events.py "$OUT/cues_used/sfx_cues.json" "$OUT/events.json" && python3 audio/measure_mix.py --events "$OUT/events.json" > "$OUT/events.txt"
-python3 audio/mix_scenes.py "$OUT" > "$OUT/scenes.log"
+python3 audio/mk_events.py "$OUT/cues_used/sfx_cues.json" "$OUT/events.json" && python3 audio/measure_mix.py --events "$OUT/events.json" --voice "$OUT/stems/voice_en.wav" > "$OUT/events.txt" || true
+ffmpeg -v error -y -i "$OUT/mix_en.wav" -c:a flac -sample_fmt s32 -bits_per_raw_sample 24 "$FINAL/mix_en.flac"
+cp -r "$OUT"/*.json "$OUT"/*.txt "$OUT"/*.log "$OUT/cues_used" "$FINAL"/ 2>/dev/null || true
 if [ "${1:-}" != "--no-preview" ] && [ -f "$W/preview/preview.mp4" ]; then
-  ffmpeg -v error -y -i "$W/preview/preview.mp4" -i "$OUT/mix.wav" -map 0:v -map 1:a -c:v copy \
+  ffmpeg -v error -y -i "$W/preview/preview.mp4" -i "$OUT/mix_en.wav" -map 0:v -map 1:a -c:v copy \
     -c:a aac -b:a 192k -ar 48000 -af apad -shortest -movflags +faststart "$W/preview/preview_mix.mp4"
   echo "preview: $FILM/$W/preview/preview_mix.mp4"
 fi
+[ -n "${KEEP_RAM:-}" ] || rm -rf "$OUT"

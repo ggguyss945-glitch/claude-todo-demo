@@ -82,7 +82,7 @@ def _glass(rng, scale=1.0, amp=1.0, dec=1.0):
     """A small glass jar's wall: few partials, short decays, a beating pair (glass shimmer). Never a metal ring."""
     f = np.array([1870.0, 1893.0, 3240.0, 4410.0, 6150.0]) * scale * rng.uniform(0.985, 1.015, 5)
     d = np.array([0.11, 0.09, 0.05, 0.03, 0.012]) * dec
-    a = np.array([1.0, 0.6, 0.45, 0.22, 0.08]) * amp
+    a = np.array([1.0, 0.6, 0.38, 0.12, 0.03]) * amp      # top partials low: a glassy tick, never a metal ping
     return modal(list(f), list(d), list(a), 0.35 * dec + 0.05, int(rng.integers(1 << 30)), exc=0.0005)
 
 
@@ -103,7 +103,7 @@ def r_tik(rng, sp, kind='jar', **_):
                 ev.append((lead + rng.uniform(0.02, 0.14), _plastic_tick(rng, rng.uniform(0.08, 0.22), 0.8)))
     else:
         ev[0] = (lead, _glass(rng, sc, 0.6, 0.6))
-    y = lp(_seq(ev, 0.05), 9500, 2)
+    y = lp(_seq(ev, 0.05), 7000, 2)                         # no harsh top (the full mix: never metallic or harsh)
     if kind == 'empty':
         y = reverb(y, 'box', 0.12, 0.0)
     return fade(y, 0.001, 0.06), lead, 0.0, False

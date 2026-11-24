@@ -39,6 +39,15 @@ import music_plan as MP                                   # noqa: E402
 EDIT = [           # the Buttons film (measure_mix.py + --events on the full mix)
     ('ping', 'Face down on the bed', 'Okay. Breathe', {}, {'params': {'kind': 'muffled'}},
      'the tablet face down on the bed pings once: muffled'),
+    # first full mix (24 Nov): story-beat foley buried 18-25 LU under voice + music: up, still under the voice
+    ('camera_shutter', 78.0, 80.0, {}, {'add_db': 4.0}, 'Mom lifts her phone: the photo is the clue'),
+    ('palms_glass', 173.5, 175.5, {}, {'add_db': 6.0}, 'palms on the lobby glass'),
+    ('door_creak', 236.0, 236.6, {}, {'add_db': 8.0}, '"I opened the closet." (not a rule-card creak)'),
+    ('phone_ring', 272.0, 273.0, {}, {'add_db': 4.0}, '"First ring."'),
+    ('coat_buttons', 541.0, 546.5, {}, {'add_db': 6.0}, 'the six buttons closing on her sung beats'),
+    ('marker_squeak', 587.0, 588.5, {}, {'add_db': 6.0}, '"The marker squeaked." (the Blank lunges at it)'),
+    ('marker_squeak', 588.5, 612.0, {}, {'add_db': 4.0}, 'MOM IT\'S OWEN I\'M HERE / everything'),
+    ('buttons_rolling', 639.0, 641.0, {}, {'add_db': 5.0}, 'two buttons roll and stop at her slippers'),
 ]
 THIN_MIN_GAP = 0.26
 THIN_GAIN = {None: -10.0}
@@ -50,7 +59,7 @@ THIN_QUIET = []
 ADD = [
     # ---- beds: the help line at the kitchen table, the fridge at night, the snow-day pickup, the streetlight
     ('Mom worked twelve-hour help-line shifts', 'helpline_kitchen', 0.0, None,
-     {'dur': 'until:That night, in a game chat'}, 'laptop keys, a caller in her headset, the fridge'),
+     {'dur': 'until:That night, in a game chat', 'keys': 0.3}, 'a caller in her headset, the fridge; the picture draws her keys'),
     ('After school, Mom sat behind me', 'helpline_kitchen', -2.0, None, {'dur': 'until:Rule number five'},
      'the kitchen after school: the microwave door beat'),
     ('Thursday dinner', 'helpline_kitchen', -3.0, None,
@@ -126,6 +135,13 @@ PICTURE = {
     'phone_ring_out': ('phone_ring', {'n': 1}, -14.0, 'he calls Mom: one ring in his ear'),
     'car_drive_off': ('tires_snow', {'dur': 4.0}, -8.0, 'the car pulls away on snow: just tire tracks'),
     'microwave_hum': None,
+    # the picture's impact_hit frames all sit ON a spoken word ("flashed.", "Buttons.", "see", "wide,", "circles.",
+    # just before "NO!") and doubled the plan's boosted hits 0.6-0.8 s later (music_plan EVENTS, after the words,
+    # +8..+9 LU, smooth releases): the score's word-anchored hits carry every scare
+    'impact_hit': None,
+    'radio_key': ('police_radio', {'dur': 1.2}, None, 'the crossing guard keys his radio'),
+    'cardigan_collapse': ('cardigan_fall', {'dur': 1.6}, None, 'the Blank folds down into an empty cardigan'),
+    'tablet_ping_soft': ('ping', {}, None, 'his tablet pings (every key she presses; face down on the bed)'),
     'b3_unfold': ('his_unfold', {'n': 4, 'spacing': 0.5}, -10.0, 'up, and up: the long joints unfolding behind the fridge'),
     'b3_ceiling': None,
     'ceiling_creak': ('wood_creak', {'kind': 'grind', 'dur': 2.0}, -12.0, 'her head bending along the ceiling'),
@@ -134,8 +150,8 @@ PICTURE = {
 }
 WHO_HUM = {}
 FAMILY = {'footsteps_wood_inside': 'steps', 'footsteps_porch': 'steps', 'footsteps_grass': 'steps',
-          'doorknob': 'knob', 'light_switch': 'switch', 'helpline_kitchen': 'kitchen', 'fridge_hum': 'kitchen',
-          'phone_ring': 'call', 'police_radio': 'radio', 'walkie': 'radio', 'house_night': 'kitchen',
+          'doorknob': 'knob', 'light_switch': 'switch', 'helpline_kitchen': 'kitchen', 'fridge_hum': 'flat',
+          'phone_ring': 'call', 'police_radio': 'radio', 'walkie': 'radio', 'house_night': 'flat',
           'deadbolt': 'lock', 'lock_turn': 'lock'}
 
 
@@ -196,7 +212,8 @@ ROOM = {'kitchen': ('helpline_kitchen', {}, 0.0), 'kitchen_day': ('helpline_kitc
         'snow_day': ('school_pickup', {}, 0.0), 'house_day': ('room_tone_house', {}, 0.0)}
 SPACE_MAP = {'closet': 'next_room', 'lobby': 'outside'}
 # recipes whose transient sits off the picture's frame by a fixed amount (filled by measure_mix.py on the first mix)
-SHIFT = {}                          # the Buttons film: filled from the first full mix
+SHIFT = {'cardboard_open': -0.14, 'phone_shutter': -0.05, 'coat_button_close': -0.06,   # the Buttons film: the
+         'b3_unfold': -0.3, 'cardigan_collapse': -0.3}     # first full mix's transient offsets (measure_mix.py)
 # sound fix round (critic minor 10): the cast's walk cycles emit wooden steps for every space; outdoors they are snow
 INDOOR_STEPS = ('footsteps_wood_inside', 'footsteps_hall', 'footsteps_stairs')
 OUTDOOR_SPACES = ('outside', 'snow', 'yard', 'street', 'cold_street', 'porch')

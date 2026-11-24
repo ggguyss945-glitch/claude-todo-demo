@@ -264,18 +264,25 @@ IDENTITY = [
     # 5. R5: the windowsill: sung perfectly, like a recording, again and again (bars 3-4 looped, sample-exact)
     ('That night, Mom sat on my windowsill -0.2', 'jingle', 0.38, None,
      dict(version='sill', phrases='34', loops=3, tempo=78.0, until='Rule number six -0.35', stop='fade', fade=0.6)),
-    # 6. R7: detuned, one button per beat, bent onto the Blank's sung words; STOPS with one note left (no "hug")
-    ('warm two for snug#One -0.05', 'jingle', 0.45, None,
-     dict(version='detuned', n=13, until='Six closed +0.4', stop='fade', fade=0.05,
+    # 6. R7: the box under the Blank's counting song, one button per sung beat (the picture's six coat_button_close
+    #    cues land on One / warm / two / snug / three / hug), bent onto her words and playing HER sung notes in her
+    #    tuning (follow: WORLD/pyin medians per word of timeline line 248, 24 Nov voice track; 'and' repeats 'warm',
+    #    she does not sing it), so it sits under her in tune; only the worn tines and the wow are 'detuned'. Six
+    #    buttons, fourteen notes (bars 1-2, through "hug"), then it STOPS at "Six closed." (the top button's bar
+    #    never plays)
+    ('warm two for snug#One -0.05', 'jingle', 0.4, None,
+     dict(version='detuned', n=14, amount=0.5, until='Six closed +0.1', stop='fade', fade=0.05,
+          follow=[51.69, 58.89, 56.69, 56.69, 51.69, 57.69, 55.09, 58.09, 58.74, 55.69, 55.69, 51.89, 51.89, 52.59],
           anchors=[(0.0, 'warm two for snug#One'), (0.75, 'warm two for snug#warm'), (1.5, 'warm two for snug#two'),
                    (2.0, 'warm two for snug#snug'), (3.0, 'warm two for snug#three'),
-                   (3.75, "warm two for snug#mamma's"), (4.5, 'warm two for snug#button')])),
+                   (3.75, "warm two for snug#mamma's"), (4.5, 'warm two for snug#button'),
+                   (5.0, 'warm two for snug#hug')])),
     # 7. aftermath: four notes from the empty cardigan (the real music box)
     ('From the empty cardigan#four -0.1', 'jingle', 0.35, None,
      dict(version='cardigan', until='Mom pulled out a tiny music box -0.1', stop='fade', fade=0.02)),
     #    Mom winds it and sings the real words: the real box, bar 4 on her "Mama sees you. Say goodnight."
     ('end:She wound the music box and sang along +0.1', 'jingle', 0.4, None,
-     dict(version='real', phrases='34', until='My son is ten now +0.8', stop='fade', fade=0.05,
+     dict(version='real', phrases='34', until='My son is ten now +0.2', stop='fade', fade=0.05,
           anchors=[(3.0, 'w316:Mama'), (3.75, 'w316:sees'), (4.0, 'w316:you'), (4.5, 'w316:Say'),
                    (4.75, 'w316:goodnight')])),
     # 8. the sting: the son's tablet chimes the first four notes, down the hall, in the gap before the narrator names it
