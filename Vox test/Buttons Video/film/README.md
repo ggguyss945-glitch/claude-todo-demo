@@ -1,56 +1,61 @@
-# "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH": film
+# "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET": film
 
-Night Policy's rule-format horror film, built in the Ice Cream film's machinery (`film_ice_ref.py`, kept for reference):
-the same 2.5D engine, cast and set systems, the Film class / plan() / shot builders / BUILDERS, the police header, captions,
-the global look and cue sheets derived from the picture. Everything is keyed to `W/align/timeline.json` (line starts /
-ends and word times); there is no absolute time in the plan. The villain is MR. PELL, "Hushabye" (`CAST.md`).
+Night Policy's rule-format horror film, built in the Walls film's machinery (`film_walls_ref.py`, kept for reference):
+the same 2.5D engine, the Film class / plan() / shot builders / BUILDERS, the header, captions, the global look and cue
+sheets derived from the picture. Everything is keyed to `W/align/timeline.json` (line starts / ends and per-line word
+times); there is no absolute time in the plan. The villain is the Blank (story bible; `CAST.md`, Buttons section).
 
-All commands run from this folder (`Vox test/Walls Video/film`). The work dir is `W = film/_work`.
+All commands run from this folder (`Vox test/Buttons Video/film`). The work dir is `W = film/_work`.
 
 | file | what |
 |---|---|
-| `film.py` | The shot list (306 shots, 12:01 with the 4 s end card). `plan()`: `plan_open` (L0-11 the hook + flash-forward), `plan_moving` (L12-27 moving day, the note), `plan_night1` (L28-53 the doorway, Hushabye, the mask, the GONE FOREVER box), `plan_prompt` (L54-60), `plan_rule1 .. plan_rule6`, `plan_police` (L242-268), `plan_rule7` (L269-275), `plan_outro` (L276-311), `plan_globals` (the address-song motif cues). |
-| `characters.py` + `characters_walls.py` / `CAST.md` | The cast (Walls section). |
-| `sets.py` + `sets_walls.py` / `SETS.md` | 14 Larkspur Lane and the inserts (Walls section). |
+| `film.py` | The shot list (about 357 shots, 13:43 with the 4 s end card). `plan()`: `plan_open` (L0-13 the cold open + hook), `plan_setup` (L14-33), `plan_chat` (L34-51 the game chat, the grey head filling in), `plan_rule1` (L52-77 the photo, the streetlight, the lobby glass), `plan_prompt` (L78-80), `plan_rule2` .. `plan_rule7`, `plan_after` (L297-316), `plan_sting` (L317-339), `plan_outro` (L340-384), `plan_globals` (the Button Song motif and the on-screen sounds no shot carries). |
+| `characters.py` + `characters_buttons.py` / `CAST.md` | The cast (Buttons section). |
+| `sets.py` + `sets_buttons.py` / `SETS.md` | Our block, the apartment, the school lane, the narrator's home now, the chat UI and the inserts (Buttons section). |
 | `render.py` | Stills, test clips and the full worker/slice render. |
-| `tools/validate.py` | The staging validator for EVERY shot type (see its docstring): floors, levels, ground lines (feet / knees / palms on the floor, inside the walls on the cavity plate, props on the shelf), furniture and police-car footprints, overlaps, reach, held props, lying figures only close / medium, Pell's 3/4 face, cut continuity, this film's STATE table, camera, lengths, lips. |
-| `audio/` | The sound step (reads `W/cues/*.json`). |
+| `tools/validate.py` | The staging validator for EVERY shot type (its docstring lists the checks): anchors, floors, levels, ground lines, the car, overlaps, reach, props, kid-safe distances, cut positions, the STATE table, camera, lengths, lips. |
+| `audio/` | The sound step (reads `W/cues/*.json`; owned by the sound teammate). |
 
 ## Shot kinds (film.py builders `B_<kind>`)
-- `set`: a set view with figures on the plan (anchors or (x, y, Y)); `cam=MC(at, ang, d)` frames a figure from a plan point
-  (eye inside the room, look point at screen centre); `c=ZO(f, anchor | '@actor', h=)` pushes in on an anchor / actor.
-- `bust`: face close-ups over the blurred set (`rot=90` for a face on a pillow); `ins`: `wl_insert` props (+ hands, + his eye
-  `EYE(...)` clipped to the vent's gaps); `prop`: drawn close-ups (the mask on its nail, the GONE FOREVER box on its shelf,
-  the plaster crack and the closet-door gap with his eye in them).
-- `wall`: inside the walls, a cutaway of the cavity (`mode` 'wall' | 'attic' | 'chase'; light through the cracks; the
-  broken-plaster frame fixed in the frame): Pell watches, eats our food, crawls, sings, shushes.
-- `rule`: Theo's dinosaur notebook, rule n large, each word appearing as it is read (`rule_write`); rule 7 stays a blank
-  line until "Believe me." (L275). `pause`: the comment prompt (stage 'ask' L54-60, 'return' L296-304). `list`: the
-  outro checklist (L285-295), every item legible while read. `card`: the outro cards.
+- `set`: a set view with figures on the plan (anchors or (x, y, Y)); `cam=MC(at, ang, d, S=)` frames from a plan point;
+  `mirror=[...]` draws figures reflected in the black microwave door (`ST.bt_mirror`); `acts` add the red coat (worn: back
+  behind him, front over him), the car arm, the rolling buttons, the flat cardigan, the narrator's hands.
+- `bust`: face close-ups over the blurred set (`rot=-90` for a face on the pillow); `ins`: `bt_insert` props (+ hands,
+  + a button dropping into the jar on its beat); `chat`: the tablet screen (`bt_chat`: the grey head filling in, Mom's
+  account at 2 a.m., the son's tablet now).
+- `rule`: the Brave List inside Owen's closet door. `list=True` is the whole list at "Rule number n" (the broken rules stay
+  pale: `INK(t)`), then rule n big, each word appearing as it is read. `blist`: the list inside a scene (a rule fading,
+  rule three staying blue, the ink coming back line by line as he writes on the fridge board).
+- `prompt`: the comment prompt (stage 'ask' L78-80, 'return' L371-377), every word on its word. `list`: the outro
+  checklist (L350-368), every item legible while read. `card`: the outro cards. `black`.
 
-## Continuity (enforced by validate.py STATE)
-Dad wears the red flannel (`dad`) only on moving day (L12-27); after that `dad_tee` / `dad_pj` and the flannel is on Pell. On moving day Pell in the wall wears his own drab work shirt (`pell_own`): one flannel at a time.
-Sam in `sam_pj` at night. Pell masked until Reyes pulls the mask off (L251), `pell_bare` after. The doorway figure is
-Pell's silhouette with Dad's tilt (`door_pell`, the hall light behind him). Lip sync only on the characters' own lines.
+## Continuity (film.py `escalate()` applies it to every actor; validate.py STATE checks it)
+Owen in pyjamas at night, the green coat outdoors (Monday, Wednesday pickup), the hoodie by day. `FADE(t)`: one step per
+secret (L60, L89, L144, L170, L203; cool, translucent, never past 0.8), gone from the microwave door only in rule six,
+back "like a photo developing" (L281-282). `PGREY(t)`: a little grey from L94, pencil grey from L205, colour back on
+"Mom" (L232). Mom's glare until she pulls her glasses off (L277); the two black circles L195-197. The Blank: form 1
+(sunglasses in the car, the reading glasses at 2 a.m.), form 2 (a little taller each time: `CH.BLANK_TALL`), form 3 from
+midnight (unfolds BESIDE the fridge, holds the coat by its seams, fingertips always short of him, collapses flat).
 
 ## Commands
 ```
 python3 film.py --list                                         # the cut list + pace
-python3 tools/validate.py --fps 8                              # staging checks; exit 1 on any ERROR (0 now)
+python3 tools/validate.py --fps 8                              # staging checks; exit 1 on any ERROR
 python3 film.py --sheet _work/shots/sheet --per 12 --tile 256 --size 640x360   # contact sheets: first | mid | last frame + the lines
-                                                               #   (+ sheet_mid_NNN.jpg: the middle frame of every shot, 6 x 12)
 python3 film.py --still 105.2,451.0 --size 960x540             # stills -> W/tests/film/
-python3 film.py --cues                                         # W/cues/sfx_cues.json, music_cues.json, shots.json
+python3 film.py --cues                                         # W/cues/sfx_cues.json, music_cues.json, shots.json, beats_cues.json
 python3 render.py --size 640x360 --fps 30 --workers 2 --crf 23 --out _work/preview_tmp --audio _work/narration/narration_en.wav
 mv _work/preview_tmp/film.mp4 _work/preview/preview.mp4        # then delete _work/preview_tmp
 ```
 
 ## Cue sheets: the sound step's contract
 `python3 film.py --cues` writes `W/cues/sfx_cues.json` (`{t, name, gain_db, pan, space, params}`: every action of the
-picture, from the shots' explicit cue lists and the cast's acting events, plus the beds), `music_cues.json` (`{duration,
-intensity, events}`: rule cards, hits, silences before the scares, the address-song motif as `jingle` events with
-`version` 'theo' | 'wall' | 'lullaby' | 'calm') and `shots.json` (the cut list with each shot's space: inside / outside /
-wall / close).
+picture, from the shots' cue lists, the cast's acting events, the beds and `plan_globals`: coat buttons, microwave hum,
+music box winding, tablet face down), `music_cues.json` (`{duration, intensity, events}`: rule cards, hits, silences
+before the scares, the Button Song as `jingle` events with `version` 'box_clean' | 'box_slow' | 'hum_slow' | 'sung_loop'
+| 'detuned' | 'four_notes' | 'box_real' | 'tablet_chime'), `shots.json` (the cut list with each shot's space) and
+`beats_cues.json` (every Tik / Ping of `W/align/beats.json` with the shot on screen and its cause; the beats are also in
+the sfx sheet as `tik` / `ping` with `params.beat`). Acting 'tik' events that are not beats become `fingertip_tap`.
 
 ## Sound: the final mix
 `bash audio/final_mix.sh` (from anywhere; about 14 min; peaks about 8 GB RAM, so it can run beside a 1-2 worker render; it sets
