@@ -5,7 +5,7 @@
 set -e
 cd "$(dirname "$0")/.."
 W=_work; S=${S:-$W/deliver/segments}; K=${K:-24}; MIX=$W/mix/final/mix_en.wav
-B=If_Your_Little_Brother_Says_Someone_Lives_In_The_Walls; H=$W/deliver/${B}_EN_1440p60_HEVC.mp4
+B=If_Your_Little_Brother_Says_Someone_Lives_In_The_Walls; H=${H:-$W/deliver/${B}_EN_1440p60_HEVC.mp4}
 n_ok=$(ls "$S"/s*/OK 2>/dev/null | wc -l)
 [ "$n_ok" -eq "$K" ] || { echo "== only $n_ok of $K segments done"; exit 1; }
 NT=$(awk '{s+=$4} END {print s}' "$S/ranges.txt")
@@ -14,8 +14,8 @@ echo "== join start $(date -u +%H:%M): $NT frames, $DUR s; mix $(ffprobe -v erro
 for k in $(awk '{print $1}' "$S/ranges.txt"); do echo "file '$(realpath "$S/s$k/seg.mp4")'"; done > "$S/list.txt"
 # Delivery audio, as in encode_chain.sh: 16.5 kHz low-pass, 4x-oversampled limiter at 0.66, 192k AAC
 ffmpeg -v error -nostdin -y -i "$MIX" -af lowpass=f=16500:poles=2,aresample=192000,alimiter=limit=0.66:attack=1:release=60:level=false,aresample=48000 \
-  -c:a aac -b:a 192k -cutoff 18000 -ar 48000 "$S/audio.m4a"
-ffmpeg -v error -nostdin -y -f concat -safe 0 -i "$S/list.txt" -i "$S/audio.m4a" -map 0:v -map 1:a -c copy \
+  -c:a aac -b:a 192k -cutoff 18000 -ar 48000 "${A:-$S/audio.m4a}"
+ffmpeg -v error -nostdin -y -f concat -safe 0 -i "$S/list.txt" -i "${A:-$S/audio.m4a}" -map 0:v -map 1:a -c copy \
   -tag:v hvc1 -metadata:s:a:0 language=eng \
   -metadata title="If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH" \
   -t "$DUR" -movflags +faststart "$H.tmp.mp4"

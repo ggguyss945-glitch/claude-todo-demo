@@ -3360,13 +3360,14 @@ def plan_police(F):
     S(W(248, 'bread'), 'dead', 'slot', st=dict(police=True), c=ZO(2.2, 'bread_bags', rate=0.02))
     S(W(248, 'box'), 'dead', 'slot', st=dict(police=True), c=ZO(2.4, 'gone_forever', ody=-20, rate=0.02))
     PR(T(249), 'box', night=True, box=dict(lid=1.0, empty=True, night=True), bg=('#1a1c24', '#07080c'), shelf=False, c=dict(mv='push', f=1.1, rate=0.03))
+    # (tex_seed: the two hall shots are rendered across several processes, so their wall textures use one stable seed)
     # 250-253 He was wearing the mask, and my dad's red flannel shirt. Reyes pulls the mask off: a tired old man, blinking. "Lawrence Pell,"
     UN = lambda **k: [P('pell', (0.2, 5.6, 2.9), face=(0.1, 3.0), id='pell', act=_A(*k.pop('pact', ()))),
                       P('reyes', (0.35, 4.75, 2.9), face=(0.2, 5.6), id='reyes', expr='calm_firm', act=_A(*k.pop('ract', ()))),
                       P('officer_w', (-0.25, 6.1, 2.9), face=(0.2, 5.6), id='off', expr='focused')]
-    S(T(250), 'hall', 'down', st=dict(HALL_N, police=True), ppl=UN(), c=ZO(2.0, (0.2, 5.4, 2.9), h=1.3))
+    S(T(250), 'hall', 'down', st=dict(HALL_N, police=True), ppl=UN(), c=ZO(2.0, (0.2, 5.4, 2.9), h=1.3), tex_seed='hall_unmask')
     S(T(251), 'hall', 'down', st=dict(HALL_N, police=True), ppl=UN(ract=(lambda a, s: a.lift_mask(W(251, 'pulled'), s.A['pell'], dur=1.6),)),
-      c=ZO(2.4, (0.25, 5.2, 2.9), h=1.5))
+      c=ZO(2.4, (0.25, 5.2, 2.9), h=1.5), tex_seed='hall_unmask')
     BU(T(252), 'pell_bare', 'hall', 'down', dict(HALL_N, police=True), cx=960, cy=600, scale=1.0, h_turn=0.35, expr='exhausted', light=PHONE,
        act=_A(blinks(T(252) + 0.5, pdur(252, 0.55), pdur(252, 0.85)), lookxy(600, 400, T(252))), c=BZ(0.015))
     BU(T(253), 'reyes', 'hall', 'down', dict(HALL_N, police=True), cx=960, cy=600, scale=0.95, h_turn=-0.3, expr='calm_firm', light=POLICE, c=BZ(0.015))
