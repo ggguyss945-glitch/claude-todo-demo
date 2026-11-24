@@ -1,15 +1,16 @@
 TITLE
-If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH
+If A Man In A Dog Head Lives In Your Walls... DON'T LOOK FOR HIM
 
 (alternates)
-If Dad Stands In Your Doorway At 3 AM... DON'T SAY GOODNIGHT
-If Your Brother Says Someone Lives In The Walls... BELIEVE HIM
+If A Man In A Dog Mask Lives In Your Walls... DON'T LOOK FOR HIM
+If A Man With A Dog's Face Lives In Your Walls... DON'T LAUGH
+If A Dog-Faced Man Tucks You In At 3 AM... DON'T SAY GOODNIGHT
+If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH
 
-Thumbnail command: DON'T LAUGH
-
+Thumbnail command: DON'T LOOK
 
 DESCRIPTION
-If your little brother says someone lives in the walls... don't laugh.
+If a man in a dog head lives in your walls, don't look for him.
 
 We moved into 14 Larkspur Lane in an August heat wave. The old owner, Mr. Pell, "just walked away." He left his green armchair, a stone frog with a key under it, his old garage code, and a note that explained every noise in the house away: the pipes, the mice, the switch that does nothing, the sealed attic.
 
@@ -62,5 +63,5 @@ horror story, scary stories, horror animation, rules horror, someone lives in th
 TIPS
 - Upload the HEVC file (If_Your_Little_Brother_Says_Someone_Lives_In_The_Walls_EN_1440p60_HEVC.mp4). Captions are burned in; you can also add the English subtitles YouTube generates.
 - Chapters work because the first one starts at 0:00; each rule chapter starts as its rule is read.
-- Thumbnail: "DON'T LAUGH" with the dog-masked man in red flannel in the doorway, the boy in bed in front (I can make it if you want).
+- Thumbnail: "DON'T LOOK" with the dog-masked man in red flannel in the doorway, the boy in bed in front (I can make it if you want).
 - Keep the channel connected in your Epidemic Sound account so the music is never claimed.
