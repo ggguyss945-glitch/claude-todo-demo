@@ -1,5 +1,5 @@
 #!/bin/bash
-# Final picture for the Walls film, rendered AND encoded chunk by chunk (run from film/):
+# Final picture for the Buttons film, rendered AND encoded chunk by chunk (run from film/):
 #   P=3 bash tools/render_encode_chain.sh > _work/logs/render_encode.log 2>&1
 # Then, once the final mix exists:  bash tools/join_chain.sh > _work/logs/join_chain.log 2>&1
 #
