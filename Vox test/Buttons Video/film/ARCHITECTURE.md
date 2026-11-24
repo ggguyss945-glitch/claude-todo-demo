@@ -181,13 +181,17 @@ configurable (`set_render_size(w, h)`) so tests can run at 960×540.
   - Levels follow the reference measurements in `analysis/AUDIO_SPEC.md`. The music must be clearly audible, not
     buried.
   - Output: −14 LUFS, true peak ≤ −1.5 dBTP, `mix_en.wav` and `mix_ru.wav` (Russian dub, same cues).
-- THIS film (the Walls film): the motif is `audio/motif_walls.py` (THEO'S ADDRESS SONG: toy / box / first / wall /
-  vent / hush / warm; `score.JINGLE_MODULE = 'motif_walls'`); the map, arc, scares and motif returns are
-  `audio/music_plan.py` (anchored to script phrases); new SFX recipes are `audio/sfx_walls.py` (exec'd by sfx.py);
-  the voice track has every character voice and place-effect BAKED in (timeline `fx_baked: true`, narrator
+- THIS film (the Buttons film): the motif is `audio/motif_buttons.py` (THE BUTTON SONG, measured from Mom's sung
+  take: box / winddown / hum / sill / detuned / real / cardigan / chime; `score.JINGLE_MODULE = 'motif_buttons'`;
+  `python3 audio/motif_buttons.py measure` checks the tune against her singing); the map, arc, scares and motif
+  returns are `audio/music_plan.py` (anchored to script phrases); new SFX recipes (tik, ping, this film's foley and
+  beds) are `audio/sfx_buttons.py` (exec'd by sfx.py); the script's 16 Tik / Ping beats come from
+  `W/align/beats.json` through `audio/beats.py` (mix.py merges them into the picture's SFX sheet; a picture cue of
+  the same kind within 0.35 s wins); `audio/sfx_plan.py` ADD places this film's beds and foley on script phrases.
+  The voice track has every character voice and place-effect BAKED in (timeline `fx_baked: true`, narrator
   `who='narrator'`): mix.py adds no voice effect. The owner's per-event check (edges, foley under the voice, scares
   +6..+10 LU) is in `audio/measure_mix.py` (`--events` alone, or in every mix measure); tests:
-  `audio/sfx_tests_walls.py`.
+  `audio/sfx_tests_buttons.py`.
 
 ### Cue sheets: the contract between picture and sound
 `film.py` writes these to `$S/pov2/cues/`.

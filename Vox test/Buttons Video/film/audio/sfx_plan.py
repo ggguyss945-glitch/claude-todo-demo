@@ -1,6 +1,6 @@
-"""sfx_plan.py: the final mix's sound-design pass over the picture's SFX cue sheet ("If Your Little Brother Says
-Someone Lives In The Walls... DON'T LAUGH"; the Ice Cream film's tables replaced: ADD, PICTURE, ROOM, SPACE_MAP,
-OFF_WORDS are this film's, EDIT and SHIFT wait for the first full mix). THIS film's tables (EDIT, ADD, PICTURE, FAMILY, ROOM, SHIFT, DOUBLE_S) are
+"""sfx_plan.py: the final mix's sound-design pass over the picture's SFX cue sheet ("If Your Mom's Eyes Turn Into
+Buttons... DON'T KEEP HER SECRET"; the Walls film's tables replaced: ADD, PICTURE, ROOM, SPACE_MAP, FAMILY are this
+film's, EDIT, SHIFT and OFF_WORDS wait for the first full mix; the Tik / Ping beats come from audio/beats.py). THIS film's tables (EDIT, ADD, PICTURE, FAMILY, ROOM, SHIFT, DOUBLE_S) are
 written for it; anchors are script PHRASES (music_plan.resolve), so they follow any voice edit or lines.py tag scheme.
 The Bus film's notes below describe the mechanism.
 
@@ -36,100 +36,83 @@ import music_plan as MP                                   # noqa: E402
 # (name, t0, t1, match params (subset), change, why). t0 / t1: anchors or seconds (the window the cue's t falls in).
 # change: {'add_db': x} | {'gain_db': x} | {'min_db': x} | {'params': {...}} | {'space': s} | {'drop': True}
 # Names here are the names AFTER the picture pass (the recipes).
-EDIT = [           # the Walls film: from the first full mix's measures (measure_mix.py + --events)
-    # only the 7 planned scares (music_plan boosts) are hits: the picture's other impact_hit frames go (the score's
-    # hits and rule stings carry those beats)
-    ('impact_hit', 148.6, 149.6, {}, {'drop': True}, 'not a planned scare ("Nobody checked.")'),
-    ('impact_hit', 197.8, 198.8, {}, {'drop': True}, 'not a planned scare (the deadbolt sounds carry "Click.")'),
-    ('impact_hit', 486.1, 487.1, {}, {'drop': True}, 'not a planned scare'),
-    ('impact_hit', 694.3, 695.3, {}, {'drop': True}, 'not a planned scare (the outro)'),
-    ('knock_door', 386.0, 387.2, {}, {'add_db': -4.0}, 'everyday knocking: +1.4 LU over the voice speaking there'),
-    ('keypad_beep', 184.0, 186.0, {}, {'add_db': -4.0}, 'the garage code at night: a beep +0.7 LU over the voice'),
-]
+EDIT = []          # the Buttons film: filled from the first full mix's measures (measure_mix.py + --events)
 THIN_MIN_GAP = 0.26
 THIN_GAIN = {None: -10.0}
 THIN_QUIET = []
 
 # --------------------------------------------------------------------------------------------- ADD
 # (anchor, name, gain_db, space, params, why). params 'dur': 'until:<anchor>' -> seconds to that anchor.
+# The script's Tik. / Ping. beats are NOT here: audio/beats.py adds them from W/align/beats.json (mix.py).
 ADD = [
-    # ---- the August nights: crickets through the window screens, the box fans (under the picture's own room tones)
-    ('A heat wave', 'box_fan', -4.0, None, {'dur': 'until:The old owner, Mr. Pell'}, '"Fans in every window."'),
-    ('That first night, I woke up at three', 'august_night', -2.0, None,
-     {'dur': "until:In the morning, Dad couldn't find"}, 'the first night: Dad in the doorway'),
-    ('On the fifth night, I went down for water', 'august_night', -4.0, None, {'dur': 'until:Rule number two'},
-     'the dark kitchen at two in the morning'),
-    ('That night, I heard chewing', 'august_night', -5.0, None, {'dur': 'until:I told Dad. Dad said I was dreaming'},
-     'the pantry at night'),
-    ('That night at two, I stood in the upstairs hall', 'august_night', -5.0, None, {'dur': 'until:Rule number five'},
-     'the upstairs hall at two'),
-    ('That night, I heard it through the wall', 'august_night', -5.0, None, {'dur': 'until:Rule number six'},
-     'the bedroom: the song in the wall'),
-    ('That night, at three, I woke up', 'august_night', -3.0, None, {'dur': 'until:Then sirens'},
-     'the 3 a.m. house, the call, the climax'),
-    # ---- the signs (the picture may draw them too: an ADD row yields to its own cue within DEDUP_S)
-    ("It still opened on Mr. Pell's old code", 'keypad', -3.0, None, {'n': 4}, 'the old code still works'),
-    ('By morning, there would be three police cars#handcuffs', 'handcuffs', -4.0, 'street', {'n': 1},
-     'the man on our curb in handcuffs'),
-    ('Click. -0.15', 'deadbolt_slow', 0.0, None, {'dur': 2.4}, 'the deadbolt turns by itself; the click before "Click."'),
-    ('The bag, folded neatly, twisted shut again#twisted', 'bread_bag', -2.0, None, {'kind': 'twist', 'dur': 1.4},
-     'the bread bag twisted shut'),
-    ('That night, I heard chewing +0.3', 'chewing', 0.0, None, {'dur': 'until:There was a crack in the plaster'},
-     '"Slow. Careful.": chewing inside the pantry wall'),
-    ('And then it was gone#crawling', 'wall_crawl', 0.0, None, {'dur': 3.5, 'speed': 1.4, 'travel': [-0.6, 0.9]},
-     'crawling away inside the wall, fast, up toward the ceiling'),
-    ('That night at two, I stood in the upstairs hall#flipped', 'light_switch', -2.0, None, {'kind': 'wall'},
-     'the switch that does nothing'),
-    ('Somewhere above me, in a place that was sealed#light', 'attic_light', 0.0, None,
-     {'dur': 'until:I flipped the switch off'}, 'the sealed attic\'s bulb comes on, buzzing'),
-    ('I flipped the switch off#off', 'light_switch', -2.0, None, {'kind': 'wall'}, 'off again'),
-    ('Then the knocking started +0.2', 'knock_door', -3.0, 'in_wall', {'n': 3, 'force': 0.55},
-     'the knocking inside the wall by the bed'),
-    # ---- 3 a.m.
-    ('I heard my dad snore#snore -0.3', 'snore', -2.0, None, {'n': 1}, 'the real Dad, asleep down the hall'),
-    ('And he tucked Theo in', 'cloth_rustle', -4.0, None, {}, 'the blanket tucked in'),
-    ('I heard the back wall of my closet slide#slide -0.5', 'closet_slide', 0.0, None, {'action': 'open', 'speed': 0.9},
-     'the closet\'s back panel slides'),
-    ("I slipped in, shut it, locked it#locked", 'lock_turn', -2.0, None, {}, 'the parents\' door locked'),
-    ('Mom grabbed her phone and dialed#dialed +0.2', 'dial_911', -2.0, 'close', {}, 'nine-one-one'),
-    ('Scratching, inside the bedroom wall', 'wall_scratch', 0.0, 'in_wall',
-     {'dur': 'until:Behind the dresser', 'travel': [-0.8, 0.0]}, 'scratching inside the bedroom wall'),
-    ('Behind the dresser', 'wall_scratch', -1.0, 'in_wall', {'dur': 1.4, 'travel': [0.0, 0.5]}, 'behind the dresser'),
-    ('Behind the headboard', 'wall_scratch', 0.0, 'in_wall', {'dur': 1.3, 'travel': [0.5, 0.9]}, 'behind the headboard'),
-    ('Then the vent by the floor rattled#rattled -0.1', 'vent_rattle', 0.0, None, {'dur': 1.2}, 'the floor vent rattles'),
-    # ---- the police
-    ('Then sirens', 'sirens_arrive', -3.0, 'outside', {'dur': 'until:The officers found him +2.0', 'n_cars': 3},
-     'three police cars arriving, through the walls'),
-    ('Heavy boots on the stairs -0.3', 'boots_stairs', 0.0, None, {'dur': 2.5, 'officers': 3, 'direction': 'up'},
-     'heavy boots up the stairs'),
-    ('When Officer Reyes pulled the mask off#pulled', 'glove_squeak', -2.0, None, {'kind': 'stretch', 'knuckles': False},
-     'the rubber mask pulled off'),
+    # ---- beds: the help line at the kitchen table, the fridge at night, the snow-day pickup, the streetlight
+    ('Mom worked twelve-hour help-line shifts', 'helpline_kitchen', 0.0, None,
+     {'dur': 'until:That night, in a game chat'}, 'laptop keys, a caller in her headset, the fridge'),
+    ('After school, Mom sat behind me', 'helpline_kitchen', -2.0, None, {'dur': 'until:Rule number five'},
+     'the kitchen after school: the microwave door beat'),
+    ('Thursday dinner', 'helpline_kitchen', -3.0, None,
+     {'dur': 'until:That night, Mom sat on my windowsill', 'keys': 0.0}, 'dinner: her headset at the window, no keys'),
+    ('Two in the morning', 'fridge_hum', 0.0, None, {'dur': 'until:After school, Mom sat behind me'}, 'the 2 a.m. kitchen'),
+    ('Two minutes to midnight', 'fridge_hum', 0.0, None, {'dur': "until:She'd put buttons where I'd never looked"}, 'the kitchen at midnight'),
+    ('That night, a woman stood under that streetlight', 'streetlight', -4.0, None,
+     {'dur': 'until:Before rule two', 'flicker': 0.0}, 'the streetlight under his window'),
+    ('Under the streetlight, someone waved', 'streetlight', -4.0, None, {'dur': 'until:Okay. Breathe', 'flicker': 0.0},
+     'the son\'s streetlight'),
+    ('Wednesday pickup', 'school_pickup', 0.0, None, {'dur': 'until:Mom came running'},
+     'kids far across the lot, a car idling, the snow\'s hush'),
+    # ---- the setup, rule 1, rule 2
+    ('She was at our lobby door, palms on the glass#palms', 'palms_glass', 0.0, 'outside', {'n': 2},
+     'palms on the lobby\'s glass door: never a knock'),
+    ('Inside my closet... click#click -0.25', 'closet_clicks', 0.0, 'closet', {'n': 3, 'spacing': 0.6},
+     'click. Click. Click. like somebody counting (each just before its word: 228.7 / 229.2 / 229.9)'),
+    ('Then, slowly, it sagged', 'cloth_rustle', -4.0, None, {}, 'the full coat sagging empty'),
+    # ---- rule 3: the car, Mr. Dunn, the police
+    ('The door swung open', 'car_door_open', -2.0, 'street', {}, 'the car door swings open'),
+    ('First ring -0.5', 'phone_ring', -3.0, 'phone', {'n': 1}, 'he calls Mom: one ring'),
+    ('His radio was already up', 'police_radio', -2.0, 'street', {'dur': 2.4}, 'the crossing guard\'s radio'),
+    ('The arm folded back in +0.6', 'tires_snow', 0.0, None, {'dur': 4.0}, 'the car pulls away: just tire tracks'),
+    ('Officer Mensah took notes', 'pen_scratch', -4.0, 'close', {'dur': 1.6}, 'his notebook'),
+    ('Mom checked every lock twice', 'lock_turn', -4.0, None, {}, 'the locks'),
+    # ---- rule 4, rule 5
+    ('Every key she pressed', 'typing', -4.0, None, {'dur': 2.2, 'cps': 6.0}, 'the Blank typing at Mom\'s laptop'),
+    ('end:Every key she pressed... my tablet pinged +0.05', 'ping', -3.0, None, {}, 'his tablet pings'),
+    ('Her head set the lamp swinging#lamp', 'lamp_swing', 0.0, None, {'dur': 4.0}, 'the lamp swinging on its cord'),
+    ('Two minutes to midnight. Officer Mensah was back', 'police_radio', -6.0, 'outside', {'dur': 3.0},
+     'his radio, low, from the hall'),
+    # ---- rule 7: the coat, the marker, the cardigan, the jar
+    ('She wrapped the coat around me', 'cloth_rustle', -3.0, None, {}, 'the coat wraps loosely around him'),
+    ('warm two for snug#One', 'coat_buttons', 0.0, None, {'times': [0.0, 0.72, 1.68, 2.32, 3.36, 4.88]},
+     'six buttons close themselves on her sung beats (One, warm, two, snug, three, hug); the top one waits'),
+    ('Under FRI, I wrote', 'marker_squeak', -3.0, None, {'strokes': 6}, 'MOM IT\'S OWEN I\'M HERE'),
+    ('The marker squeaked -0.45', 'marker_squeak', 0.0, None, {'strokes': 1}, 'the squeak the Blank lunges at'),
+    ('So I wrote everything', 'marker_squeak', -4.0, None, {'strokes': 8}, 'he writes everything'),
+    ('end:The Blank folded in on herself, down to a flat, empty cardigan -0.2', 'cardigan_fall', 0.0, None,
+     {'dur': 1.6}, 'down to a flat, empty cardigan'),
+    ('Two black buttons rolled', 'buttons_roll', 0.0, None, {'dur': 2.2}, 'two buttons roll and stop at her slippers'),
+    ('Lid on tight', 'jar_lid', 0.0, None, {'turns': 2}, 'the lid screwed tight'),
+    ('She wound the music box#wound', 'music_box_wind', -2.0, None, {'dur': 1.6}, 'she winds the real music box'),
+    ('Mom laid her phone face down', 'tablet_down', -2.0, None, {'surface': 'table'}, 'her phone face down'),
+    # ---- the sting
+    ('I opened his door', 'door_creak', -3.0, 'inside', {}, 'his door, down the hall'),
+    ('He turned the tablet face down', 'tablet_down', 0.0, None, {'surface': 'bed'}, 'the tablet face down on the bed'),
+    ('end:Face down on the bed, the tablet pinged +0.08', 'ping', 0.0, None, {'kind': 'muffled'},
+     '"pinged. Once. Still waiting." (not a beats.json beat: the narrator says it)'),
 ]
 DEDUP_S = 2.0                                             # an ADD row yields to a picture cue of its sound this close
 # a picture cue of these names closer than this to the last one of the same name is a doubled tick: dropped
-DOUBLE_S = {'light_switch': 0.3, 'porch_light': 0.3, 'leg_click': 0.09, 'door_tap': 0.25,
-            'furnace_die': 1.5}   # sound fix: leg clicks 60 ms apart were doubles (minor 6); the furnace died twice (11)
+DOUBLE_S = {'light_switch': 0.3, 'tik': 0.12, 'ping': 0.2}
 
 # picture name -> (recipe, extra params, gain or None, why); None drops the cue
 PICTURE = {
-    # the motif and every sung line are not SFX: the score's identity layer and the voice track carry them
+    # the motif and every sung line are not SFX: the score's identity layer and the voice track carry them (the
+    # son's tablet chime is the motif's 'chime' version)
     'chime': None, 'jingle': None, 'music_box': None, 'humming': None, 'singing': None, 'song': None, 'hum': None,
-    # the August heat: wind / cold names from the earlier films land on the August night
-    'wind': ('august_night', {}, None, 'the August night'), 'cold_night': ('august_night', {}, None, 'the August night'),
-    'house_hum': ('room_tone_house', {}, None, 'no furnace in August'),
-    # THIS film's picture names (full mix 1): every name the picture writes, mapped on purpose
-    'laugh': None, 'sigh': None,           # Dad's laugh / sigh are in his voice take: no canned laugh or sigh
-    'crawl_thump': None,                   # the wall_crawl recipe (from 'scuttle') carries the hand and knee thumps
-    'scuttle': ('wall_crawl', {'speed': 1.3}, None, 'the crawl inside the wall, fast'),
-    'box_set': ('box_drop', {}, -14.0, 'the GONE FOREVER box set on the top shelf'),
-    'switch_click': None,                  # a doubled tick: the picture's light_switch 0.25 s before is the flip
-    'rubber_peel': ('glove_squeak', {'kind': 'stretch', 'knuckles': False}, None, 'the rubber mask pulled off'),
-    'pipe_knock': ('knock_door', {'n': 3, 'force': 0.5}, None, 'the pipes knock, inside the wall'),
+    'tablet_chime': None,
 }
 WHO_HUM = {}
 FAMILY = {'footsteps_wood_inside': 'steps', 'footsteps_porch': 'steps', 'footsteps_grass': 'steps',
-          'doorknob': 'knob', 'light_switch': 'switch', 'morning_bus': 'bus9_morning', 'ambience_dawn': 'dawn',
-          'dial_911': 'call', 'siren_far': 'siren'}
+          'doorknob': 'knob', 'light_switch': 'switch', 'helpline_kitchen': 'kitchen', 'fridge_hum': 'kitchen',
+          'phone_ring': 'call', 'police_radio': 'radio', 'walkie': 'radio'}
 
 
 def _t(a, lines):
@@ -183,12 +166,13 @@ def _span(cn, params):
     return 0.0
 
 
-ROOM = {'house_night': ('august_night', {}, 0.0), 'night_in': ('august_night', {}, 0.0),
-        'night_out': ('august_night', {'inside': False}, 0.0), 'house_powered': ('room_tone_house', {}, 0.0),
-        'house_day': ('room_tone_house', {}, 0.0), 'morning': ('room_tone_house', {}, -3.0)}
-SPACE_MAP = {'wall': 'in_wall', 'vent': 'vent'}
+ROOM = {'kitchen': ('helpline_kitchen', {}, 0.0), 'kitchen_day': ('helpline_kitchen', {}, 0.0),
+        'kitchen_night': ('fridge_hum', {}, 0.0), 'night_in': ('fridge_hum', {}, -3.0),
+        'street_night': ('streetlight', {'flicker': 0.0}, -4.0), 'pickup': ('school_pickup', {}, 0.0),
+        'snow_day': ('school_pickup', {}, 0.0), 'house_day': ('room_tone_house', {}, 0.0)}
+SPACE_MAP = {'closet': 'next_room', 'lobby': 'outside'}
 # recipes whose transient sits off the picture's frame by a fixed amount (filled by measure_mix.py on the first mix)
-SHIFT = {}                          # the Walls film: filled from the first full mix
+SHIFT = {}                          # the Buttons film: filled from the first full mix
 # sound fix round (critic minor 10): the cast's walk cycles emit wooden steps for every space; outdoors they are snow
 INDOOR_STEPS = ('footsteps_wood_inside', 'footsteps_hall', 'footsteps_stairs')
 OUTDOOR_SPACES = ('outside', 'snow', 'yard', 'street', 'cold_street', 'porch')
@@ -198,8 +182,7 @@ STACK_S = 0.04
 VO_PATH = os.path.join(MP.W, 'align', 'vo_en.wav')
 OFF_MAX = 0.45
 ON_WORD_DB = {'impact_hit': -6.0}
-OFF_WORDS = [
-    (('deadbolt_slow', 'deadbolt', 'lock_turn'), 'And I watched the deadbolt', 'end:Click.', 'the bolt\'s click before "Click."'),
+OFF_WORDS = [                       # the Buttons film: filled from the first full mix
 ]
 
 

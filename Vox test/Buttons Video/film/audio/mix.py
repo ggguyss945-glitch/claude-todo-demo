@@ -1523,6 +1523,12 @@ def main():
                 log('  sfx plan:', ln_)
         except Exception as e:                       # the picture's sheet as it is: never fail the mix on the pass
             log('WARNING: sfx_plan.py failed (%s): the picture\'s SFX sheet as it is' % repr(e)[:160])
+    try:                                               # the Buttons film: the script's Tik. / Ping. beats (W/align/
+        import beats as BT                             # beats.json) the picture's sheet does not already carry
+        sfx_cues, blog = BT.merge(sfx_cues)
+        log(f'beats: {sum(1 for x in blog if x.endswith("added"))} of {len(blog)} tik / ping beats added')
+    except Exception as e:                             # never fail the mix on the beats
+        log('WARNING: beats.py failed (%s): no tik / ping beats added' % repr(e)[:160])
     if A.plan == 'full' or A.write_cues:               # what was mixed, for measure_mix.py (the picture's sheets stay)
         ud = os.path.join(A.out, 'cues_used'); os.makedirs(ud, exist_ok=True)
         json.dump(sfx_cues, open(os.path.join(ud, 'sfx_cues.json'), 'w'), indent=0)

@@ -1,13 +1,14 @@
 #!/bin/bash
-# Rebuild the final mix after picture changes ("If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH"),
+# Rebuild the final mix after picture changes ("If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET"),
 # from any directory:
-#   bash "Vox test/Walls Video/film/audio/final_mix.sh"          cues -> mix -> measure -> preview_mix.mp4
+#   bash "Vox test/Buttons Video/film/audio/final_mix.sh"          cues -> mix -> measure -> preview_mix.mp4
 # Prepared once (sound prep, already done; re-run only when the owner's packs change):
 #   (no new Epidemic set for this film: the linked sets of _work/samples, audio/catalog_epidemic_ice.json)
 #   python3 audio/review_sfx.py --md                _work/mix/sfx_review.md (verdicts on the new files)
-#   python3 audio/motif_walls.py                    THEO'S ADDRESS SONG's versions -> _work/mix/motif (checks, sheet)
+#   python3 audio/motif_buttons.py measure          Mom's sung notes vs the tune -> _work/mix/motif/mom_notes.json
+#   python3 audio/motif_buttons.py                  THE BUTTON SONG's versions -> _work/mix/motif (checks, sheet)
 #   python3 audio/music_plan.py --table             the music map (word-anchored on _work/align/timeline.json)
-#   python3 audio/sfx_tests_walls.py                8 test sounds -> _work/mix/tests + the owner's per-event check
+#   python3 audio/sfx_tests_buttons.py              8 test sounds -> _work/mix/tests + the owner's per-event check
 #   ... final_mix.sh --no-preview                                        skip the preview mux
 # Steps (each one is also fine to run by hand from film/):
 #   1. python3 film.py --cues                       cue sheets from the picture -> _work/cues/{sfx,music}_cues.json
@@ -41,9 +42,9 @@ echo 1000 > /proc/self/oom_score_adj 2>/dev/null || true
 python3 film.py --cues
 # the score is rendered first in its own process (it alone peaks at about 7 GB) into a RAM cache, then the mix loads
 # it (bit-identical to rendering it inside the mix, which peaked at 9.5 GB with the voice and SFX buses held)
-export MIX_SCORE_CACHE=${MIX_SCORE_CACHE:-/dev/shm/walls_score_cache}
+export MIX_SCORE_CACHE=${MIX_SCORE_CACHE:-/dev/shm/buttons_score_cache}
 # disk (about 0.5 GB free): the float stems (about 0.8 GB) live in RAM; delete them after the measures
-mkdir -p /dev/shm/walls_stems; [ -e "$OUT/stems" ] || ln -s /dev/shm/walls_stems "$OUT/stems"
+mkdir -p /dev/shm/buttons_stems; [ -e "$OUT/stems" ] || ln -s /dev/shm/buttons_stems "$OUT/stems"
 rm -rf "$MIX_SCORE_CACHE"; trap 'rm -rf "$MIX_SCORE_CACHE"' EXIT      # the cache is RAM: never leave it behind
 MIXARGS="../$W/align/timeline.json ../$W/align/vo_en.wav - ../$W/cues ../$OUT --langs en --plan full --hits-db 6 --voice-ride 1.0 --bed-p50 -14 --write-cues"
 ( cd audio && python3 mix.py $MIXARGS --score-only ) 2>&1 | tee "$OUT/score.log"

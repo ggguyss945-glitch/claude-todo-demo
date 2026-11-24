@@ -1,5 +1,7 @@
-"""Sound effects for "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH" (THIS film's names are
-WALLS_NAMES in audio/sfx_walls.py, executed after sfx_ice.py). Before it: "If The Ice Cream Truck Plays Its Song In
+"""Sound effects for "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET" (THIS film's names are
+BUTTONS_NAMES in audio/sfx_buttons.py, executed last: tik, ping, this film's foley and beds). Before it: "If Your Little
+Brother Says Someone Lives In The Walls... DON'T LAUGH" (WALLS_NAMES in audio/sfx_walls.py, executed after
+sfx_ice.py). Before that: "If The Ice Cream Truck Plays Its Song In
 Winter... DON'T GO OUTSIDE" (the police film's v2 SFX
 engine, as the delivery, dummy, Bunnyman, Doctor and Bus films extended it; THIS film's names are ICE_NAMES in
 audio/sfx_ice.py, executed here just before RECIPES; the Bus film's BUS_NAMES and every earlier name stay available): recorded, layered, perspective-processed, 48 kHz stereo float.
@@ -6332,6 +6334,9 @@ exec(compile(open(os.path.join(HERE, 'sfx_ice.py')).read(), os.path.join(HERE, '
 # THIS film, the Walls film ("If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH"): audio/sfx_walls.py
 # (its names, spaces 'in_wall' / 'in_wall_far' / 'vent', aliases and keyword guesses come last, so they win)
 exec(compile(open(os.path.join(HERE, 'sfx_walls.py')).read(), os.path.join(HERE, 'sfx_walls.py'), 'exec'))
+# THIS film, the Buttons film ("If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET"): audio/sfx_buttons.py
+# (tik, ping and this film's foley and beds; its aliases and keyword guesses come last, so they win)
+exec(compile(open(os.path.join(HERE, 'sfx_buttons.py')).read(), os.path.join(HERE, 'sfx_buttons.py'), 'exec'))
 
 RECIPES = {k: globals()['r_' + k] for k in NAMES}
 
@@ -6343,6 +6348,7 @@ PHONE_FIX = ('footsteps_wood_inside', 'footsteps_grass', 'footsteps_stairs', 'fo
              'knock_door')
 PHONE_FIX = PHONE_FIX + ICE_PHONE_FIX                  # the Ice Cream film (audio/sfx_ice.py)
 PHONE_FIX = PHONE_FIX + WALLS_PHONE_FIX                # the Walls film (audio/sfx_walls.py)
+PHONE_FIX = PHONE_FIX + BUTTONS_PHONE_FIX              # the Buttons film (audio/sfx_buttons.py)
 
 
 def phone_presence(y, floor=-12.0, max_db=12.0):

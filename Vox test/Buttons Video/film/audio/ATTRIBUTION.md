@@ -33,6 +33,29 @@ Free files (audio/catalog.json) used by this film's new recipes:
 Synthesised (no source): the chewing, the snore, nail stick-slip on studs, sheet-metal vent ticks, the keypad beeps, the
 garage opener, the attic bulb's buzz.
 
+## The Buttons film: "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET"
+
+No new outside files: every recorded source below is already in the linked libraries (read in place through
+`_work/samples` symlinks, never copied) or in the free catalogue (`audio/catalog.json`).
+
+- THE BUTTON SONG (`audio/motif_buttons.py`): our own original four-bar waltz, written from Mom's sung take in this
+  film's voice track (pitch-tracked, quantised to A major); every version synthesised here (music-box tines from
+  `audio/jingle.py`, the hums from `audio/motif_walls.py`'s voice model). No melody of any existing song.
+- Tik, ping, microwave door, marker squeak, closet clicks, coat buttons, rolling buttons, jar lid, car window,
+  tablet down, palms on glass (the pane and the palm), tyre crunch on snow: synthesised in `audio/sfx_buttons.py`.
+- Headset murmur: civitas "talk" recordings (CC0-1.0, Freesound uploads by mireia_af / Manicciola via
+  https://github.com/reneodlt/civitas), band-limited.
+- Snow-day pickup: the bus set's school ambiences (Epidemic Sound, owner subscription: "Ambience, School, Kids
+  Playground..." and "Ambience, School, Few Close, Big Crowd Of Kids, Background Walla").
+- Cardigan falling: the mirror set's "Cloth, Impact, Throw Clothes On Floor, Pile" (Epidemic Sound) with the
+  owlish cloth rustles (CC0-1.0, EternityForest Free-SFX).
+- Palms on the lobby glass: a little of the mirror set's "Glass, Friction, Finger Rub And Squeak On Glass Door"
+  (Epidemic Sound).
+- Reused earlier recipes (sources listed in their films' sections): typing, fridge hum, car idle, car door, police
+  radio, pen scratch, page flip, phone ring, door creak, lock turn, streetlight, music-box winding, cloth rustle.
+- Music: only tracks already catalogued from the owner's Epidemic sets (see `audio/score.py` TRACKS, this film's
+  table).
+
 ## This film: "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE"
 
 Epidemic Sound (the owner's subscription; catalogued in audio/catalog_epidemic_ice.json, never copied out of
