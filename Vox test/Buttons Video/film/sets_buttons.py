@@ -63,7 +63,7 @@ BT_FDOOR = (4.15, 5.05, 2.08)          # the front door on x 0 (y0 latch, y1 hin
 BT_MDOOR = (3.05, 3.9, 2.05)           # Mom's bedroom door on y 5.2 (x0 hinge, x1)
 BT_LWIN = (1.15, 2.55, 0.85, 2.1)
 BT_KWIN = (4.75, 6.05, 0.95, 2.1)
-BT_JAR = (5.05, 0.12)                  # the button jar on the kitchen sill (x, y; Y = BT_UP + 0.95)
+BT_JAR = (5.05, 0.1)                   # the button jar on the kitchen sill board (x, y; Y = BT_UP + 0.95)
 BT_TABLE = Box(4.6, 2.35, 1.3, 0.84, BT_UP, BT_UP + 0.75, 0)
 BT_LAMPP = (4.3, 2.35)                 # the pendant lamp over the table's west half (its shade bottom 1.62 above the floor)
 BT_FRIDGE = Box(5.95, 4.82, 0.8, 0.74, BT_UP, BT_UP + 1.82, 0)
@@ -72,8 +72,9 @@ BT_GAP = (5.1, 5.55)
 BT_CNT_E = Box(7.29, 2.55, 4.1, 0.62, BT_UP, BT_UP + 0.92, -90)   # the counter along the east wall (front faces -x)
 BT_CNT_B = Box(6.98, 4.89, 1.24, 0.62, BT_UP, BT_UP + 0.92, 0)    # the counter on the back wall (the sink)
 BT_STOVE = Box(7.29, 1.25, 0.76, 0.64, BT_UP, BT_UP + 0.92, -90)
-BT_MICRO = Box(7.32, 3.28, 0.62, 0.44, BT_UP + 0.92, BT_UP + 1.26, -90)
-BT_MGLASS = (3.19, 3.54, 0.98, 1.22)   # the microwave door glass on its face x 7.1 (y0, y1, Y0, Y1 above the floor)
+BT_MICRO = Box(7.32, 2.92, 0.62, 0.44, BT_UP + 1.22, BT_UP + 1.56, -90)   # on a wooden riser on the counter (its glass at a seated boy's eye level)
+BT_RISER = Box(7.32, 2.92, 0.66, 0.46, BT_UP + 0.92, BT_UP + 1.22, -90)
+BT_MGLASS = (2.83, 3.18, 1.28, 1.52)   # the microwave door glass on its face x 7.1 (y0, y1, Y0, Y1 above the floor)
 BT_MX = 7.098                          # the microwave door's plane (the mirror for bt_mirror)
 BT_COUCH = Box(2.45, 3.95, 1.9, 0.86, BT_UP, BT_UP + 0.84, -90)   # faces the front door (-x)
 # the school (its own plan): the kerb on the north at y 0, the lane y -3.2 .. 0 (one-way east), the school front y 9
@@ -85,7 +86,7 @@ NW_OFF = (0.0, 3.2, 0.0, 3.4)
 NW_HALL = (3.2, 4.4, 0.0, 6.0)
 NW_SON = (4.4, 8.0, 0.0, 3.6)
 NW_SWIN = (5.3, 6.4, 0.85, 2.05)
-NW_LAMP = (5.4, -4.4)
+NW_LAMP = (6.1, -4.4)
 
 BT_SODIUM = '#ffb468'
 BT_LAPTOP = '#bcd4ff'
@@ -117,7 +118,7 @@ _GR.setdefault('bt_ins', dict(contrast=1.04, pivot=0.25, gamma=1.04, sat=1.04, w
 _GR.setdefault('bt_ins_night', dict(contrast=1.06, pivot=0.25, gamma=1.04, sat=1.0, wb=(0.96, 1.0, 1.06), floor='#060a14',
                                     bloom=0.7, bloom_thr=230, vignette=0.48, grain=0.55, shoulder=0.5))
 _GR.setdefault('bt_screen', dict(contrast=1.0, pivot=0.25, gamma=1.0, sat=1.0, wb=(1.0, 1.0, 1.0), floor='#000000',
-                                 bloom=0.35, bloom_thr=240, vignette=0.12, grain=0.25, shoulder=0.6))
+                                 bloom=0.0, bloom_thr=250, vignette=0.94, grain=0.2, shoulder=0.7))
 
 BT_CAMS = []
 
@@ -651,9 +652,11 @@ def _bt_board_art(p_, W, H, state='birthday', k=1.0, ink=1.0):
     p_.fill(rect(0, 0, W, H), '#f6f8f6'); p_.line(rect(0, 0, W, H), 1.2 * u, '#b8bcc4')
     p_.fill(rect(0, 0, W, H), '#ffffff', 30); p_.linear(rect(0, 0, W, H), 0, 0, W, H, [(0, '#ffffff', 0), (0.4, '#ffffff', 60), (0.55, '#ffffff', 0)])
     p_.fill(rect(W * 0.08, H - 1.6 * u, W * 0.3, 1.2 * u), '#3a3a42')        # the marker tray's marker
-    btext(p_, "FRI.", 2.5 * u, 7.0 * u, 'hand', 5.6 * u, '#c8262a', 245)
-    btext(p_, "O'S BIRTHDAY", 13.5 * u, 7.0 * u, 'hand', 4.8 * u, '#c8262a', 245)
-    hx, hy = 42.6 * u, 3.2 * u
+    w1 = btext(p_, "FRI. ", 2.5 * u, 7.0 * u, 'hand', 5.4 * u, '#c8262a', 245)
+    s2 = 4.6 * u
+    while s2 > 2.5 * u and 2.5 * u + w1 + btext_width("O'S BIRTHDAY", 'hand', s2) > 40.0 * u: s2 *= 0.95
+    btext(p_, "O'S BIRTHDAY", 2.5 * u + w1, 7.0 * u, 'hand', s2, '#c8262a', 245)
+    hx, hy = 43.2 * u, 4.6 * u
     p_.fill(smooth([(hx, hy + 2.0 * u), (hx - 1.8 * u, hy), (hx - 1.0 * u, hy - 1.5 * u), (hx, hy - 0.6 * u), (hx + 1.0 * u, hy - 1.5 * u), (hx + 1.8 * u, hy)]), '#c8262a', 230)
     if state == 'birthday': return
     def kid(s, x, y, size, frac):
@@ -838,15 +841,17 @@ def _bt_micro_layer(v, o):
         if kk > 0.02:
             lx, ly = M(4.1, BT_UP + 0.9, 2.35); pen.glow(lx, ly, 40, BT_LAPTOP, int(110 * kk))
         if callable(o.get('refl')): o['refl'](pen, t, path)
-        pen.fill(path, '#000000', 70)                                       # the dark tint over everything reflected
+        cq = [M(5.6, BT_UP + 2.48, 1.2), M(5.6, BT_UP + 2.48, 4.0), M(3.6, BT_UP + 2.48, 4.0), M(3.6, BT_UP + 2.48, 1.2)]
+        pen.fill(poly(cq), '#c8c0b0' if not night else '#3a4060', 26)      # the ceiling
+        pen.fill(path, '#000000', 60)                                       # the dark tint over everything reflected
         pen.cv.restore()
         x0 = min(p_[0] for p_ in q); x1 = max(p_[0] for p_ in q); y0 = min(p_[1] for p_ in q); y1 = max(p_[1] for p_ in q)
         pen.cv.save(); pen.cv.clipPath(path, skia.ClipOp.kIntersect, True)
-        pen.linear(rect(x0, y0, x1 - x0, y1 - y0), x0, y0, x1, y1, [(0, '#ffffff', 0), (0.3, '#ffffff', 26), (0.36, '#ffffff', 0), (0.62, '#ffffff', 0), (0.66, '#ffffff', 14), (0.7, '#ffffff', 0)])
+        pen.linear(rect(x0, y0, x1 - x0, y1 - y0), x0, y0, x1, y1, [(0, '#ffffff', 0), (0.28, '#ffffff', 34), (0.36, '#ffffff', 0), (0.62, '#ffffff', 0), (0.66, '#ffffff', 18), (0.7, '#ffffff', 0)])
         pen.cv.restore()
         pen.line(path, 1.2, '#2a2a2e')
-    lay = Layer(max(0.3, v.d(BT_MX, 3.36)), draw, 'micro_glass', blur=None)
-    lay.order = max(0.3, v.d(BT_MX, 3.36)) - 0.05
+    lay = Layer(max(0.3, v.d(BT_MX, 3.0)), draw, 'micro_glass', blur=None)
+    lay.order = max(0.3, v.d(BT_MX, 3.0)) - 0.05
     return lay
 
 
@@ -854,7 +859,7 @@ def _bt_clock_layer(v, o):
     """The oven clock (green digits on the stove's backguard) and the microwave's clock: emissive. o['clock'] '11:58' or f(t)."""
     def draw(pen, t):
         s_ = o.get('clock', '6:42'); s_ = s_(t) if callable(s_) else s_
-        for (x, Y, y, sz) in ((7.535, BT_UP + 1.02, BT_STOVE.cy, 0.045), (BT_MX - 0.005, BT_UP + 1.18, 2.995, 0.022)):
+        for (x, Y, y, sz) in ((7.535, BT_UP + 1.02, BT_STOVE.cy, 0.045), (BT_MX - 0.005, BT_UP + 1.48, 2.71, 0.022)):
             if v.d(x, y) < 0.3 or v.p(x, Y, y)[0] < -200: continue
             if not v.visible((x, Y, y), (-1, 0, 0)): continue
             px, py = v.p(x, Y, y); s = v.s(x, y)
@@ -994,9 +999,15 @@ def _bt_main_cfg(o):
                     for c_ in range(3): p_.fill(rrect(46.5 + c_ * 3.8, 13 + r_ * 4.4, 2.8, 3, 0.6), '#3a3a42')
                 p_.fill(rect(42, 2, 1.2, 30), '#2e2e34')
             draw_box(pen, v, mi, {'front': dict(fill='#1a1a1e', art=art), 'all': '#26262a', 'top': '#2a2a30'}, lw=1.0)
-        P.append(Piece('microwave', (mi.cx, BT_UP + 1.08, mi.cy), micro, block=mi.footprint()))
-        for (cy_, w_) in ((1.25, 1.2), (3.65, 1.7)):
-            up = Box(7.43, cy_, w_, 0.34, BT_UP + 1.48, BT_UP + 2.25, -90)
+        rs = BT_RISER
+        def riser_micro(pen, v):                                            # one piece: the riser first, the microwave on it
+            draw_box(pen, v, rs, {'all': '#6a4a30', 'front': dict(fill='#3a281a', art=lambda p_, W, H: (
+                p_.line(rect(2, 2, W - 4, H - 4), 3.0, '#6a4a30'), p_.fill(rect(2, H / 2 - 1.5, W - 4, 3), '#6a4a30'), p_.fill(rrect(8, H / 2 + 3, 22, H / 2 - 8, 2), '#c8a060'),
+                p_.fill(rrect(36, 6, 16, H / 2 - 9, 2), '#e8e0d0')))}, lw=0.8)
+            micro(pen, v)
+        P.append(Piece('microwave', (mi.cx, BT_UP + 1.2, mi.cy), riser_micro, block=rs.footprint()))
+        for (cy_, w_, Yb) in ((1.25, 1.2, 1.48), (3.4, 2.2, 1.64)):
+            up = Box(7.43, cy_, w_, 0.34, BT_UP + Yb, BT_UP + 2.25, -90)
             P.append(Piece('cab_%d' % int(cy_ * 10), (7.43, BT_UP + 1.9, cy_), (lambda up: lambda pen, v: draw_box(pen, v, up, {'all': BT_PAL['cab'], 'front': dict(fill=BT_PAL['cab'], art=lambda p_, W, H: [
                 p_.line(rect(4 + k * W / max(1, int(W / 45)), 6, W / max(1, int(W / 45)) - 8, H - 12), 1.0, '#000000', 90) for k in range(max(1, int(W / 45)))])}, lw=1.0, skip=('bottom',)))(up)))
         # the fridge (bottom freezer, the whiteboard) and the tall cabinet: the GAP between them
@@ -1031,7 +1042,7 @@ def _bt_main_cfg(o):
                 draw_parts(pen, v, _bt_tparts(ch, '#7a5a3a', apron=0.03, thick=0.04, legw=0.035))
                 draw_box(pen, v, sub(ch, -0.2, 0.2, -0.21, -0.17, BT_UP + 0.46, BT_UP + 0.94), {'all': '#7a5a3a'}, lw=0.7)
             P.append(Piece(nm, (cx, BT_UP + 0.3, cy), chair, block=ch.footprint()))
-        stl = Box(6.62, 3.28, 0.34, 0.34, BT_UP + 0.62, BT_UP + 0.66, 0)
+        stl = Box(6.6, 2.9, 0.34, 0.34, BT_UP + 0.62, BT_UP + 0.66, 0)
         def stool(pen, v):
             for (u, n) in ((-0.13, -0.13), (0.13, -0.13), (0.13, 0.13), (-0.13, 0.13)):
                 a_ = stl.at(u, n, BT_UP); b_ = stl.at(u * 0.6, n * 0.6, BT_UP + 0.62)
@@ -1055,7 +1066,11 @@ def _bt_main_cfg(o):
         if not callable(o.get('swing')):
             P.append(Piece('pendant', (BT_LAMPP[0], BT_UP + 1.8, BT_LAMPP[1]), lambda pen, v: bt_pendant(pen, v, _lv(o, 'swing', 0.0), _lv(o, 'lamp', 0.0))))
         # the jar on the kitchen sill
-        P.append(Piece('jar', (BT_JAR[0], BT_UP + 1.0, BT_JAR[1]), lambda pen, v: bt_jar(pen, v, BT_JAR[0], BT_UP + 0.95, BT_JAR[1], o.get('jar', 'full'))))
+        sb = Box((BT_KWIN[0] + BT_KWIN[1]) / 2, 0.11, BT_KWIN[1] - BT_KWIN[0] + 0.16, 0.22, BT_UP + BT_KWIN[2] - 0.035, BT_UP + BT_KWIN[2], 0)
+        def sill_jar(pen, v):                                               # the deep sill board the jar stands on
+            draw_box(pen, v, sb, {'all': '#e6dfcf', 'top': '#efe9da'}, lw=0.8)
+            bt_jar(pen, v, BT_JAR[0], BT_UP + BT_KWIN[2], BT_JAR[1], o.get('jar', 'full'))
+        P.append(Piece('jar', (BT_JAR[0], BT_UP + 1.0, BT_JAR[1]), sill_jar))
         # the living room: the couch facing the front door, a side table and lamp, the bookshelf
         cb = BT_COUCH
         def couch(pen, v):
@@ -1097,9 +1112,9 @@ def _bt_main_cfg(o):
         S['table_mom'] = _mk_spot(v, 'table_mom', 3.66, 2.35, U, 'seat', "Mom's chair at the west end, at her laptop (facing +x); the Blank sits here at dinner", face=(1, 0), seat_Y=0.46)
         S['table_owen'] = _mk_spot(v, 'table_owen', 5.54, 2.35, U, 'seat', "Owen's chair at the east end (facing -x, his tablet on the milk carton)", face=(-1, 0), seat_Y=0.46)
         S['table_n'] = _mk_spot(v, 'table_n', 4.6, 3.03, U, 'seat', 'the chair on the north side (facing -y)', face=(0, -1), seat_Y=0.46)
-        S['stool'] = _mk_spot(v, 'stool', 6.62, 3.28, U, 'seat', 'the stool at the counter facing the microwave (+x): the microwave beat', face=(1, 0), seat_Y=0.66)
-        S['micro'] = _mk_spot(v, 'micro', BT_MX, 3.36, U + 1.1, 'point', 'the black microwave door (bt_mirror maps reflections into it)')
-        S['behind_stool'] = _mk_spot(v, 'behind_stool', 6.05, 3.25, U, 'stand', 'standing right behind the stool (the Blank in the reflection)', face=(1, 0))
+        S['stool'] = _mk_spot(v, 'stool', 6.6, 2.9, U, 'seat', 'the stool at the counter facing the microwave (+x): the microwave beat', face=(1, 0), seat_Y=0.66)
+        S['micro'] = _mk_spot(v, 'micro', BT_MX, 3.0, U + 1.4, 'point', 'the black microwave door (bt_mirror maps reflections into it)')
+        S['behind_stool'] = _mk_spot(v, 'behind_stool', 5.95, 2.78, U, 'stand', 'standing right behind the stool (the Blank in the reflection)', face=(1, 0))
         S['fridge'] = _mk_spot(v, 'fridge', 5.95, 4.08, U, 'stand', 'at the fridge, facing the board (+y): writing on it', face=(0, 1))
         S['board'] = _mk_spot(v, 'board', 5.95, 4.43, U + 1.35, 'point', 'the whiteboard on the fridge door (centre)')
         S['marker'] = _mk_spot(v, 'marker', 5.82, 4.43, U + 1.07, 'point', "the marker in the board's tray")
@@ -1278,9 +1293,9 @@ _bcam('bt_apt_wide', 640, 500, BT_UP + 1.6, 0.45, 0.7, 60, _env(), 'the kitchen 
 _bcam('bt_apt_living', 620, 500, BT_UP + 1.6, 4.3, 0.55, -42, _env(), 'from the kitchen to the living room: the couch facing the front door, Owen\'s door, the living window', 'apt')
 _bcam('bt_apt_table', 860, 520, BT_UP + 1.3, 6.1, 1.85, -80, _env(), "the table from Owen's end: Mom's chair and laptop at the far end (the Blank sits there at dinner)", 'apt')
 _bcam('bt_apt_table_back', 820, 520, BT_UP + 1.45, 2.55, 1.7, 75, _env(), "from behind Mom's chair (2 a.m.: her back, the laptop glow), Owen's end and the kitchen beyond", 'apt')
-_bcam('bt_apt_fridge', 560, 640, BT_UP + 1.25, 5.5, 1.75, 3, _env(), 'the fridge and its board, the GAP beside it to the ceiling, the tall cabinet, Mom\'s door left', 'apt', pitch=-6.0)
+_bcam('bt_apt_fridge', 540, 650, BT_UP + 1.25, 5.45, 2.05, 2, _env(), 'the fridge and its board, the GAP beside it to the ceiling, the tall cabinet, Mom\'s door left', 'apt', pitch=-6.0)
 _bcam('bt_apt_board', 1350, 540, BT_UP + 1.35, 5.95, 3.55, 0, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)), 'close on the whiteboard', 'apt')
-_bcam('bt_apt_micro', 1150, 520, BT_UP + 1.36, 5.95, 3.12, 86, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)), 'over Owen\'s shoulder on the stool into the black microwave door', 'apt', pitch=7.0)
+_bcam('bt_apt_micro', 1150, 540, BT_UP + 1.45, 6.2, 3.16, 98, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)), 'over Owen\'s left shoulder on the stool into the black microwave door (it reflects him and Mom at her end of the table)', 'apt', pitch=2.0)
 _bcam('bt_apt_window', 900, 520, BT_UP + 1.35, 5.3, 1.9, 182, _env(), 'the kitchen window, the button jar on its sill, the street beyond', 'apt')
 _bcam('bt_apt_momdoor', 820, 520, BT_UP + 1.2, 5.6, 2.3, -38, _env(), "from Owen's seat to Mom's bedroom door (the Blank in front of it)", 'apt')
 _bcam('bt_apt_clock', 1300, 540, BT_UP + 1.05, 6.55, BT_STOVE.cy, 90, _env(x=(930, 990), y=(510, 570), zoom=(1.0, 1.05)), 'close on the oven clock (11:58 -> 12:00)', 'apt')
@@ -2018,7 +2033,7 @@ def _nw_cfg(which, o):
 _bcam('bt_now_desk', 900, 600, BT_UP + 1.35, 1.65, 1.6, 0, _env(), "the narrator's desk: the laptop, the headset, the jar (lid off, empty), the lamp", 'now', pitch=10.0)
 _bcam('bt_now_hall', 640, 500, BT_UP + 1.6, 3.8, 0.3, 4, _env(), "down the hall to his son's door (ajar, the tablet's glow)", 'now')
 _bcam('bt_now_son', 640, 500, BT_UP + 1.55, 4.7, 3.15, 140, _env(), "his son's room from the door: the bed, the tablet, the window onto a streetlight", 'now')
-_bcam('bt_now_window', 800, 520, BT_UP + 1.25, 7.1, 2.7, -152, _env(), 'from the bed to the window: under the streetlight, someone waves (at the window next to his)', 'now')
+_bcam('bt_now_window', 720, 520, BT_UP + 1.25, 6.3, 2.6, -176, _env(), 'from the bed to the window: under the streetlight, someone waves (at the window next to his)', 'now')
 
 
 def bt_now(view='desk', **kw):
@@ -2358,7 +2373,7 @@ def _bti_laptop(pen, t, state='line', typed=1.0, **kw):
     Delivered, left on the mat) | 'msg' (2 a.m.: Mom's account typing to Owen; typed 0..1 or f(t))."""
     pen.fill(rect(-500, -400, 2900, 1900), '#0e1220')
     sc = rrect(80, 40, 1760, 1000, 14)
-    pen.fill(sc, '#f4f6fa')
+    pen.fill(sc, '#e4e7ee')
     pen.fill(rect(80, 40, 1760, 70), '#2a3a5a')
     if state == 'line':
         btext(pen, 'HelpLine  -  Agent console', 120, 88, 'sans_b', 30, '#ffffff', 245)
@@ -2402,7 +2417,7 @@ def _bti_photo(pen, t, send=0.0, **kw):
 BT_INSERTS = {
     'brave_list': (_bti_list, 'bt_ins', 'the Brave List inside the closet door: 7 rules in blue pen, crayon border (ink [7] 1 blue .. 0 pale; words (n, k); hl n)'),
     'brave_rule': (_bti_rule, 'bt_ins', 'one rule big (n 1..7; write 0..1 words shown; ink 1 blue .. 0 pale)'),
-    'board': (_bti_board, 'bt_ins', "the fridge board: state 'birthday' | 'here' (k 0..1) | 'all' (k 0..6 items)"),
+    'board': (_bti_board, 'bt_screen', "the fridge board: state 'birthday' | 'here' (k 0..1) | 'all' (k 0..6 items)"),
     'box': (_bti_box, 'bt_ins', "the box on our doormat, Mom's name on the label (state 'closed' | 'open': the red coat, the card)"),
     'card': (_bti_card, 'bt_ins', 'the card: "Because she never even looked. Don\'t tell her."'),
     'coat': (_bti_coat, 'bt_ins_night', 'the red coat in the closet at 3 a.m.: full 1 (buttoned, somebody inside) .. 0 sagged empty (f(t))'),
@@ -2411,8 +2426,8 @@ BT_INSERTS = {
     'lock_screen': (_bti_lock_screen, 'bt_ins', "Mom's lock screen: Owen on Monday pointing at Barlow's window"),
     'glasses': (_bti_glasses, 'bt_ins', "Mom's glasses with the laptop glare (circles 0..1: two black shiny circles)"),
     'clock': (_bti_clock, 'bt_ins_night', "the oven clock (clock '11:58' / '12:00' or f(t))"),
-    'laptop': (_bti_laptop, 'bt_ins', "Mom's laptop screen: 'line' | 'delivered' | 'msg' (typed 0..1)"),
-    'photo': (_bti_photo, 'bt_ins', 'the photo out of his window in the tablet camera (send 0..1)'),
+    'laptop': (_bti_laptop, 'bt_screen', "Mom's laptop screen: 'line' | 'delivered' | 'msg' (typed 0..1)"),
+    'photo': (_bti_photo, 'bt_screen', 'the photo out of his window in the tablet camera (send 0..1)'),
 }
 
 

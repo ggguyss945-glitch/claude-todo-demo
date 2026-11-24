@@ -68,3 +68,17 @@ BUTTONS = [
     ('ins_laptop_msg', II('laptop', prop_kw=dict(state='msg', typed=0.7)), 0.5, "2 a.m.: Mom's account typing"),
     ('ins_photo', II('photo', prop_kw=dict(send=1.0)), 0.5, 'the photo out of his window: Send'),
 ]
+
+
+def _refl_test():
+    """A geometry check for the microwave mirror: dots where Owen's head (stool), Mom's head (her chair) and the Blank's
+    head (behind the stool) reflect."""
+    def refl(pen, t, clip):
+        v = ST.cam('bt_apt_micro')
+        for (x, Y, y, c) in ((6.6, ST.BT_UP + 1.32, 2.9, '#5d7fb0'), (3.66, ST.BT_UP + 1.22, 2.35, '#d9caa9'), (5.95, ST.BT_UP + 1.72, 2.78, '#9ca2aa')):
+            sx, sy, s, d = ST.bt_mirror(v, x, Y, y)
+            pen.fill(ST.oval(sx, sy, 0.1 * s, 0.12 * s), c, 230)
+    return refl
+
+
+BUTTONS += [('apt_micro_refl', G(lambda: ST.bt_apt('micro', tod='evening', laptop=1.0, lamp=1.0, refl=_refl_test())), 0.5, 'mirror check: Owen (blue), the Blank (grey), Mom (oatmeal) in the glass')]

@@ -1,6 +1,48 @@
-# SETS.md: the sets of "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH"
+# SETS.md: the sets of "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET"
 
-## Walls film (this film): `sets_walls.py`
+## Buttons film (this film): `sets_buttons.py`
+Exec'd inside `sets.py` after `sets_walls.py` (hook at the end of sets.py). Every name is `bt_* / BT_* / _bt* / sc_* / nw_*`; use
+`import sets as ST`. The module docstring has the plan (metres: x east, y north, Y up; our building's street front y 0, the
+street to the south; the apartment floor `ST.BT_UP` 3.4, ceiling 2.5). `ST.BT_API` lists every view, `ST.BT_INSERTS` every
+insert (with notes), `ST.BT_CHAT` ready message lists. Sheet + index (anchors of every still) + bench: `_work/sets/`.
+```
+python3 tools/sets_sheet_buttons.py                     # every variant -> _work/sets/sets_sheet.png + index.json
+python3 tools/sets_sheet_buttons.py --only apt_,ins_    # some -> sets_partial.png;  --keep a,b also writes bt_<name>.jpg
+python3 tools/sets_sheet_buttons.py --no_stills --bench --bench_only apt_wide   # 2560x1440 timing -> bench_2560.json
+```
+Variants (the best example of every state): `tools/sets_sheet_buttons_list.py`.
+
+| builder (views) | states (number or f(t) where it says level) |
+|---|---|
+| `bt_apt(view)`: wide, living, table, table_back, fridge, board, micro, window, momdoor, clock, door, couch | tod 'night' / 'evening' / 'day'; levels lamp (pendant), ceil, living, laptop (+laptop_on True/'closed'/False), tablet (+tablet_at), street; swing deg or f(t) (the lamp swings); board 'birthday'/'here'/'all' + board_k ('here' 0..1, 'all' 0..6 items, or f(t): written live); clock '11:58' or f(t)->str; jar 'full'/'open'/'black'/'empty'; carton (tablet on the milk carton), dinner, headset_table, mug, papers; fdoor / mdoor deg or f(t); refl=f(pen, t, clip) (the figures in the microwave: `ST.bt_mirror(sp.view, x, Y, y)` -> (sx, sy, px/m, depth), draw them mirrored with `reflection=True`) |
+| `bt_owen(view)`: wide, window, closet, bed, sill_pov | tod; lamp, ceil, tablet (+tablet_at; tablet_bed True/'down'), hall, street; sweep=`ST.bt_sweep(t0)` (headlights across the ceiling); closet deg or f(t); door (70); ink [7] (the list at room scale); coat None/'full'/'sag'/0..1/f(t); sash 0..1 or f(t) ("sliding shut"); bed |
+| `bt_street(view)`: from_window, lobby_pov, lamp, lamp_close, lobby, barlow, shopwin | tod; win {next, owen, living, kitchen, e1, e2} lit windows; sweep=`ST.bt_sweep(t0)` (a car passes, the light sweeps her face); snow (old snow at the kerbs) |
+| `bt_lobby(view)`: door, close | tod (the street through the glass) |
+| `bt_school(view)`: wide, curb, window, dunn, back | car True/False (then only tire tracks); rear_door 0..1 or f(t); win_open (default True: the DRIVER window is open); snow level / f(t) |
+| `bt_now(view)`: desk, hall, son, window | lamp, laptop, tablet, hall, street; headset 'desk'/'stand'/None; jar 'empty'/'empty_on'; tablet_bed 'up'/'down'; door (18 = ajar) or f(t) |
+| `bt_chat(msgs, show, head, typing, name, draft, draft_k, account, banner, theme)` | full-frame tablet screen; head 0..7 = the grey head filling in (bun, cardigan, freckles, car, pancakes, song, then the BUTTONS click on); account 'mom' (2:04 AM, light app); theme 'now' (the son's tablet) |
+| `bt_insert(name, prop_kw, motion)` | brave_list (ink [7] 1 blue .. 0 pale, words (n, k) word by word, hl n), brave_rule (n, write, ink), board, box ('closed'/'open'), card, coat (full f(t)), jar (state, bg 'sill'/'sill_day'/'desk'), music_box (crank), lock_screen, glasses (circles 0..1), clock, laptop ('line'/'delivered'/'msg'), photo (send) |
+
+Key anchors: apt `table_mom` (seat, the Blank at dinner), `table_owen`, `stool` (the microwave beat; in line with
+`table_mom` so the door reflects both), `behind_stool`, `micro`, `fridge`, `board`, `marker`, `fridge_gap` (the creepy form
+unfolds BESIDE the fridge; `gap_top` the ceiling over it), `counter_e`, `momdoor` (the Blank in front of Mom's door),
+`window_k`, `jar`, `couch_door` (the headset lady facing the front door), `officer`, `lamp`, `slippers`; owen `bed`,
+`pillow`, `sill_seat` (seat), `window`, `closet`, `closet_in`, `coat`, `list`, `door_in`; street `under_lamp`, `owen_window`,
+`next_window` (she waves at it), `glass_out` / `glass` (palms on the lobby door), `barlow_walk`, `barlow_mom`, `coat`;
+lobby `glass_out` / `glass_in`; school `kerb_owen`, `step_back`, `driver` (draw her between the layers car_body and
+car_kerb_side), `car_window` (the arm comes out here), `hood_reach`, `dunn`, `dunn_owen`, `mensah`, `mom_run`; now
+`desk_chair`, `jar`, `headset`, `son_door`, `doorway`, `bed_sit`, `kneel`, `tablet_bed`, `lamp_spot` (outside: figures seen
+through a window take order `sp.info['out_order']`).
+Night rule: the frame is dark, the subject lit (the streetlight through Owen's window, the laptop, the tablet, the pendant,
+the oven clock, the lobby glow, Barlow's window). Bench 2560 (warm frame): 0.15-0.2 s; the street with headlights 0.4 s.
+Open: the car is a projected side-view model (fine for side and 3/4 views, not from the front); the sash overlay reads as a
+plain frame; no plan map for this film.
+
+---
+
+# (reference) The Walls film's sets
+
+## Walls film: `sets_walls.py`
 Exec'd inside `sets.py` after `sets_ice.py` (hook at the end of sets.py). Every name is `wl_* / WL_* / _wl*`; use
 `import sets as ST`. The module docstring has the full plan (14 Larkspur Lane, metres: x east, y north from the front
 wall, Y up; ground floor Y 0, upstairs `WL_UP` 2.9, yards `WL_G` -0.5, road `WL_ROAD` -0.62). `ST.WL_API` lists every
