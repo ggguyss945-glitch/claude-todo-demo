@@ -162,6 +162,8 @@ def render(version, anchors=None, tempo=None, seed=0, loops=None, amount=None, p
         c = TUNE_CENTS
         if v in ('box', 'real', 'cardigan', 'sill', 'winddown'):
             c += WORN.get(m, 0) * (1.0 + 1.5 * (v == 'winddown'))
+        if v == 'detuned' and fol:                          # under her sung line: her tuning, only the wear
+            return float(np.median([(f - round(f)) * 100.0 for f in fol if f is not None])) + WORN.get(m, 0) * 1.5
         if v == 'detuned':                                  # every tine wrong, and the whole thing sagging flat
             c += WORN.get(m, 0) * 6 + rng.uniform(-35, 35) * a - 55.0 * a * (k / max(1, nn - 1)) ** 1.5
         return c
