@@ -3,7 +3,7 @@
     python3 align.py --asr-only ...      transcribe only (writes asr_cache.json + transcript.txt, no lines.py needed)
     python3 align.py --write-pauses ...  also rewrite each L(...) row of lines.py with the measured pause / pace
 Defaults: W/narration/narration_en.wav, the Parakeet TDT 0.6b v2 int8 dir ($PARAKEET_DIR or the scratchpad models dir),
-W/align, with W = Walls Video/film/_work. Script: Walls Video/film/script/lines.py (tools/vo_lines.py; the recording is
+W/align, with W = film/_work. Script: film/script/lines.py (tools/vo_lines.py; the recording is
 the truth). With W/narration/edit_list.json (tools/vo_edit.py) the line bounds are the edit's own (exact); the matched
 bounds are only compared with them (printed), and every line also gets its recognised words ('words': [[w, t], ...]).
 ASR: Silero VAD (vad.onnx beside the Parakeet dir) finds speech; neighbouring segments are merged into chunks of at most
@@ -30,7 +30,7 @@ import difflib, json, os, re, sys
 import numpy as np, soundfile as sf, librosa
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(os.path.dirname(HERE))                               # .../Walls Video
+ROOT = os.path.dirname(os.path.dirname(HERE))                               # .../Buttons Video
 W = os.path.join(ROOT, 'film', '_work')
 MODELS = os.environ.get('VO_MODELS') or '/tmp/claude-0/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/scratchpad/models'
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
@@ -134,7 +134,7 @@ NUM = {'zero': '0', 'oh': '0', 'one': '1', 'two': '2', 'to': '2', 'too': '2', 't
        'mr': 'mister', 'dr': 'doctor', 'thirteen': '13', 'fifty': '50', 'eighty': '80', 'nineteen': '19', 'twenty': '20',
        'seventy': '70', 'hundred': '100', 'gray': 'grey', 'shh': 'sh', 'shhh': 'sh', 'genes': 'jeans', 'ninety': '90', 'thirty': '30', 'forty': '40',
        'lena': 'lina', 'lenas': 'linas', 'leena': 'lina', 'pajamas': 'pyjamas', 'muster': 'mister',
-       'kesslers': 'kesslers', 'fiftyeight': '58', 'sixtyeight': '68'}   # spellings of this film ("Lena" for Lina, "Muster" for Mr.)
+       'mamma': 'mama', 'mammas': 'mamas', 'mensa': 'mensah', 'mensas': 'mensah'}   # spellings of this film ("Mamma" for Mama)
 JOIN = {('any', 'more'): 'anymore', ('arm', 'chair'): 'armchair', ('grown', 'up'): 'grownup', ('2', 'night'): 'tonight',
         ('rear', 'view'): 'rearview', ('land', 'line'): 'landline', ('type', 'writer'): 'typewriter',
         ('peep', 'hole'): 'peephole', ('street', 'light'): 'streetlight', ('wheel', 'chair'): 'wheelchair',
@@ -177,7 +177,7 @@ for k, (w, _) in enumerate(words):
         asr.append(n); aw.append(k)
 script, owner = [], []
 for i, l in enumerate(LINES):
-    for n in toks(l['en']): script.append(n); owner.append(i)
+    for n in toks(l['say']): script.append(n); owner.append(i)       # what the take says ('en' is the caption)
 sm = difflib.SequenceMatcher(None, script, asr, autojunk=False)
 fk, lk, nmatch = {}, {}, {}                                     # line -> first / last matched ASR word index, matched count
 for blk in sm.get_matching_blocks():
@@ -222,14 +222,14 @@ while i < len(LINES):
     a = lk[max(k for k in fk if k < i)] + 1 if any(k < i for k in fk) else 0
     b = fk[j] if j < len(LINES) else len(words)
     if b > a:
-        run = list(range(i, j)); size = [max(1, len(toks(LINES[r]['en']))) for r in run]
+        run = list(range(i, j)); size = [max(1, len(toks(LINES[r]['say']))) for r in run]
         cut, acc = [a], 0
         for sz in size: acc += sz; cut.append(a + round((b - a) * acc / sum(size)))
         for r, c0, c1 in zip(run, cut, cut[1:]):
             if c1 <= c0: continue
             fk[r], lk[r] = c0, c1 - 1
             heard = ''.join(re.sub(r'[^a-z]', '', words[q][0].lower()) for q in range(c0, c1))
-            score[r] = difflib.SequenceMatcher(None, re.sub(r'[^a-z]', '', LINES[r]['en'].lower()), heard).ratio()
+            score[r] = difflib.SequenceMatcher(None, re.sub(r'[^a-z]', '', LINES[r]['say'].lower()), heard).ratio()
             gapfill.append((r, ' '.join(words[q][0] for q in range(c0, c1))))
     i = j
 first = {i: words[k][1] for i, k in fk.items()}
@@ -368,7 +368,7 @@ if os.path.exists(EDL) and os.path.abspath(EN) == os.path.abspath(os.path.join(W
           f'{sum(1 for d in dev if d > 0.1)} lines differ by more than 0.1 s')
     en_st = [e['out'][0] for e in el]; en_en = [e['out'][1] for e in el]
     pause_rec = [round(max(0.0, (en_st[k + 1] if k + 1 < len(LINES) else DUR) - en_en[k]), 2) for k in range(len(LINES))]
-rate = [len(re.sub(r'[^A-Za-z0-9]', '', spoken(l['en']))) / max(0.2, en_en[k] - en_st[k]) for k, l in enumerate(LINES)]
+rate = [len(re.sub(r'[^A-Za-z0-9]', '', spoken(l['say']))) / max(0.2, en_en[k] - en_st[k]) for k, l in enumerate(LINES)]
 med = float(np.median([r for r, l in zip(rate, LINES) if len(l['en']) >= 20]))
 pace_rec = [round(r / med, 2) for r in rate]                      # speaking rate vs the narrator's median (1.0)
 
@@ -380,7 +380,8 @@ else:
     sf.write(_vo, en48, SR, subtype='PCM_24')
 tl = {'duration_en': round(DUR, 3), 'lines': [], 'dub': [], 'fx_baked': True}   # every line's fx is already in the voice track
 for k, l in enumerate(LINES):
-    tl['lines'].append({'i': k, 'who': l['who'], 'tag': l['tag'], 'fx': l['fx'], 'en': l['en'], 'ru': l['ru'],
+    tl['lines'].append({'i': k, 'who': l['who'], 'tag': l['tag'], 'fx': l['fx'], 'en': l['en'], 'say': l['say'], 'ru': l['ru'],
+                        'beats': l.get('beats', []),
                         'pause': l['pause'], 'pace': l['pace'], 't': round(en_st[k], 3), 'end': round(en_en[k], 3),
                         'found_en': k in first, 'match': round(score[k], 2), 'pause_rec': pause_rec[k], 'pace_rec': pace_rec[k],
                         'ru_src': None, 'found_ru': False, 'fx_baked': bool(l['fx']),

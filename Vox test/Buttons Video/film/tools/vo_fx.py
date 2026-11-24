@@ -1,26 +1,26 @@
-"""Voice places for "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH" (Night Policy), baked into
-the voice track by tools/vo_edit.py (lines.py 'fx'; the mix must not add them again). Tasteful and intelligible: every
+"""Voice places for "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET" (Night Policy), baked into the
+voice track by tools/vo_edit.py (lines.py 'fx'; the mix must not add them again). Tasteful and intelligible: every
 processed line is loudness-matched to the dry line (+ OFFSET) and must still pass the recogniser on its own
-(tools/vo_asrcheck.py --every).
-    ceiling  Mr. Pell's "Off." from inside the sealed attic, right above Sam's head: through the ceiling board (top rolled
-             off from 2.6 kHz, the board's 300 Hz thump), the attic's small, dead air around it (0.35 s, -16 dB)
-    wall     inside the wall by Sam's bed (the address song, the excuses): drywall in front (low-pass 2.2 kHz, a 180 Hz
-             panel resonance, a little consonant leak from the top kept at -16 dB), the stud bay behind (a 40 ms
-             boxy cavity, -13 dB)
-    mask     in the room, through the rubber mask ("Hush-a-bye", "Shhh. Just the pipes."): subtle; the mask's cavity
-             (a 1.2 ms comb, -12 dB), a soft 900 Hz box (+1.5 dB), the top a little dulled (-3.5 dB from 4 kHz)
-    vent     through the floor vent's grille ("Hush-a-bye. That's my house."): a sheet-metal duct: band 220 Hz-5.5 kHz,
-             three narrow duct modes (680, 1450, 2350 Hz), a short metallic flutter (3.1 ms, decaying in 90 ms, -9 dB)
-    phone    the dispatcher on Mom's phone speaker: 320 Hz-3.6 kHz, a small speaker's 1.9 kHz lift, light soft
-             saturation, every word clear
-    outdoor  Mr. Pell unmasked at the curb: dry (the mix adds the night street)
+(tools/vo_asrcheck.py --every). Nothing is time-stretched: "slower" is only ever an effect (a late, lower double).
+    whisper  the Blank's chat messages, the card, "I see you." and the sting (read whispered in her take): close and
+             intimate (+2.5 dB proximity under 180 Hz, +1.5 dB air at 4.5 kHz), a faint cold digital sheen: a
+             sample-held copy of the top (> 3.5 kHz, aliasing like a cheap screen speaker, -24 dB) and a 1.7 ms comb (-17 dB)
+    car      her car line, as dry as the real Mom (the viewer must not hear a difference): a hint of the cabin (0.12 s,
+             -26 dB) only
+    double   2 a.m. and dinner: a subtle, too-smooth double: two WORLD copies (+9 cents at 14 ms, -12 dB; -7 cents at
+             23 ms, -16 dB), the top smoothed (-1.5 dB from 7 kHz)
+    tall     the cold open, midnight, the climax and her song: the tall form: a lower, detuned double (WORLD: -3 semitones,
+             formants x0.90 = a longer throat, 20 ms late, -9 dB), a second copy +14 cents (9 ms, -14 dB), a touch of
+             size (a 0.9 s room, 25 ms pre-delay, -17 dB) and body (+2 dB under 160 Hz)
+    phone    Mom's "Baby? I'm at the table. Where are you?" on Owen's phone speaker: 320 Hz-3.6 kHz, a small speaker's
+             1.9 kHz lift, light soft saturation, every word clear
 """
 import numpy as np
 from scipy import signal
 
 SR = 48000
-OFFSET = {'ceiling': -2.0, 'wall': -2.5, 'mask': -0.5, 'vent': -2.0, 'phone': -1.0, 'outdoor': 0.0}
-TAIL = {'ceiling': 0.30, 'wall': 0.06, 'mask': 0.0, 'vent': 0.10, 'phone': 0.0, 'outdoor': 0.0}   # decay past the line (s)
+OFFSET = {'whisper': -1.0, 'car': 0.0, 'double': 0.0, 'tall': 0.5, 'phone': -1.0}
+TAIL = {'whisper': 0.0, 'car': 0.08, 'double': 0.03, 'tall': 0.70, 'phone': 0.0}   # decay past the line (s)
 
 
 def _sos(kind, f, order=2, q=None):
@@ -67,42 +67,60 @@ def speech_db(y):
     return float(np.median(p[p > p.max() - 20]))
 
 
-def ceiling(y):
-    pad = np.concatenate([y, np.zeros(int(TAIL['ceiling'] * SR))])
-    z = signal.sosfilt(_sos('lowpass', 2600, 4), pad)
-    z = peak(z, 300, 2.5, 1.0)
-    z = mix_wet(z, signal.fftconvolve(z, room(0.4, 0.35, 3000, 11))[:len(z)], -16)
+def _pad(y, fx):
+    return np.concatenate([np.asarray(y, dtype=np.float64), np.zeros(int(TAIL[fx] * SR))])
+
+
+def _late(y, sec):
+    d = int(sec * SR)
+    return np.concatenate([np.zeros(d), y[:len(y) - d]])
+
+
+def world(y, semis=0.0, alpha=1.0):
+    """The line re-synthesised by WORLD with its pitch moved (semitones) and its formants warped (alpha)."""
+    import pyworld as pw
+    from vo_voices import warp_envelope
+    x = np.ascontiguousarray(y, dtype=np.float64)
+    f0, t = pw.harvest(x, SR, f0_floor=70.0, f0_ceil=800.0, frame_period=5.0)
+    sp = pw.cheaptrick(x, f0, t, SR); ap = pw.d4c(x, f0, t, SR)
+    if alpha != 1.0: sp = warp_envelope(sp, alpha)
+    z = pw.synthesize(np.ascontiguousarray(f0 * 2 ** (semis / 12)), np.ascontiguousarray(sp), np.ascontiguousarray(ap), SR, 5.0)
+    return np.concatenate([z, np.zeros(max(0, len(x) - len(z)))])[:len(x)]
+
+
+def whisper(y):
+    z = shelf(_pad(y, 'whisper'), 180, 2.5, high=False)
+    z = peak(z, 4500, 1.5, 0.8)
+    top = signal.sosfilt(_sos('highpass', 3500, 4), z)
+    held = np.repeat(top[::5], 5)[:len(top)]                         # sample-and-hold: a cheap screen speaker's aliasing
+    held = signal.sosfilt(_sos('highpass', 3500, 2), held)
+    z = mix_wet(z, held, -24)
+    d = int(0.0017 * SR); c = np.zeros_like(z); c[d:] = z[:-d]
+    return mix_wet(z, c, -17)
+
+
+def car(y):
+    z = _pad(y, 'car')
+    z = mix_wet(z, signal.fftconvolve(z, room(0.12, 0.08, 3500, 21))[:len(z)], -26)
     return z
 
 
-def wall(y):
-    pad = np.concatenate([y, np.zeros(int(TAIL['wall'] * SR))])
-    body = signal.sosfilt(_sos('lowpass', 2200, 4), pad)
-    body = peak(body, 180, 3.0, 1.2)
-    leak = signal.sosfilt(_sos('highpass', 2500, 2), pad)
-    z = body + leak * 10 ** (-16 / 20)
-    z = mix_wet(z, signal.fftconvolve(z, room(0.06, 0.04, 2500, 12))[:len(z)], -13)
-    return z
+def double(y):
+    z = _pad(y, 'double')
+    a = _late(world(z, semis=0.09), 0.014)                           # +9 cents
+    b = _late(world(z, semis=-0.07), 0.023)                          # -7 cents
+    z = mix_wet(mix_wet(z, a, -12), b, -16)
+    return shelf(z, 7000, -1.5, high=True)
 
 
-def mask(y):
-    d = int(0.0012 * SR)
-    z = y.copy(); z[d:] += 10 ** (-12 / 20) * y[:-d]
-    z = peak(z, 900, 1.5, 1.1)
-    return shelf(z, 4000, -3.5, high=True)
-
-
-def vent(y):
-    pad = np.concatenate([y, np.zeros(int(TAIL['vent'] * SR))])
-    z = signal.sosfilt(_sos('bandpass', [220, 5500], 2), pad)
-    for f, g in ((680, 5.0), (1450, 4.0), (2350, 3.0)):
-        z = peak(z, f, g, 9.0)
-    n = int(0.09 * SR); ir = np.zeros(n); k = int(0.0031 * SR)
-    for j in range(1, n // k):
-        ir[j * k] = (0.72 ** j) * (1 if j % 2 else -1)
-    fl = signal.fftconvolve(z, ir)[:len(z)]
-    fl = peak(fl, 2350, 4.0, 6.0)
-    return mix_wet(z, fl, -9)
+def tall(y):
+    z = _pad(y, 'tall')
+    low = _late(world(z, semis=-3.0, alpha=0.90), 0.020)
+    det = _late(world(z, semis=0.14), 0.009)
+    w = mix_wet(mix_wet(z, low, -9), det, -14)
+    w = shelf(w, 160, 2.0, high=False)
+    rv = signal.fftconvolve(_late(w, 0.025), room(1.2, 0.9, 5000, 23))[:len(w)]
+    return mix_wet(w, rv, -17)
 
 
 def phone(y):
@@ -113,7 +131,7 @@ def phone(y):
     return signal.sosfilt(_sos('bandpass', [300, 3800], 2), z)
 
 
-FX = {'ceiling': ceiling, 'wall': wall, 'mask': mask, 'vent': vent, 'phone': phone, 'outdoor': None}
+FX = {'whisper': whisper, 'car': car, 'double': double, 'tall': tall, 'phone': phone}
 
 
 def apply(y, fx):

@@ -7620,6 +7620,10 @@ exec(compile(open(_ICE_SRC).read(), _ICE_SRC, 'exec'))
 # characters_walls.py, run here the same way (see WALLS_API / CAST.md)
 _WALLS_SRC = os.path.join(_HERE, 'characters_walls.py')
 exec(compile(open(_WALLS_SRC).read(), _WALLS_SRC, 'exec'))
+# the buttons film's cast (Owen, Mom, the Blank in three forms, Mr. Dunn, Officer Mensah, the son) lives in
+# characters_buttons.py, run here the same way (see BUTTONS_API / CAST.md)
+_BUTTONS_SRC = os.path.join(_HERE, 'characters_buttons.py')
+exec(compile(open(_BUTTONS_SRC).read(), _BUTTONS_SRC, 'exec'))
 
 
 if __name__ == '__main__' and '--selftest' in sys.argv:

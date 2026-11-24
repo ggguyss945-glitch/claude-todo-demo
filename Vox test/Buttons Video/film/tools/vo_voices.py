@@ -1,7 +1,7 @@
-"""Child voices for "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH" (Night Policy; the Ice Cream
-film's WORLD revoice). ElevenLabs will not design child voices, so Theo (6) and Sam (12) were read in ONE adult take
-(W/narration/raw/index.json: theo_and_sam_adult_take) and are re-voiced here, line by line, as tools/vo_edit.py cuts
-them (vo_edit calls voice_line(y, line) for every theo / sam line). Every other character has its own take: untouched.
+"""Child voices for "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET" (Night Policy; the Walls film's
+WORLD revoice). ElevenLabs will not design child voices, so Owen (11) and his son (10) were read in ONE adult take
+(W/narration/raw/index.json: kids_adult_take) and are re-voiced here, line by line, as tools/vo_edit.py cuts
+them (vo_edit calls voice_line(y, line) for every owen / son line). Every other character has its own take: untouched.
 
 Method: WORLD vocoder (pyworld: Harvest F0, CheapTrick envelope, D4C aperiodicity, 1 ms frames). For each voice:
   - pitch: the line's F0 is moved to the voice's median (geometric), its excursions scaled (rng) and softly limited
@@ -19,13 +19,15 @@ Method: WORLD vocoder (pyworld: Harvest F0, CheapTrick envelope, D4C aperiodicit
     the line's speech level; voiceless sounds (h, s, th, f, t, k) pass through dry with 8 ms ramps;
   - a gentle tone EQ (no chest, a little presence).
 Each processed line is loudness-matched to the same line dry (+ the voice's offset), with 12 ms fades at its edges.
-Test: python3 tools/vo_voices.py --test [theo|sam ...]   -> W/narration/tests/voices/<tag>_{dry,wet}.wav and
+Test: python3 tools/vo_voices.py --test [owen|son ...]   -> W/narration/tests/voices/<tag>_{dry,wet}.wav and
   voices_test.json: F0 in -> out, the measured formant warp (measure_warp) and Parakeet + Whisper on each line alone.
 """
 import numpy as np
 
 SR = 48000
 NAR_F0 = 168.5                                         # the narrator's median F0 (Hz), measured on the take
+KID_REF = 135.0                                        # the kids' take read quietly at ~110-135 Hz: a line above it
+                                                       # (scared, shouted) keeps its rise ('follow')
 FP = 1.0                                               # WORLD frame period (ms)
 PAD = 0.040                                            # silence padded around a line for the analysis (s)
 FRY = 0.8                                              # frames this many octaves under the line's median are creak
@@ -45,13 +47,16 @@ _B = dict(f0=None, rng=1.0, comp=None, smooth=0.0, alpha=1.0, breath=0.0, trem=N
           lu=0.0, wow=None, sag=None, morph=None, tape=None)
 _KID = dict(_B, rng=0.95, comp=0.42, breath=0.12, jit=0.004, unv=0.35, fric=True, ease=0.0, nasal=0.0)
 VOICES = {
-    'theo': dict(_KID, f0=285.0, alpha=1.26, lu=-0.5, eq=[('ls', 220, -4.0, 0.7), ('peak', 3200, 1.0, 1.0)],
-                 desc="Theo, 6: a small boy (285 Hz; a child's vocal tract, formants x1.26: from x1.28 up the recognisers heard Larkspur as marks per in the sung address), a lively melody (x0.95), "
-                      'a little breath (0.12), no chest (-4 dB under 220 Hz)'),
-    'sam': dict(_KID, f0=232.0, alpha=1.245, rng=0.90, comp=0.40, breath=0.10, lu=-0.5, nasal=-20.0,
-                eq=[('ls', 200, -3.0, 0.7), ('peak', 3000, 0.8, 1.0)],
-                desc='Sam, 12: a boy before his voice breaks (232 Hz, formants x1.245), a calmer melody (x0.90), '
-                     'a little breath (0.10), a lighter chest (-3 dB under 200 Hz)'),
+    # Owen, 11 and his son, 10: two different boys from one adult take (Walls' Sam, 12: 232 Hz, x1.245, was the start).
+    # follow: a line read above KID_REF keeps that rise to this power (the shouted "NO!" stays a full shout).
+    'owen': dict(_KID, f0=236.0, alpha=1.24, rng=1.0, comp=0.45, breath=0.10, follow=0.7, lu=-0.5, nasal=0.0,
+                 eq=[('ls', 200, -3.0, 0.7), ('peak', 3200, 1.8, 1.0)],
+                 desc='Owen, 11: a boy before his voice breaks (236 Hz, formants x1.24), a lively melody (x1.0), '
+                      'bright (+1.8 dB at 3.2 kHz), a little breath (0.10), a lighter chest (-3 dB under 200 Hz)'),
+    'son': dict(_KID, f0=270.0, alpha=1.28, rng=0.85, comp=0.38, breath=0.16, follow=0.6, lu=-1.0, nasal=-20.0,
+                eq=[('ls', 220, -4.0, 0.7), ('peak', 3000, 0.5, 1.0), ('hs', 6500, -2.0, 0.7)],
+                desc='the son, 10: a touch younger and softer (270 Hz, formants x1.28), a quieter melody (x0.85), '
+                     'more breath (0.16), no chest (-4 dB under 220 Hz), a softer top (-2 dB from 6.5 kHz)'),
 }
 
 
@@ -95,7 +100,7 @@ def new_f0(f0, s, t):
     out = np.zeros_like(f0)
     if not v.any(): return out
     lf = np.log(f0[v]); med = np.median(lf)
-    tgt = s['f0'] if s.get('f0') else float(np.exp(med))
+    tgt = s['f0'] * max(1.0, float(np.exp(med)) / KID_REF) ** s.get('follow', 0.0) if s.get('f0') else float(np.exp(med))
     lo = s['rng'] * (lf - med)
     if s.get('comp'):                                                # soft limit: small movements pass, big slides bend
         c = s['comp'] * np.log(2.0)
@@ -430,7 +435,7 @@ def _test(args):
         z, st = voice_line(y.copy(), l)
         st['measured_warp'], _, _ = measure_warp(y, z)
         st['heard_dry'], st['heard'] = hear(y), hear(z)
-        ok = [V.toks(h) == V.toks(l['en']) for h in st['heard']]
+        ok = [V.toks(h) == V.toks(l['say']) for h in st['heard']]
         st['word_perfect'] = ok; bad += not all(ok)
         sf.write(os.path.join(out, l['tag'] + '_dry.wav'), y.astype(np.float32), SR)
         sf.write(os.path.join(out, l['tag'] + '_wet.wav'), z.astype(np.float32), SR)

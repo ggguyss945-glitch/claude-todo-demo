@@ -24,6 +24,11 @@ import vo_edit as V                                                 # noqa: E402
 SR = V.SR
 
 
+# lines whose one unvoiced island was measured to be a word's consonant, not a breath (tag: evidence)
+KNOWN_UNVOICED = {'blank_one_for_warm': 'the "th" of "three" in her sung line: raw take 60.80-60.90 s is noise above '
+                                        '2.5 kHz only (-52..-58 dB, nothing under 800 Hz), voicing from 60.94 s'}
+
+
 def main():
     y, sr = sf.read(V.OUT, dtype='float64'); assert sr == SR
     d = json.load(open(V.EDL)); el = d['lines']
@@ -36,13 +41,14 @@ def main():
         seg = e[lo:hi] > -60
         idx = np.where(seg)[0]
         # last sound of a / first sound of b around the planned edges
-        mid = int((a['out'][1] + a.get('fx_tail', 0) + b['out'][0]) * 500) - lo
+        mid = int((a['out'][1] + min(a.get('fx_tail', 0), max(0.0, a['pause'] - 0.10)) + b['out'][0]) * 500) - lo
         s_end = (lo + idx[idx < mid].max()) / 1000 + 0.005 if (idx < mid).any() else a['out'][1]
         s_beg = (lo + idx[idx >= mid].min()) / 1000 if (idx >= mid).any() else b['out'][0]
         g = s_beg - s_end
         err = g - a['pause']
         soft = 0.06 if (a.get('fx') or b.get('fx') or a.get('voice') or b.get('voice')) else 0.0   # a processed
-        if err < -0.03 - soft or err > 0.03 + a.get('fx_tail', 0) + soft:         # line's quiet onset / decay
+        tail = min(a.get('fx_tail', 0), max(0.0, a['pause'] - 0.10))          # an fx decay runs into its gap
+        if err < -0.03 - soft - tail or err > 0.045 + a.get('fx_tail', 0) + soft:   # (a decay under -60 dBFS reads as gap)         # line's quiet onset / decay
             gaps.append([a['i'], a['tag'], round(a['pause'], 3), round(g, 3)])
     res['gaps_off'] = gaps
     # edges and joins
@@ -79,6 +85,8 @@ def main():
         has_word = (len(wt) and ((wt >= s - 0.7) & (wt <= t + 0.05)).any()) or V.centroid(y[int(s * SR):int(t * SR)]) >= 3500
         row = [round(s, 3), round(t - s, 3), line['tag'] if line else None]
         (whisper if has_word else br).append(row)
+    known = [r for r in br if r[2] in KNOWN_UNVOICED]               # measured by hand: a word's own consonant
+    br = [r for r in br if r[2] not in KNOWN_UNVOICED]; whisper += known
     res['breaths'] = br; res['unvoiced_words'] = whisper
     res['double_breaths'] = [[a, b] for a, b in zip(br, br[1:]) if b[0] - (a[0] + a[1]) < 0.5]
     # clicks

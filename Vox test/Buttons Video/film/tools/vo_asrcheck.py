@@ -3,8 +3,8 @@ hears in it.
     python3 tools/vo_asrcheck.py [--whole-file-only] [--every]   exit 1 on any mismatch that is not in ALLOW
     --every: also recognise EVERY line on its own (50 ms margins, 0.3 s of silence padding) and judge it the same way
     A one-word line that still fails on its own gets a Whisper second opinion (0.3 and 0.6 s padding; both must read it).
-    The child lines (who theo / sam, re-voiced) are stricter: on its own every one must read WORD-PERFECT (normalised
-    spellings: "Larksburg" = Larkspur, "Hushabai" = hush-a-bye) by Parakeet; Whisper's reading is printed beside it.
+    The child lines (who owen / son, re-voiced) are stricter: on its own every one must read WORD-PERFECT (normalised
+    spellings: "Mamma" = Mama, "street light" = streetlight) by Parakeet; Whisper's reading is printed beside it.
 Reads W/narration/edit_list.json (each line's output span) and W/align/asr_cache.json (Parakeet on narration_en.wav,
 written by align.py: run align.py after every vo_edit.py build, then this). A recognised word belongs to the line whose
 sound holds its start (out span - 40 ms .. + 20 ms); a word that starts in a gap goes to the next line when that line
@@ -25,15 +25,15 @@ from vo_edit import toks                                           # noqa: E402 
 # what the recogniser cannot help hearing its own way (homophones and spellings: not edit faults)
 SAME = {'vii': '7', 'larksburgh': 'larkspur', 'larksbury': 'larkspur', 'gray': 'grey', 'mr': 'mister', 'dr': 'doctor', 'oh': '0', 'sh': 'shh', 'genes': 'jeans', 'colour': 'color',
         'lena': 'lina', 'lenas': 'linas', 'pajamas': 'pyjamas', 'muster': 'mister',
-        'moms': 'mom', 'coco': 'cocoa', 'prize': 'pries'}   # "Mom's" (apostrophe dropped), homophones
-JOIN2 = {('snow', 'flake'): 'snowflake', ('door', 'knob'): 'doorknob', ('snow', 'man'): 'snowman', ('grown', 'up'): 'grownup'}
+        'moms': 'mom', 'mamma': 'mama', 'bravelist': 'bravelist', 'mammas': 'mamas', 'mensa': 'mensah'}   # "Mom's" (apostrophe dropped), homophones
+JOIN2 = {('snow', 'flake'): 'snowflake', ('door', 'knob'): 'doorknob', ('snow', 'man'): 'snowman', ('grown', 'up'): 'grownup',
+         ('street', 'light'): 'streetlight', ('window', 'sill'): 'windowsill', ('head', 'set'): 'headset',
+         ('brave', 'list'): 'bravelist'}   # compounds the recogniser writes as one word or two
 # lines that may fail, by tag, with the reason (checked with a second recogniser, not an edit fault)
 ALLOW_TAGS = {
-    'just_watching_us': 'the take runs "us sleep" together: both recognisers write "watching asleep" on the raw take too '
-                        '(Parakeet "Just watching asleep.", Whisper "Just watching a sleep."): not an edit fault',
-    'watching_us_sleep': 'the same "us sleep" run-together as just_watching_us (raw take: both recognisers "Watching asleep")',
-    'the_note_said': 'one unedited piece of the take; Parakeet flips "note said" / "notes said" with the padding (edit at 0 and '
-                     '0.10 s margins: "The note said Mice"; at 0.05 s: "notes"); Whisper reads "The note said mice." at all three',
+    'mom_checked_every': 'the take itself: "notes. Mom" run together with no gap; the raw take from 45.85 s reads '
+                         '"Mon checked" by Whisper (Parakeet "Mom"); the cut sits in its silence (-85 dB at 45.96 s, the '
+                         'onset from 45.97 s is kept): not an edit fault',
 }
 
 
@@ -77,20 +77,20 @@ def main(quiet_iso=False, every=False):
     bad = []
     H = {i: norm(' '.join(v)) for i, v in heard.items()}
     for n, e in enumerate(el):
-        i = e['i']; hs = H[i]; sc = norm(e['en'])
+        i = e['i']; hs = H[i]; sc = norm(e.get('say', e['en']))
         why = judge(hs, sc)
         if n + 1 < len(el) and hs and H[el[n + 1]['i']]:
             a, b = hs[-1], H[el[n + 1]['i']][0]
-            nxt = norm(el[n + 1]['en'])
+            nxt = norm(el[n + 1].get('say', el[n + 1]['en']))
             if (a + b) in sc or (a + b) in nxt or (a == b and len(a) > 1 and nxt[:1] == [a] and sc[-1:] != [a]):
                 why.append('word split across the boundary: "%s" | "%s"' % (a, b))
         if why:
-            bad.append([i, ', '.join(why), e['en'], ' '.join(heard[i]), None])
+            bad.append([i, ', '.join(why), e.get('say', e['en']), ' '.join(heard[i]), None])
     if bad and not quiet_iso:
         iso = isolated([b[0] for b in bad], el)
         for b in bad:
             txt = iso.get(b[0], '')
-            if not judge(norm(txt), norm(el[b[0]]['en'])) and 'split' not in b[1]:
+            if not judge(norm(txt), norm(el[b[0]].get('say', el[b[0]]['en']))) and 'split' not in b[1]:
                 b[4] = txt
     if every:                                                       # every line on its own as well, not only the flagged
         iso_all = isolated([e['i'] for e in el], el)
@@ -98,17 +98,17 @@ def main(quiet_iso=False, every=False):
         for e in el:
             i = e['i']
             txt = iso_all.get(i, '')
-            why = judge(norm(txt), norm(e['en']))
+            why = judge(norm(txt), norm(e.get('say', e['en'])))
             if why and i not in flagged:
-                bad.append([i, 'on its own: ' + ', '.join(why), e['en'], txt, None])
+                bad.append([i, 'on its own: ' + ', '.join(why), e.get('say', e['en']), txt, None])
         for e in el:                                                  # the child voices: word-perfect on their own
-            if e['who'] in ('theo', 'sam'):
+            if e['who'] in ('owen', 'son'):
                 txt = iso_all.get(e['i'], '')
                 wh = whisper_opinion([e['i']], el).get(e['i'], [''])[0]
-                ok = norm(txt) == norm(e['en'])
-                print('child L%-3d %-5s %s | Parakeet: %s | Whisper: %s' % (e['i'], 'OK' if ok else 'FAIL', e['en'], txt, wh))
-                if not ok: bad.append([e['i'], 'child line not word-perfect on its own', e['en'], txt, None])
-        n_iso_ok = sum(1 for e in el if not judge(norm(iso_all.get(e['i'], '')), norm(e['en'])))
+                ok = norm(txt) == norm(e.get('say', e['en']))
+                print('child L%-3d %-5s %s | Parakeet: %s | Whisper: %s' % (e['i'], 'OK' if ok else 'FAIL', e.get('say', e['en']), txt, wh))
+                if not ok: bad.append([e['i'], 'child line not word-perfect on its own', e.get('say', e['en']), txt, None])
+        n_iso_ok = sum(1 for e in el if not judge(norm(iso_all.get(e['i'], '')), norm(e.get('say', e['en']))))
         print('every line on its own: %d/%d read as their script' % (n_iso_ok, len(el)))
     # a one-word line (a shout, a cut-off "He...") is a coin toss for Parakeet on its own (it flips with the padding:
     # "Here" / "Here it" / "Four"): Whisper gives a second opinion, and the line passes when Whisper reads the word at

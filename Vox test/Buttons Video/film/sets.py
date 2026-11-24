@@ -10088,3 +10088,11 @@ exec(compile(open(_ICE_SETS_SRC).read(), _ICE_SETS_SRC, 'exec'))
 # sets_walls.py, run here in this module's namespace after sets_ice.py (it reuses its set engine). See its docstring and SETS.md.
 _WALLS_SETS_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sets_walls.py')
 exec(compile(open(_WALLS_SETS_SRC).read(), _WALLS_SETS_SRC, 'exec'))
+
+
+# ======================================================================================================================
+# THE BUTTONS FILM ("If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET"): the apartment (kitchen + living
+# room, Owen's room), our block (the streetlight, the lobby glass, Barlow's), the snowy school lane, the chat screen, now,
+# and the inserts live in sets_buttons.py, run here in this module's namespace after sets_walls.py. See its docstring and SETS.md.
+_BUTTONS_SETS_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sets_buttons.py')
+exec(compile(open(_BUTTONS_SETS_SRC).read(), _BUTTONS_SETS_SRC, 'exec'))

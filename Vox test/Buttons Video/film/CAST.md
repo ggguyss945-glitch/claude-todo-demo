@@ -1,6 +1,62 @@
-# CAST: "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH"
+# CAST: "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET"
 
-## Walls film (this film): `characters_walls.py`, see `WALLS_API`
+## Buttons film (this film): `characters_buttons.py`, see `BUTTONS_API`
+Run in the `characters` namespace after `characters_walls.py` (the `_BUTTONS_SRC` exec line in characters.py). Use
+`import characters as CH`. Old ids kept: `mom_walls`, `owen_dummy`. All designs are ours (story bible), none from the mood stills.
+
+- **Sheet / faces / strips:** `python3 tools/cast_buttons.py [sheet] [faces] [details] [strips [mom|owen|blank_a|blank_b|misc]]`
+  -> `_work/cast/cast_sheet.png`, `faces_640.jpg`, `details.jpg` (contact crops), `strips_<group>.jpg` (8 frames per action,
+  stand-in scenery; prints reach misses and foot gaps). Self-test: `python3 characters.py --selftest` (buttons checks last;
+  the older films' checks run with their own `mom` / `owen`).
+- **Ids** (height `CH.height_px(id, ppm, tall=0)`): `owen` 1.45 m (blue hoodie, brown eyes) / `owen_coat` (green coat,
+  broken zip, open) / `owen_pj`; `mom` 1.65 m Nadia (open oatmeal cardigan, pens in the pocket, teal tee, messy bun +
+  pencil, freckles, reading glasses with laptop glare, headset, slippers); `blank1` (form 1: Mom's look, cardigan buttoned
+  to the throat, reading glasses over button eyes) / `blank1_shades` (sunglasses, the car); `blank2` (form 2: glossy bun,
+  smooth grey-tinged skin, shiny black buttons, button eyes, never blinks, big smile; grow her per scene with
+  `tall=CH.BLANK_TALL['r1'|'r3'|'r4'|'r4_micro'|'r5'|'sill']`); `blank3` (form 3, drawn by `_draw_blank3`: height =
+  FLOOR TO CEILING px); `dunn` 1.74 m; `mensah` 1.83 m; `son` 1.40 m; `narrator_b` (hands only: `CH.draw_arm`).
+- **Looks (pose fields, set with `a.set(t0, t1, fade, **kw)`):** `faded` 0..1 (Owen rubbed out: cool, translucent,
+  still clear; animate back to 0 for "like a photo developing"); `CH.draw(..., reflection=True)` + `refl_hide` 1 = gone
+  from the microwave door; `pgrey` 0..1 (headset lady pencil grey, also on busts); `glare` 1 = glare OFF (default on);
+  `circles` 1 = the two black circles; `specs` 0 = glasses off (`a.glasses_off(t0, side=-1)`: green eyes);
+  `hs_off` 1 = headset off; `shades` / `shades_dn` 0..1 (lower the sunglasses: buttons); `default_head` 1 for one
+  frame (`a.flicker(t)`); expressions `busy`, `puzzled`, `listening_soft`, `quiet_sure`, `too_sweet`, `too_wide`.
+- **Mom:** `typing(t0, t1, kb_xy, side=0)` (laptop or tablet; `key_tap` events); `one_finger(t0, t1, side, toward)`;
+  `snap_photo(t0, aim_xy, side, dur)` -> (shutter t, events); `phone_to_ear` + `cry` (existing);
+  `press_headset(t0, t1, side)`; `headset_off(t0, side)` + `glasses_off(t0, side=-other)`; `walk` / `turn` (step between);
+  `hug(t0, child, t1)` (kneels, palms on his back); `wind_box(t0, t1, side)` (prop `music_box`, pose.crank);
+  `set_down(t0, prop, side, xy)` -> release t.
+- **Owen / son:** `typing` with `hold_prop('tab_back', -1, t0, t1)`; `point_at`, `crouch(t0, 1.6, t1, dur=0.25)` (duck),
+  `wave`, `walk(t0, t1, 0, dx, facing=-1)` (step back; walk/run take OFFSETS from the placed x), `run`;
+  `write_marker(t0, t1, side, board_xy)`; `rise_to(t0, button_xy, side, dur)` (stops 2.5 cm short, `tik`);
+  `drop_out(t0, x_to)` (fast crouch, then runs to design x); son `tablet_down(t0, bed_xy)` -> contact t, then
+  `look_at` up + expr `kind_smile`.
+- **Blank 1 / 2:** `wave(..., slow=True)` + `look_at` the WRONG window; `hand_on_glass(t0, t1, side)` both hands;
+  `listen_tilt(t0, None, side, angle)`; `seated(seat_y)` (chair, windowsill) + `typing`; `talk` for the song.
+- **Form 3** (`a = CH.Acting('blank3', height=floor_y - ceiling_y).place(x, floor_y)`, `a.set(-1e9, None, 0, b3_face=-1)`
+  faces left): `b3_unfold(t0, dur)` (from a low crouch in the gap BESIDE the fridge: draw the fridge after her);
+  `b3_hand(t0, side, target, t1, dur)` (FINGERTIPS to a point / callable / (actor, part); slow wrong-way elbows; `tik`);
+  `b3_hold_coat(t0, coat_fn, t1, dur, face)`; `b3_lunge(t0, from_xy, to_xy, dur, t1)` (fingers sweep the counter);
+  `freeze(t0, t1)`; `b3_collapse(t0, dur)` (folds to `draw_flat_cardigan`); points: `CH.b3_point(a, t, part)`.
+  Keep her fingertips >= 2.5 cm from his skin (target his hood / the coat, never his face).
+- **The red coat:** `CH.draw_red_coat(pen, cx, cy, h, buttons, open_, full, part, top_out, top_to)`; `CH.coat_on(owen, t)`
+  -> (cx, cy, h) at his shoulders; `CH.coat_pts(cx, cy, h)` (shoulders, top button). Worn: draw `part='back'`, Owen,
+  then `part='front'`. Buttons close from the bottom; the top one can never be drawn closed. After `drop_out` set
+  `full` 0 and keep the coat where her hands hold it.
+- **Car arm (R3):** `CH.draw_long_arm(pen, window_xy, hood_xy, ext 0..1, t, px_per_cm)` (bends where arms don't bend,
+  fingers tap; stops 3 cm short; ext back to 0 folds it in). **Dunn:** `hold_sign(-1e9, None, side=-1)`,
+  `radio_up(t0, t1, side)`, `shelter(t0, owen, t1, side, toward)`. **Mensah:** `take_notes(t0, t1)`,
+  `read_board(t0, board_xy, t1, then=(mom, 'eyes'))`.
+- **Props (cm):** `headset`, `music_box`, `stop_sign`, `notepad`, `tab` / `tab_back`, `button`; existing `cell`,
+  `walkie`, `marker`, `pencil`, `glasses`. `CH.draw_flat_cardigan(pen, cx, floor_y, w)`.
+- **Open:** form 3's arms cannot lean past their reach (stage her within ~1.5 m); the folded start is a crouch, not
+  flat; the sting cuffs are heavy at very close range; Mom's glare is fixed (no per-shot sweep yet).
+
+---
+
+# (reference) Walls film cast: "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH"
+
+## Walls film: `characters_walls.py`, see `WALLS_API`
 Run in the `characters` namespace after `characters_ice.py` (the `_WALLS_SRC` exec line in characters.py). Use
 `import characters as CH`. Old ids kept: `mom_bunny`, `dad_ice`, `theo94`.
 
