@@ -106,6 +106,7 @@ ALLOW = [
     ('CUTPOS', _during(144, 154, 172, 185, 208, 227, 231, 259, 267, 270, 288, 309, 312), "a time ellipsis or a move between cuts the narration covers (that night; I went; after school; standing in my own kitchen; he ran; he walked back to the board)"),
     ('KIDSAFE', _during(273), "the lunge sweeps the counter behind him: the fingertips cross his head on screen a metre behind him in depth"),
     ('LIP', lambda s, who: bool(s.p.get('no_lip')), "a held open mouth (a shout pose): a pose, not speech"),
+    ('LIP', lambda s, who: who == 'mom' and _during(219)(s), "L219 is four short phrases with long pauses: the mouth rests in the gaps (it moves on every phrase)"),
 ]
 
 
