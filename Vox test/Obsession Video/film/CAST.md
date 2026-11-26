@@ -84,6 +84,7 @@ Run in the `characters` namespace by the one `characters_evie.py` exec line at t
 
 - **The chalk smile** is a smooth white chalk line drawn on the face surface over her mouth. The real mouth is gone and the line's ends curl up. It is never a cut: no red, no teeth. When she talks (`talk()` / `m_open`), the line parts in the middle like a drawn mouth, with a dark fill and no teeth.
 - **Night:** call `a.night()` in night shots. Her colour then goes chalk-flat by `e_flatn`. Under a lit hall, use `a.night(amount=0.4)` so the drain still reads.
+  Review fix: the night flatness goes to a mid grey-blue (skin about 0.70 at most, never near-white), the chalk smile has a dark under-stroke (#2c3040) with shadow curls at its ends and stays on the front of the face (ends curling up the cheeks toward the ears), and the phone glow under her chin is weaker (alpha 120). Only the drain goes to chalk-white. The letterbox fingers hang from a narrow palm and wrist at the slot, taper, bend at two knuckle joints each and arch at the tip as they write.
 - **Braids:** they unravel from the bottom up. The bow droops, loses a loop, and from about R5 hangs untied. Flyaway hairs increase.
 
 **Movement vocabulary (clips; each has a clear start and end, and her feet stay on the ground).**

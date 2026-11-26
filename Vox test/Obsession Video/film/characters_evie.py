@@ -504,9 +504,11 @@ def _ev_chalk_smile(c, hm, sp, P, det, t):
     curling up a little. Never a cut: no red, no teeth. Talking (m_open) parts the line in the middle like a drawn mouth."""
     w = clamp(P.e_chalk)
     my = sp['mouth_y']
-    phm = float(np.interp(w, [0, 0.25, 0.42, 0.58, 0.8, 1.0], [0.14, 0.28, 0.48, 0.7, 1.1, 1.5]))
-    rise = float(np.interp(w, [0, 0.25, 0.42, 0.58, 0.8, 1.0], [2, 6, 12, 19, 32, 46]))
-    sag = 6.0 + 5.0 * w
+    # (the width stays on the front of the face, so the ends curl UP the cheeks toward the ears instead of wrapping round
+    # the jaw like an outline)
+    phm = float(np.interp(w, [0, 0.25, 0.42, 0.58, 0.8, 1.0], [0.14, 0.28, 0.46, 0.64, 0.88, 1.1]))
+    rise = float(np.interp(w, [0, 0.25, 0.42, 0.58, 0.8, 1.0], [2, 6, 12, 18, 27, 36]))
+    sag = 6.0 + 4.0 * w
     q = np.linspace(-1.0, 1.0, 41)
     ys = my + sag * (1 - q * q) - rise * q ** 4
     ph = q * phm
@@ -1483,9 +1485,11 @@ class LetterboxFingers:
                 tipj = np.array([tx, ty]) + nrm * j * self.fcm * 2.6 * sc_tip * (1 if self.seed % 2 == 0 else -1) \
                     - d / dl * j * 3.0 * sc_tip + wig
                 lift = 0.0 if writing or j else 0.6 * sc_tip
+                mx_, my_ = (bx + tipj[0]) / 2 + off_slot * 0.3, (by + tipj[1]) / 2 - lift
+                arch = (1.6 if j == 0 else 1.1) * self.fcm * sc_tip          # the writing curl: the last joint arches
+                kx, ky = mx_ + (tipj[0] - mx_) * 0.8, my_ + (tipj[1] - lift - my_) * 0.8 - arch
                 pts = [(sx + off_slot, sy + 2), (sx + off_slot, sy + 0.25 * (by - sy)), (bx + off_slot * 0.8, by - 0.12 * (by - sy)),
-                       (bx + off_slot * 0.7, by), ((bx + tipj[0]) / 2 + off_slot * 0.3, (by + tipj[1]) / 2 - lift),
-                       (tipj[0], tipj[1] - lift)]
+                       (bx + off_slot * 0.7, by), (mx_, my_), (kx, ky), (tipj[0], tipj[1] - lift)]
                 c_ = _cr(pts, 64)
             else:
                 Lp = _arclen(a_ap)
@@ -1500,6 +1504,24 @@ class LetterboxFingers:
             fl.append(c_)
         for j in (3, 2, 1, 0):
             self._finger(cv, fl[j], self.ppc, sc_tip if on_floor else self.ppc, j, t, detail)
+        # the hand: a long narrow palm and the wrist hanging down the inside of the door from the slot, the four fingers
+        # growing out of its knuckles
+        if back < 0.98:
+            pc, F_ = self.ppc, self.fcm
+            ph = (13.0 * pc) * (1.0 - back)
+            hw0, hw1 = 2.2 * F_ * pc, 2.9 * F_ * pc
+            palm = [(sx - hw0, sy - 1.0 * pc), (sx + hw0, sy - 1.0 * pc), (sx + hw1, sy + ph * 0.75), (sx + hw1 * 0.92, sy + ph),
+                    (sx + hw1 * 0.45, sy + ph + 0.8 * pc), (sx, sy + ph + 1.0 * pc), (sx - hw1 * 0.45, sy + ph + 0.8 * pc),
+                    (sx - hw1 * 0.92, sy + ph), (sx - hw1, sy + ph * 0.75)]
+            pp = smooth(palm, True, 0.5)
+            cv.drawPath(pp, skia.Paint(Color=col('#edebe3', 255), AntiAlias=True))
+            cv.drawPath(pp, _chalk_paint('#77766f', 230, max(1.0, 0.22 * pc)))
+            kk = skia.Path()                                   # the knuckle line and two tendons
+            for q_ in (-0.75, -0.25, 0.25, 0.75):
+                x_ = sx + q_ * hw1 * 0.95; y_ = sy + ph + 0.35 * pc * (1.0 - abs(q_))
+                kk.addCircle(x_, y_ - 0.2 * pc, 0.55 * F_ * pc * 0.5)
+                kk.moveTo(x_ * 0.8 + sx * 0.2, sy + 0.5 * pc); kk.lineTo(x_, y_ - 0.9 * pc)
+            cv.drawPath(kk, _chalk_paint(CHALK_DK, 110, max(1.0, 0.16 * pc)))
         # the back of the hand, pressed into the slot (knuckles across it)
         kn = rrect(sx - 2.4 * self.fcm * self.ppc, sy - 1.1 * self.ppc, 4.8 * self.fcm * self.ppc, 2.6 * self.ppc, 1.2 * self.ppc)
         cv.save(); cv.clipRect(skia.Rect.MakeXYWH(sx - sw / 2, sy - 2.0 * self.ppc, sw, 4.0 * self.ppc), skia.ClipOp.kIntersect, True)
@@ -1512,7 +1534,9 @@ class LetterboxFingers:
         if L[-1] < 1.0: return
         n = len(c_)
         ws = np.interp(np.linspace(0, 1, n), [0, 0.35, 1.0], [s0, s0 * 0.9 + s1 * 0.1, s1]) * self.fcm * (1.0 - 0.1 * j) * 0.5
-        ws = ws * np.interp(np.linspace(0, 1, n), [0, 0.5, 0.88, 0.96, 1.0], [1.08, 0.86, 0.9, 1.1, 1.0])   # a pad at the tip
+        J1, J2 = 0.62, 0.84                                     # two knuckle joints: a bulge at each, tapering to the tip
+        ws = ws * np.interp(np.linspace(0, 1, n), [0, 0.3, J1 - 0.05, J1, J1 + 0.05, J2 - 0.04, J2, J2 + 0.04, 0.95, 1.0],
+                            [1.25, 1.02, 0.9, 1.04, 0.86, 0.8, 0.9, 0.74, 0.76, 0.72])
         tg = np.gradient(c_, axis=0); tg /= (np.hypot(tg[:, 0], tg[:, 1])[:, None] + 1e-6)
         nr = np.column_stack([-tg[:, 1], tg[:, 0]])
         left = c_ + nr * ws[:, None]; right = c_ - nr * ws[:, None]
@@ -1535,7 +1559,17 @@ class LetterboxFingers:
                 cr.moveTo(p[0] + nx * w, p[1] + ny * w)
                 cr.quadTo(p[0] + tgv[0] * w * 0.35, p[1] + tgv[1] * w * 0.35, p[0] - nx * w, p[1] - ny * w)
                 s += step
-            cv.drawPath(cr, _chalk_paint(CHALK_DK, 85, lw * 0.8))
+            cv.drawPath(cr, _chalk_paint(CHALK_DK, 40, lw * 0.8))
+        jk = skia.Path()                                        # the two joints: strong creases across the finger
+        for jf in (J1, J2):
+            p, tgv = _at_len(c_, L[-1] * jf, L)
+            w = float(np.interp(L[-1] * jf, L, ws)) * 0.85
+            nx, ny = -tgv[1], tgv[0]
+            for dd_ in (-0.25, 0.25):
+                ox, oy = tgv[0] * w * dd_, tgv[1] * w * dd_
+                jk.moveTo(p[0] + nx * w + ox, p[1] + ny * w + oy)
+                jk.quadTo(p[0] + tgv[0] * w * 0.4 + ox, p[1] + tgv[1] * w * 0.4 + oy, p[0] - nx * w + ox, p[1] - ny * w + oy)
+        cv.drawPath(jk, _chalk_paint('#77766f', 170, lw * 0.9))
         cv.drawPath(path, _chalk_paint('#77766f', 230, lw))
         tx, ty = c_[-1]
         cv.drawCircle(float(tx + math.cos(ang0) * ws[-1] * 0.6), float(ty + math.sin(ang0) * ws[-1] * 0.6), float(ws[-1] * 1.6),

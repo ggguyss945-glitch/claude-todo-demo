@@ -5,7 +5,7 @@
 set -e
 cd "$(dirname "$0")/.."
 W=_work; S=${S:-$W/deliver/segments}; K=${K:-48}; MIX=${MIX:-$W/mix/final/mix_en.flac}
-B=If_Your_Moms_Eyes_Turn_Into_Buttons; H=${H:-$W/deliver/${B}_EN_1440p60_HEVC.mp4}
+B=If_A_Girl_Is_Obsessed_With_Being_Your_Only_Friend; H=${H:-$W/deliver/${B}_EN_1440p60_HEVC.mp4}
 n_ok=$(ls "$S"/s*/OK 2>/dev/null | wc -l)
 [ "$n_ok" -eq "$K" ] || { echo "== only $n_ok of $K segments done"; exit 1; }
 NT=$(awk '{s+=$4} END {print s}' "$S/ranges.txt")
@@ -17,7 +17,7 @@ ffmpeg -v error -nostdin -y -i "$MIX" -af lowpass=f=16500:poles=2,aresample=1920
   -c:a aac -b:a 192k -cutoff 18000 -ar 48000 "${A:-$S/audio.m4a}"
 ffmpeg -v error -nostdin -y -f concat -safe 0 -i "$S/list.txt" -i "${A:-$S/audio.m4a}" -map 0:v -map 1:a -c copy \
   -tag:v hvc1 -metadata:s:a:0 language=eng \
-  -metadata title="If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET" \
+  -metadata title="If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME" \
   -t "$DUR" -movflags +faststart "$H.tmp.mp4"
 mv "$H.tmp.mp4" "$H"
 echo "== joined $(date -u +%H:%M)"

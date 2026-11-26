@@ -1245,6 +1245,25 @@ def win_sill_layer(ys=940.0, jamb=True, name='win_sill'):
     return Layer(0.8, draw, name, blur=0)
 
 
+def glass_layer(ys=900.0, name='win_glass', depth=0.8, bar=True):
+    """Adam's own window seen from inside at night, IN FRONT of a bust outside it: the painted frame (sill, jambs, the
+    cross bar), the cold glass sheen and a faint warm reflection of his lamp, so the face reads as beyond the glass."""
+    def draw(pen, t):
+        g = rect(-500, -500, 2920, ys + 500)
+        pen.linear(g, 0, -500, 2400, ys, [(0, '#b8c8ff', 26), (0.5, '#b8c8ff', 0), (1, '#ffd9a0', 22)])
+        for k in range(3):                                    # streaks of sheen across the pane
+            x0 = 200 + 640 * k
+            pen.fill(poly([(x0, -500), (x0 + 120, -500), (x0 - 280, ys), (x0 - 400, ys)], True), '#dfe8ff', 14)
+        fr, ed = '#2c3246', '#59607a'
+        pen.fill(rect(-500, ys, 2920, 700), fr); pen.fill(rect(-500, ys, 2920, 14), ed, 230)       # the sill
+        pen.fill(rect(-500, ys + 40, 2920, 700), '#141824', 230)
+        for x0, x1 in ((-500, 70), (1850, 2420), (930, 990)):                                       # jambs, mullion
+            pen.fill(rect(x0, -500, x1 - x0, ys + 520), fr)
+            pen.fill(rect(x1 - 6 if x0 < 0 else x0, -500, 6, ys + 520), ed, 200)
+        if bar: pen.fill(rect(-500, 380, 2920, 44), fr); pen.fill(rect(-500, 380, 2920, 6), ed, 200)      # the cross bar
+    return Layer(depth, draw, name, blur=0)
+
+
 def B_bust(F, sh):
     """A face close-up over a blurred, darkened set: p who, bg=(room, view[, cam]) + set=dict(..), cx, cy, scale, turn,
     h_turn (or a framing preset), act, expr, light; busts=[dict(who, cx, cy, scale, act, expr, light, depth)] more faces;
@@ -2525,7 +2544,7 @@ def _xev(sh, evs):
 
 
 def fingers_acts(text_, letter_t, t_in, t_out=None, key='floor_only', box=(0.15, 0.22, 0.85, 0.78), axis='u', slot_w=0.3,
-                 smile=None, stub=None, flap=True):
+                 smile=None, stub=None, flap=True, letter_dur=0.85):
     """The chalk fingers through the letterbox writing text_ (letters on letter_t) on the floor rect sp.info[key];
     smile = (t0, t1, hum): her chalk smile in the slot; stub = t0: the stub drops and rolls to the bottom stair."""
     def acts(A, sh, sp):
@@ -2533,7 +2552,7 @@ def fingers_acts(text_, letter_t, t_in, t_out=None, key='floor_only', box=(0.15,
         lb, db = sp.anchors['letterbox'], sp.anchors['door_base']
         ppc = lb.ppm / 100.0
         f = CH.LetterboxFingers((lb.x, lb.y, slot_w * lb.ppm), (db.x, db.y), quad, text_, box=box, size_cm=size, px_per_cm=ppc,
-                                t_in=t_in, letter_times=list(letter_t), t_out=t_out, axis=axis)
+                                t_in=t_in, letter_times=list(letter_t), t_out=t_out, axis=axis, letter_dur=letter_dur)
         _xev(sh, f.events)
         sd = None
         if stub is not None and 'bottom_stair' in sp.anchors:
@@ -2670,6 +2689,10 @@ def swing_rider(t0, t1, anchor='swing_l', taps=True, amp=16.0):
 
 
 # ---------------------------------------------------------------- the trailer (the cold open, lines 0..6)
+NECK_TR = (1.8, 1.1, 860, 600, 860, 440)    # neck length / dx (body units), camera from (x, y) to (x, y) in the facade view
+SQ_TR = (965, 540, 1.5, 965, 540, 1.9)    # the square: camera from (x, y, zoom) to (x, y, zoom) in the low hop view
+
+
 def plan_trailer(F):
     TR = dict(era='trailer')
     h1, h2, h3 = E(1) + 0.08, E(2) + 0.08, E(3) + 0.06
@@ -2679,49 +2702,68 @@ def plan_trailer(F):
     # WAVE 1: the tape, sweet, then wrong; her favourite-person stare; the smile that never blinks
     TAPE(0.0, glitch=[WD(0, 'met'), WD(0, 'says')], c=K((0.0, 960, 540, 1, None, 1.02), (W(0, 'favo'), 860, 600, 1, 'in', 1.45)), **TR)
     hits += [(WD(0, 'met'), 0.25, 'tape tracking tear'), (WD(0, 'says'), 0.3, 'tape tear')]
-    BU(W(0, 'favo'), 'evie', 'school', 'corridor', stage='wed', cx=960, cy=600, scale=1.15, expr='evie_hold',
-       act=_A(tiltf(WD(0, 'person'), 14, 1.0), lock(WD(0, 'whole'))), c=BZ(0.05), **TR)
+    BU(W(0, 'favo'), 'evie', 'school', 'corridor', stage='wed', cx=960, cy=640, scale=1.15, expr='evie_hold',
+       act=_A(tiltf(WD(0, 'person'), 22, 1.6), lock(WD(0, 'whole'), None)),
+       c=K((W(0, 'favo'), 960, 560, 1, None, 1.0), (WD(0, 'whole'), 960, 520, 1, 'in', 1.22), (W(0, "don't"), 960, 500, 1, 'out', 1.4)), **TR)
     hits.append((W(0, 'favo'), 0.45, 'cut: Evie at his shoulder, "favourite person"'))
+    hits.append((WD(0, 'whole'), 0.3, 'her eyes snap to the lens'))
     TAPE(W(0, "don't"), warp=lambda t, t0=WD(0, "don't"): clamp((t - t0) / 0.7), glitch=[WD(0, "don't"), WD(0, 'back')], off=4.6,
          tape_v='warped', c=K((W(0, "don't"), 820, 600, 1, None, 1.5), (T(1), 800, 610, 1, 'in', 1.9)), **TR)
     hits.append((W(0, "don't"), 0.5, 'the tape chews: "don\'t say it back"'))
-    BU(T(1), 'evie', 'front', 'down', st=dict(track='mat', porch=0.6), stage='r6', cx=960, cy=560, scale=1.0, expr='evie_flat',
-       act=_A(lock(T(1))), light=PORCH, c=K((T(1), 960, 560, 1, None, 1.0), (h1, 960, 500, 1, 'in', 1.75)), **TR)
-    # WAVE 2: the dark phone lights up; ONLY ME creeps up the path (from above); the neck stretches up to the window
-    hits.append((h1, 0.7, 'HIT 1: the dark phone'))
-    PH(h1, lambda u, t0=h1: dict(screen='dark', lit=clamp((u + t0 - WD(2, 'lights')) / 0.2), bg='bed'),
-       c=K((h1, 960, 540, 1, None, 1.0), (W(2, "don't"), 960, 470, 1, 'in', 1.35)),
+    BU(T(1), 'evie', 'front', 'down', st=dict(track='mat', porch=0.6), stage='r7', cx=960, cy=600, scale=1.0, expr='evie_flat',
+       act=_A(lock(T(1))), light=dict(PORCH, rim_a=60),
+       c=K((T(1), 960, 590, 1, None, 1.2), (WD(1, 'blink'), 960, 605, 1, 'in', 1.9), (h1, 960, 608, 1, None, 1.98)), **TR)
+    hits.append((WD(1, 'blink'), 0.6, 'the ear-to-ear smile, no blink'))
+    # WAVE 2: the dark phone (push), it lights up full frame (HIT 1), she is under the streetlight; ONLY ME creeps up the
+    # path; the neck stretches up to his lit window
+    PH(h1, dict(screen='dark', lit=0.0, bg='bed'), c=K((h1, 960, 540, 1, None, 1.0), (WD(2, 'lights'), 960, 500, 1, 'in', 1.6)), **TR)
+    hits.append((WD(2, 'lights'), 0.85, 'HIT 1: the switched-off phone lights up full frame'))
+    PH(WD(2, 'lights'), dict(screen='dark', lit=1.0, bg='bed'), cut='white',
+       c=K((WD(2, 'lights'), 960, 360, 1, None, 2.0), (W(2, 'can', off=-0.18), 960, 380, 1, 'out', 1.75)),
        sfx=[(WD(2, 'lights'), 'phone_buzz', -10, 0, 'close')], **TR)
-    hits.append((WD(2, 'lights'), 0.5, 'the switched-off screen lights up'))
+    hits.append((W(2, 'can', off=-0.18), 0.5, 'her under the streetlight, phone glow, from his window'))
+    S(W(2, 'can', off=-0.18), 'front', 'street', st=dict(track='street'), stage='r5',
+      ppl=[EV('on_street', glowf(W(2, 'can', off=-0.18)), lock(W(2, 'can', off=-0.18) + 0.15), tiltf(W(2, 'can', off=-0.18) + 0.2, 20, 1.4))],
+      c=dict(mv='push', on='on_street', h=0.9, f=2.0, rate=0.12, free=True), **TR)
     for w_, tr, at in (("don't", 'street', 'on_street'), ('look', 'half', 'on_half'), ('out', 'foot', 'on_foot'), ('window', 'step', 'on_step')):
         S(W(2, w_), 'front', 'wide', st=dict(track=tr), stage='r5', c=Z(1.18, 0.03, 1150, 760),
           ppl=[EV(at, lock(W(2, w_)), fore_k=2.4)], cut='glitch', **TR)
         hits.append((W(2, w_), 0.35, 'ONLY ME one stretch nearer (%s)' % tr))
     hits.append((h2, 0.8, 'HIT 2: the neck'))
-    S(h2, 'front', 'down', st=dict(track='door', porch=0.0, win={'adam': 1.0}), stage='r5',
-      ppl=[EV('on_door', lock(h2), lambda a, s: a.neck_up(h2 + 0.15, 2.2, 2.4 * a.height, dx=-0.1 * a.height, grow=0.2))],
-      c=K((h2, 830, 640, 1, None, 1.25), (W(3, 'and'), 820, 470, 1, 'in', 1.7)), **TR)
-    # WAVE 3: the fingers write ONLY; the whip to the blue door; she stands up out of the red square; the counter races
+    tn = W(3, 'and') - 0.8
+    S(h2, 'front', 'facade', st=dict(track='door', porch=0.0, win={'adam': 1.0, 'up': 1.0}), stage='r5',
+      ppl=[EV('on_door', lock(h2), lambda a, s: a.neck_up(h2 + 0.05, tn - h2 - 0.1, NECK_TR[0] * a.height, dx=NECK_TR[1] * a.height, grow=0.25))],
+      c=K((h2, NECK_TR[2], NECK_TR[3], 1, None, 1.15), (tn, NECK_TR[4], NECK_TR[5], 1, 'in', 1.3)), **TR)
+    hits.append((tn, 0.6, 'her face rises into his window'))
+    BU(tn, 'evie', 'front', 'street', st=dict(track='door'), stage='r6', cx=960, cy=lambda t, t0=tn: 1150 - 560 * ease_out_cubic(clamp((t - t0) / 0.6)),
+       scale=1.25, expr='evie_flat', act=_A(lock(tn)), light=dict(NIGHT, rim_a=60), acts=lambda A, s, sp: [glass_layer()], c=BZ(0.04), **TR)
+    # WAVE 3: the fingers write ONLY; the blue door from above; she stands up out of the red square; the counter to 47;
+    # the slot smile
     hits.append((W(3, 'and'), 0.6, 'the letterbox fingers'))
-    S(W(3, 'and'), 'hall', 'floor', st=dict(flap=1.0), night=True, evie='near',
-      acts=fingers_acts('ONLY', [WD(3, 'someone') - 0.15, WD(3, 'at'), WD(3, 'your'), WD(3, 'blue') - 0.05], W(3, 'and') - 0.9),
-      c=Z(1.0, 0.04), **TR)
-    hits.append((W(3, 'blue'), 0.65, 'whip: the blue door from above'))
-    S(W(3, 'blue'), 'front', 'down', st=dict(house='danny', track='foot', win={'up': 0.0}), chalk=1.0,
-      ppl=[AD('on_foot', lk(W(3, 'blue'), (960, -400)), expr='kind_smile', sil=0.45, sil_rim='#c8d4ff', fore_k=2.2)],
-      c=K((W(3, 'blue'), 1300, 600, 1, 'out', 1.15), (W(3, 'blue') + 0.25, 960, 620, 1, 'out', 1.2), (W(3, 'two'), 960, 640, 1, None, 1.3)),
-      cut='whip', sfx=[(W(3, 'blue'), 'whoosh', -6, 0, None, {'kind': 'hard'})], **TR)
+    tb = WD(3, 'blue', off=0.15)
+    S(W(3, 'and'), 'hall', 'halfway', st=dict(flap=1.0), night=True, evie='near',
+      acts=fingers_acts('ONLY', [W(3, 'and') + 0.05 + 0.27 * k for k in range(4)], W(3, 'and') - 0.9, letter_dur=0.24),
+      c=Z(1.25, 0.03, 870, 700), **TR)
+    hits.append((tb, 0.65, 'whip: the blue door from above'))
+    S(tb, 'front', 'down', st=dict(house='danny', track='foot', win={'up': 0.0}, frame=False), chalk=1.0,
+      ppl=[AD('on_foot', lk(tb, (960, -400)), expr='kind_smile', sil=0.45, sil_rim='#c8d4ff', fore_k=2.2)],
+      c=dict(mv='push', on='on_foot', f=2.0, rate=0.03, free=True), cut='whip', sfx=[(tb, 'whoosh', -6, 0, None, {'kind': 'hard'})], **TR)
     hits.append((W(3, 'two'), 0.75, 'Evie stands up out of the red Keeping Square'))
-    S(W(3, 'two'), 'play', 'square', st=dict(tod='sunset', square='plain'), stage='r4', rim=SUNSET,
-      ppl=[EV('square_stand', lambda a, s: a.flat_drawing(-1e9, WD(3, 'two') + 0.1), lambda a, s: a.stand_from_ground(WD(3, 'two') + 0.1, 1.1),
-              lock(WD(3, 'chalked')))], c=K((W(3, 'two'), 960, 600, 1, None, 1.0), (h3, 960, 470, 1, 'in', 1.4)), **TR)
+    t2 = W(3, 'two') + 0.2
+    S(W(3, 'two'), 'play', 'hop', st=dict(tod='sunset', square='plain'), stage='r4', rim=SUNSET,
+      ppl=[EV('square_stand', lambda a, s: a.flat_drawing(-1e9, t2), lambda a, s: a.stand_from_ground(t2, 1.3), lock(t2 + 1.2))],
+      c=K((W(3, 'two'), SQ_TR[0], SQ_TR[1], 1, None, SQ_TR[2]), (h3, SQ_TR[3], SQ_TR[4], 1, 'in', SQ_TR[5])), **TR)
+    tq = t2 + 1.25
+    hits.append((tq, 0.5, 'her face in the sunset, eyes locked'))
+    BU(tq, 'evie', 'play', 'gate', st=dict(tod='sunset', square='plain'), stage='r4', cx=960, cy=620, scale=1.2, expr='evie_flat', light=SUNSET,
+       act=_A(lock(tq), tiltf(tq + 0.1, 16, 0.5)), c=BZ(0.08), **TR)
     hits.append((h3, 0.9, 'HIT 3: the counter races'))
-    PH(h3, lambda u, t0=h3: dict(screen='thread', count=int(12 + 35 * clamp(u / max(0.2, h4 - t0 - 0.12))), typing=1.0, bg='dark'),
-       c=K((h3, 960, 540, 1, None, 1.0), (h4, 960, 600, 1, 'in', 1.5)), cut='glitch', **TR)
-    hits.append((h4, 1.0, '47: the blue door from above, slow tilt'))
-    S(h4, 'front', 'down', st=dict(house='danny', track='foot', win={'up': 0.0}), chalk=1.0,
-      ppl=[AD('on_foot', lk(h4, (960, -400)), expr='kind_smile', sil=0.45, sil_rim='#c8d4ff', fore_k=2.2)],
-      c=K((h4, 900, 380, 1, None, 1.15), (T(5), 960, 600, 1, 'in_out', 1.3)), **TR)
+    PH(h3, lambda u, t0=h3: dict(screen='thread', count=int(round(12 + 35 * clamp(u / max(0.2, h4 - t0 - 0.3)))), typing=1.0, bg='dark'),
+       c=K((h3, 960, 330, 1, None, 1.3), (h4 - 0.18, 1060, 210, 1, 'in', 1.8), (h4, 1070, 195, 1, 'out', 2.3)), cut='glitch', **TR)
+    hits.append((h4, 1.0, '47: the slot smile in the letterbox'))
+    S(h4, 'hall', 'floor', st=dict(flap=1.0), night=True, evie='near',
+      acts=fingers_acts('ONLY', [h4 - 6.0 + 0.3 * k for k in range(4)], h4 - 7.5, t_out=h4 - 4.0, smile=(h4 - 0.05, T(5) + 1.0, 1.0), letter_dur=0.25),
+      c=dict(mv='push', on='letterbox', f=2.6, rate=0.04, free=True), **TR)
     S(T(5), 'front', 'facade', st=dict(house='danny', track='foot', win=lit_win(WD(5, 'grown')), mom=True),
       c=K((T(5), 1000, 520, 1, None, 1.2), (hs, 1040, 380, 1, 'in', 1.5)), **TR)
     hits.append((hs, 1.0, 'HARD STOP: black'))
@@ -2769,9 +2811,10 @@ def plan_hook(F):
 # ---------------------------------------------------------------- the setup (13..51)
 def plan_setup(F):
     S(T(13), 'school', 'lunch',
-      ppl=[P('kofi', 'opp_l', id='kofi', act=_A(lk(T(13), ('danny', 'head'))), talk=False), P('danny', 'opp_seat', id='danny', expr='kind_smile',
-           act=_A(lk(T(13) + 0.3, ('kofi', 'head')))), P('sam', 'opp_r', id='sam', expr='kind_smile', act=_A(lk(T(13), ('danny', 'head'))))],
-      c=Z(1.5, 0.02, 960, 700))
+      ppl=[P('kofi', 'opp_l', id='kofi', act=_A(lk(T(13), ('danny', 'head')), nodf(T(13) + 0.9, 2), lk(T(13) + 1.8, ('sam', 'head'))), talk=False),
+           P('danny', 'opp_seat', id='danny', expr='kind_smile', act=_A(lk(T(13) + 0.3, ('kofi', 'head')), nodf(T(13) + 1.2), lk(T(13) + 2.2, ('sam', 'head')))),
+           P('sam', 'opp_r', id='sam', expr='kind_smile', act=_A(lk(T(13), ('danny', 'head')), shake_head(T(13) + 1.5, 2, 6.0), lk(T(13) + 2.4, ('kofi', 'head'))))],
+      c=K((T(13), 1180, 720, 1, None, 1.45), (E(14), 1000, 700, 1, 'in_out', 1.6)))      # review: a moving three-quarter, the boys reacting
     BU(T(15), 'danny', 'school', 'lunch', cx=900, cy=600, scale=1.1, turn=-0.55, expr='kind_smile', c=BZ(0.03))
     S(T(16), 'school', 'lunch', ppl=[AD('adam_seat', lk(T(16), 'table_top'), expr='adam_lonely')], c=Z(1.6, 0.03, 1040, 700))
     # the tape: little Adam and Danny at seven on the swings, the song
@@ -2839,7 +2882,7 @@ def plan_rule1(F):
     bts = [b['t'] for b in load_beats() if b.get('line') == 56]
     RULE(T(52), 1)
     S(T(56), 'room', 'bed', st=dict(phone=pulse_fn(bts, 0.1, 1.0, 0.6)), night=True,
-      ppl=[AD('bed_edge', lk(T(56), 'phone_bed'), who='adam_night', expr='adam_guarded')], c=Z(1.3, 0.02, 1000, 560))
+      ppl=[AD('bed_edge', lk(T(56), 'phone_bed'), who='adam_night', expr='adam_guarded')], c=Z(1.05, 0.02, 1000, 560))
     PH(T(57), dict(screen='thread', count=12, typing=1.0, bg='bed'), c=Z(1.0, 0.03))
     PH(T(58), lambda u, t0=T(58): dict(screen='thread', count=step_fn([(WD(59, 'thirty'), 30), (WD(60, 'forty'), 47)], 12)(u + t0), typing=1.0, bg='bed'),
        c=Z(1.1, 0.04))
@@ -2863,8 +2906,8 @@ def plan_rule1(F):
       ppl=[EV('on_street', lock(T(72), WD(72, 'clicked')), lambda a, s: a.flinch(WD(72, 'clicked') + 0.1))], c=Z(1.45, 0.02, 1100, 680),
       sfx=[(WD(72, 'clicked'), 'porch_light_click', -10, 0, 'outside')])
     S(T(73), 'front', 'street', st=dict(track='street', porch=1.0),
-      ppl=[EV('on_street', lambda a, s: a.lie_flat(WD(73, 'lay'), 0.8), lambda a, s: a.slide_flat(WD(73, 'slid'), 1.6, (a.x0 + 420, a.y0 - 70), scale_to=0.8))],
-      c=Z(1.45, 0.02, 1150, 650))
+      ppl=[EV('on_street', lambda a, s: a.lie_flat(WD(73, 'lay'), 0.9), lambda a, s: a.slide_flat(WD(73, 'slid'), 1.6, (a.x0 + 620, a.y0 - 90), scale_to=0.8))],
+      c=dict(mv='push', on='on_street', h=0.45, f=2.6, rate=0.01, free=True))
     # Thursday morning
     S(T(74), 'front', 'wide', st=dict(tod='dawn', track='street', track_wet=1.0, bucket=True), rim=DAWN, c=Z(1.05, 0.01))
     S(T(76), 'front', 'step', st=dict(tod='dawn', bucket=True), rim=DAWN, c=Z(1.2, 0.03, 1100, 420))
@@ -2892,15 +2935,18 @@ def plan_rule2(F):
        c=BZ(0.03))
     BU(T(96), 'adam', 'school', 'locker', cx=960, cy=610, scale=1.0, turn=0.25, expr='adam_scared', c=BZ(0.03))
     TAPE(T(98), off=16.0, c=K((T(98), 1000, 560, 1, None, 1.8), (E(98), 1000, 580, 1, 'in', 2.2)))
-    S(T(99), 'school', 'lunch', ppl=[P('kofi', 'opp_l', id='kofi'), P('danny', 'opp_seat', id='danny', expr='kind_smile', act=_A(lk(T(99), ('kofi', 'head')))),
-                                     P('sam', 'opp_r', id='sam', expr='kind_smile')], c=Z(1.6, 0.02, 950, 700))
+    S(T(99), 'school', 'lunch', ppl=[P('kofi', 'opp_l', id='kofi', act=_A(lk(T(99), ('sam', 'head')), nodf(T(99) + 0.6, 2))),
+                                     P('danny', 'opp_seat', id='danny', expr='kind_smile', act=_A(lk(T(99), ('kofi', 'head')), nodf(T(99) + 0.9))),
+                                     P('sam', 'opp_r', id='sam', expr='kind_smile', act=_A(lk(T(99) + 0.2, ('kofi', 'head')), shake_head(T(99) + 0.8, 2, 6.0)))],
+      c=K((T(99), 780, 700, 1, None, 1.55), (E(99), 960, 690, 1, 'in_out', 1.7)))
     BU(T(100), 'adam', 'school', 'lunch', cx=980, cy=620, scale=1.0, turn=0.3, expr='adam_lonely', light=PHONE,
        act=_A(lk(T(100), (1200, 1100))), c=BZ(0.02))
     IN(T(101), 'locker', dict(dust=1.0), c=K((T(101), 960, 640, 1, None, 2.0), (E(102), 960, 660, 1, 'in', 2.7)))
     S(T(103), 'school', 'corridor', ppl=[AD('locker', expr='adam_lonely', face='crossing'),
                                          EV('corr_far', glowf(T(103)), lock(T(103) + 0.3))], c=Z(2.0, 0.03, 960, 690))
     S(T(104), 'front', 'wide', st=dict(track='half'), ppl=[EV('on_half', lock(T(104)))], c=Z(1.2, 0.02, 1100, 760))
-    S(T(105), 'front', 'wide', st=dict(track='half'), ppl=[EV('on_half', lock(T(104)), tiltf(T(105) + 0.3, 12))], c=Z(2.2, 0.03, 1150, 700))
+    S(T(105), 'front', 'down', st=dict(track='half', porch=0.4), ppl=[EV('on_half', lock(T(104)), tiltf(T(105) + 0.3, 12))],
+      c=dict(mv='push', on='on_half', h=0.5, f=1.35, rate=0.04, free=True))
     BU(T(106), 'evie', 'front', 'wide', st=dict(track='half'), cx=960, cy=600, scale=1.15, expr='evie_hold', act=_A(lock(T(106))), c=BZ(0.03))
     BU(T(107), 'evie', 'front', 'wide', st=dict(track='half'), cx=960, cy=520, scale=1.7, expr='evie_hold', act=_A(lock(T(107))), c=BZ(0.04))
 
@@ -2942,8 +2988,9 @@ def plan_rule3(F):
     PH(T(131), lambda u, t0=T(131): dict(screen='mute', mute=step_fn([(WD(132, 'mom'), 1), (WD(133, 'sister'), 2), (WD(134, 'danny'), 3)], 0)(u + t0), bg='table'),
        c=Z(1.15, 0.02))
     BU(T(135), 'adam', 'school', 'corridor', cx=960, cy=620, scale=1.05, expr='adam_scared', light=PHONE, act=_A(lk(T(135), (960, 1200))), c=BZ(0.03))
-    S(T(136), 'school', 'corridor', ppl=[AD('locker', expr='adam_scared', face='crossing', act=_A(lk(T(136), (960, 1000)))),
-                                         EV('corr_far', glowf(T(136)), typef(T(136), E(136)), lock(W(136, 'me')))], c=Z(2.2, 0.03, 940, 690))
+    BU(T(136), 'evie', 'school', 'corridor', stage='r3', cx=1100, cy=600, scale=1.0, expr='evie_flat', light=PHONE,
+       act=_A(glowf(T(136)), lock(W(136, 'me')), tiltf(T(136) + 0.3, 14, 1.8)),
+       busts=[dict(who='adam', cx=520, cy=880, scale=1.15, depth=0.8, turn=0.5, expr='adam_scared')], c=BZ(0.05))
 
 
 # ---------------------------------------------------------------- rule 4 (137..183)
@@ -3008,7 +3055,7 @@ def plan_rule4(F):
     S(T(180), 'play', 'wide', st=dict(tod='sunset', square='adam', flood=1.0), rim=SUNSET,
       ppl=[AD(None, path=[(T(180), 'gate_adam'), (E(180) + 1.2, 'hop_start')], surface='gravel', run=True, expr='adam_scared')], c=Z(1.15, 0.02, 760, 680))
     S(T(181), 'front', 'down', st=dict(track='step'), ppl=[EV('on_step', lock(T(181)))], c=Z(1.2, 0.02, 950, 700))
-    S(T(182), 'front', 'down', st=dict(track='step'), ppl=[EV('on_step', lock(T(181)), tiltf(T(182) + 0.4, 14, 1.6), lambda a, s: a.chalk_tap(W(183, 'waiting')))], c=K((T(182), 930, 700, 1, None, 1.6), (E(183), 930, 730, 1, 'in', 1.95)))
+    S(T(182), 'front', 'down', st=dict(track='step'), ppl=[EV('on_step', lock(T(181)), tiltf(T(182) + 0.4, 22, 2.4), lambda a, s: a.chalk_tap(T(182) + 1.0), lambda a, s: a.chalk_tap(W(183, 'waiting')))], c=K((T(182), 930, 700, 1, None, 1.6), (E(183), 930, 715, 1, 'in', 1.74)))
 
 
 # ---------------------------------------------------------------- rule 5 (184..209)
@@ -3017,19 +3064,22 @@ def plan_rule5(F):
     DIN = dict(kitchen=1.0, dinner=True)
     S(T(187), 'kitchen', 'dinner', st=DIN, night=False,
       ppl=[P('mom', 'mom_chair', id='mom', expr='mom_warm', turn_free=True, act=_A(lambda a, s: a.hold_prop('fork', 1)))], c=Z(1.0, 0.015))
-    S(T(188), 'kitchen', 'dinner', st=DIN, night=True,
-      ppl=[EV('window_out', lock(W(188, 'lips')), talkf(W(188, 'lips'), E(188) + 0.3), check=False),
-           P('mom', 'mom_chair', id='mom', expr='mom_tired', act=_A(lambda a, s: a.hold_prop('fork', 1), lk(T(188), 'table_top')))],
-      c=K((T(188), 960, 700, 1, None, 1.2), (E(188), 960, 640, 1, 'in', 1.7)))
+    BU(T(188), 'evie', 'front', 'street', st=dict(track='street'), night=True, stage='r4', cx=1320, cy=640, scale=0.78, expr='evie_flat', light=dict(NIGHT, rim_a=50),
+       acts=lambda A, s, sp: [glass_layer(ys=930.0, depth=0.9, bar=False)],
+       act=_A(lock(W(188, 'lips')), talkf(W(188, 'lips'), E(188) + 0.3), tiltf(T(188) + 0.4, 14, 1.6)), talk=False,
+       busts=[dict(who='mom', cx=560, cy=900, scale=1.25, depth=0.8, turn=0.45, expr='mom_tired', light=KITCH)],
+       c=K((T(188), 940, 600, 1, None, 1.0), (E(188), 1120, 560, 1, 'in', 1.3)))
     PH(T(189), dict(screen='thread', count=3, typing=1.0, bg='table'), c=Z(1.1, 0.03), sfx=[(T(189) + 0.2, 'phone_buzz', -16, 0, 'close')])
-    S(T(190), 'kitchen', 'dinner', st=DIN, night=True,
-      ppl=[EV('window_out', lock(T(190)), check=False), P('mom', 'mom_chair', id='mom', expr='mom_tired', act=_A(lambda a, s: a.hold_prop('fork', 1), lk(T(190), 'table_top')))],
-      c=Z(1.9, 0.02, 960, 650))
+    BU(T(190), 'evie', 'front', 'street', st=dict(track='street'), night=True, stage='r4', cx=640, cy=620, scale=0.85, expr='evie_flat', light=dict(NIGHT, rim_a=50),
+       acts=lambda A, s, sp: [glass_layer(ys=930.0, depth=0.9, bar=False)],
+       act=_A(lock(T(190)), tiltf(T(190) + 0.3, 12, 2.0)),
+       busts=[dict(who='mom', cx=1360, cy=930, scale=1.25, depth=0.8, turn=-0.5, expr='mom_tired', light=KITCH)],
+       c=K((T(190), 960, 600, 1, None, 1.0), (E(190), 800, 560, 1, 'in', 1.3)))
     BU(T(191), 'evie', 'kitchen', 'dinner', st=DIN, night=True, cx=960, cy=580, scale=1.0, expr='evie_flat', act=_A(lock(T(191))), c=BZ(0.04))
     S(T(192), 'kitchen', 'dinner', st=DIN, night=False,
       ppl=[P('mom', 'mom_chair', id='mom', expr='mom_watchful',
              act=_A(lambda a, s: a.hold_prop('fork', 1, -1e9, WD(192, 'fork') + 0.6), lambda a, s: a.set_down(WD(192, 'fork') - 0.2, 'fork', 1, scr(s.sp, 'table_top', 80, 30))))],
-      c=Z(1.5, 0.02, 960, 760), sfx=[(WD(192, 'fork') + 0.35, 'fork_down', -14, 0, 'inside')])
+      c=K((T(192), 960, 760, 1, None, 1.5), (WD(192, 'fork') + 0.4, 960, 700, 1, 'in', 2.6)), sfx=[(WD(192, 'fork') + 0.35, 'fork_down', -14, 0, 'inside')])
     BU(T(193), 'mom', 'kitchen', 'dinner', st=DIN, night=False, cx=940, cy=600, scale=1.0, expr='mom_watchful', light=KITCH, c=BZ(0.02))
     BU(T(194), 'adam', 'kitchen', 'tiles', st=DIN, night=False, cx=1000, cy=600, scale=1.0, turn=-0.3, expr='adam_guarded', light=PHONE,
        act=_A(lk(T(194), (1000, 1300))), c=BZ(0.02))
@@ -3051,10 +3101,11 @@ def plan_rule5(F):
     BU(T(204), 'adam_night', 'room', 'door', night=True, cx=980, cy=620, scale=1.0, turn=-0.3, expr='adam_guarded', act=_A(lk(T(204), (300, 640))), c=BZ(0.02))
     BU(T(205), 'lina', 'hall', 'landing', st=dict(landing=0.5), night=True, cx=960, cy=620, scale=1.05, turn=0.2, expr='lina_earnest', light=BULB, c=BZ(0.02))
     S(T(206), 'room', 'window', st=dict(track='door'), night=True, c=Z(1.0, 0.02))
-    S(T(207), 'front', 'down', st=dict(track='door', win={'adam': 1.0}), stage='r5',
-      ppl=[EV('on_door', lock(T(207)), lambda a, s: a.neck_up(WD(207, 'bending'), 3.2, 2.8 * a.height, dx=-0.15 * a.height, grow=0.2))],
-      c=K((T(207), 850, 650, 1, None, 1.2), (E(208), 830, 470, 1, 'in_out', 1.7)), cut=None)
-    BU(T(209), 'evie', 'front', 'down', st=dict(track='door'), stage='r5', cx=960, cy=600, scale=1.2, expr='evie_flat', act=_A(lock(T(209))),
+    S(T(207), 'front', 'facade', st=dict(track='door', win={'adam': 1.0, 'up': 1.0}), stage='r5',
+      ppl=[EV('on_door', lock(T(207)), lambda a, s: a.neck_up(WD(207, 'bending'), 3.2, NECK_TR[0] * a.height, dx=NECK_TR[1] * a.height, grow=0.25))],
+      c=K((T(207), NECK_TR[2], NECK_TR[3], 1, None, 1.15), (E(208), NECK_TR[4], NECK_TR[5], 1, 'in_out', 1.3)), cut=None)
+    BU(T(209), 'evie', 'front', 'street', st=dict(track='door'), stage='r5', cx=960, cy=lambda t, t0=T(209): 1150 - 560 * ease_out_cubic(clamp((t - t0) / 0.8)),
+       scale=1.2, expr='evie_flat', act=_A(lock(T(209))), light=dict(NIGHT, rim_a=60), acts=lambda A, s, sp: [glass_layer()],
        c=BZ(0.05), hit=[WD(209, 'ears')])
 
 
@@ -3164,6 +3215,7 @@ def plan_rule7(F):
     # the door: from inside the hall past Mom's and Adam's backs, the frame cropping her
     DOOR = lambda t0: dict(fdoor=80.0 if t0 < 0 else 0.0, kitchen=1.0, porch=1.0, hall=1.0)     # (a live fdoor f(t) leaves the shut door drawn)
     MAT = (0.8, -0.25, 0.02)
+    MAT_OUT = (0.8, -0.45, 0.02)                 # review: clearly outside, beyond the threshold
     MO = dict(order_at=(0.8, 0.06, 0.25))
     S(T(290), 'hall', 'door', st=DOOR(1), night=True, night_k=0.4,
       ppl=[P('mom', 'mom_door', id='mom', expr='mom_firm', face=(0.8, -1.0), act=_A(lambda a, s: a.reach_to(W(290, 'opened') - 0.4, -1, scr(s.sp, 'letterbox', -60, 120), dur=0.5))),
@@ -3174,13 +3226,13 @@ def plan_rule7(F):
            EV(MAT, lock(W(290, 'stood')), face=(0.8, 1.0), **MO)],
       c=Z(1.1, 0.015, 900, 640), sfx=[(W(290, 'stood') - 0.3, 'door_open', -12, 0, 'inside')])
     S(T(291), 'hall', 'door', st=DOOR(-9), night=True, night_k=0.4,
-      ppl=[P('mom', 'mom_door', id='mom', expr='mom_firm', face=(0.8, -1.0)), AD('adam_door', who='adam_night', expr='adam_steady', face=(0.8, -1.0)),
-           EV(MAT, lock(T(291)), face=(0.8, 1.0), **MO)], c=Z(1.5, 0.02, 900, 620))
+      ppl=[P('mom', (0.22, 0.9, 0.0), id='mom', expr='mom_firm', face=(0.8, -1.0)), AD((1.33, 0.85, 0.0), who='adam_night', expr='adam_steady', face=(0.8, -1.0)),
+           EV(MAT_OUT, lock(T(291)), tiltf(T(291) + 0.4, 14, 1.8), face=(0.8, 1.0), **MO)], c=Z(1.5, 0.02, 900, 620))
     BU(T(292), 'mom', 'hall', 'door', st=DOOR(-9), night=False, cx=900, cy=600, scale=1.0, turn=-0.35, expr='mom_firm', light=PORCH, act=_A(lk(T(292), (1600, 560))), c=BZ(0.02))
     BU(T(293), 'evie', 'front', 'down', st=dict(track='mat', porch=1.0), stage='r7', night_k=0.4, cx=960, cy=600, scale=1.1, expr='evie_hold', light=PORCH,
-       act=_A(lk(T(293), (500, 600))), c=BZ(0.02))
+       act=_A(lk(T(293), (500, 600)), lock(T(293) + 0.6), tiltf(T(293) + 0.7, 16, 2.0)), c=BZ(0.05))
     BU(T(294), 'evie', 'front', 'down', st=dict(track='mat', porch=1.0), stage='r7', night_k=0.4, cx=960, cy=600, scale=1.2, expr='evie_hope', light=PORCH,
-       act=_A(lk(T(294), (600, 640)), tiltf(T(294), 10)), c=BZ(0.03))
+       act=_A(lk(T(294), (600, 640)), tiltf(T(294), 18, 2.2), lock(E(294) - 0.4)), c=BZ(0.06))
     BU(T(295), 'adam_night', 'hall', 'door', st=DOOR(-9), night=False, cx=980, cy=610, scale=1.0, turn=0.35, expr='adam_steady', light=PORCH, c=BZ(0.02))
     BU(T(297), 'adam_night', 'hall', 'door', st=DOOR(-9), night=False, cx=980, cy=600, scale=1.1, turn=0.3, expr='kind_smile', light=PORCH, c=BZ(0.02))
     BU(T(298), 'mom', 'hall', 'door', st=DOOR(-9), night=False, cx=900, cy=600, scale=1.0, turn=-0.35, expr='mom_firm', light=PORCH, c=BZ(0.02))
@@ -3188,7 +3240,7 @@ def plan_rule7(F):
       ppl=[P('mom', 'mom_door', id='mom', expr='mom_firm', face=(0.8, -1.0)), AD('adam_door', who='adam_night', expr='adam_steady', face=(0.8, -1.0)),
            EV(MAT, lock(T(299)), face=(0.8, 1.0), **MO)], c=Z(1.6, 0.02, 900, 620))
     BU(T(300), 'evie', 'front', 'down', st=dict(track='mat', porch=1.0), stage='drain', night_k=0.4, cx=960, cy=600, scale=1.2, expr='evie_hope', light=PORCH,
-       act=_A(lock(T(300))), c=BZ(0.03))
+       act=_A(lock(T(300)), tiltf(T(300) + 0.3, 14, 2.4)), c=BZ(0.06))
     S(T(301), 'hall', 'door', st=DOOR(-9), night=True, night_k=0.4,
       ppl=[P('mom', 'mom_door', id='mom', expr='mom_firm', face=(0.8, -1.0)), AD('adam_door', who='adam_night', expr='adam_steady', face=(0.8, -1.0)),
            EV(MAT, lock(T(301)), lambda a, s: a.drain_away(T(301) + 0.2, 1.6, 2.8, wind=1.0), face=(0.8, 1.0), **MO)], c=Z(1.7, 0.02, 900, 620))
@@ -3231,8 +3283,7 @@ def plan_after(F):
     IN(T(322), 'shoebox', dict(dust=0.0), motion=lambda u: (-500 * (1 - ease_out_cubic(clamp(u / 0.9))), 0.0, 0.0, 0.0), c=Z(1.0, 0.02),
        sfx=[(T(322) + 0.1, 'box_slide', -16, 0, 'inside')])
     IN(T(324), 'shoebox', dict(dust=0.0), c=Z(1.8, 0.03, 960, 520))
-    S(T(325), 'school', 'lunch_table', ppl=[P('danny', 'opp_seat', id='danny', expr='danny_kind'), P('kofi', 'opp_l', id='kofi', expr='kind_smile'),
-                                            P('sam', 'opp_r', id='sam', expr='kind_smile')], c=Z(1.1, 0.02, 925, 760))
+    IN(T(325), 'shoebox', dict(dust=0.0), c=K((T(325), 900, 560, 1, None, 2.2), (E(325) + 0.3, 1020, 500, 1, 'in_out', 2.7)))     # review: the gifts he kept
     IN(T(326), 'card', dict(show=7, bg='school'), c=K((T(326), 960, 540, 1, None, 1.0), (E(327), 420, 220, 1, 'in_out', 2.5)))
     BU(W(327, 'chewed'), 'danny', 'school', 'lunch', cx=900, cy=600, scale=1.15, turn=-0.55, expr='danny_kind', c=BZ(0.02))
     BU(T(328), 'danny', 'school', 'lunch', cx=960, cy=610, scale=1.0, turn=-0.3, expr='danny_kind', c=BZ(0.02))

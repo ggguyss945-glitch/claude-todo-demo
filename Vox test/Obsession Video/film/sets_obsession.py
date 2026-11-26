@@ -340,10 +340,26 @@ def om_print(pen, v, x, y, Y, toward=(0.0, 1.0), alpha=1.0, side=1):
     tip = v.p(x + toward[0] * 0.14, Y, y + toward[1] * 0.14)
     ang = math.degrees(math.atan2(tip[0] - px, -(tip[1] - py)))
     sq = clamp(abs(v.cam_h - Y) / max(0.3, math.hypot(v.d(x, y), v.cam_h - Y)), 0.2, 1.0)
-    fn = _om_cast('draw_sneaker_print')
-    ppc = v.s(x, y) / 100.0
-    if fn is not None:
-        fn(pen, px, py, ppc, ang, alpha, sq, side); return
+    # Review: drawn in the ground plane itself (each point of the sole projected), so it lies flat and foreshortened on
+    # the step, the toe toward the door, with the tread across it
+    tx_, ty_ = toward[0], toward[1]
+    nl = math.hypot(tx_, ty_) or 1.0
+    tx_, ty_ = tx_ / nl, ty_ / nl
+    def P_(u, w):                                   # u along the toe (cm), w sideways (cm)
+        return v.p(x + (tx_ * u - ty_ * w) / 100.0, Y + 0.002, y + (ty_ * u + tx_ * w) / 100.0)
+    sole_ = [(10.5, -3.2), (10.0, 3.0), (2.0, 3.8), (-6.0, 4.2), (-10.8, 2.4), (-11.0, -1.8), (-6.0, -4.0), (2.0, -3.4)]
+    pts_ = [P_(u, w * side) for (u, w) in sole_]
+    pth = smooth(pts_, True, 0.8)
+    lw_ = max(0.8, v.s(x, y) / 100.0 * 0.55)
+    pen.cv.drawPath(pth, skia.Paint(Color=col(OM_CHALK, int(70 * alpha)), AntiAlias=True))
+    pen.cv.drawPath(pth, _om_chalk_paint(OM_CHALK, 170 * alpha, lw_))
+    tr_ = skia.Path()
+    for k in range(7):
+        u0 = -9.0 + k * 2.6
+        a_, b_, c_ = P_(u0, -2.6), P_(u0 + 1.1, 0.0), P_(u0, 2.6)
+        tr_.moveTo(*a_); tr_.lineTo(*b_); tr_.lineTo(*c_)
+    pen.cv.drawPath(tr_, _om_chalk_paint(OM_CHALK, 160 * alpha, lw_ * 0.8))
+    return
     cv = pen.cv; cv.save(); cv.translate(px, py); cv.scale(1.0, sq); cv.rotate(ang); cv.scale(ppc, ppc)
     sole = smooth([(-3.2, 10.5), (3.0, 10.0), (3.8, 2.0), (4.2, -6.0), (2.4, -10.8), (-1.8, -11.0), (-4.0, -6.0), (-3.4, 2.0)], True, 0.8)
     cv.drawPath(sole, _om_chalk_paint(OM_CHALK, 170 * alpha, 0.6)); cv.restore()
@@ -1207,7 +1223,7 @@ _OM_HOPC = ('#f2c43a', '#4a9ad8', '#62b85a', '#f2f2ea', '#4a9ad8', '#f2c43a', '#
 def _om_play_light(o):
     tod = _otod(o)
     if tod == 'sunset':
-        return '#5a4450', [Lamp(kind='dir', c=mix(OM_RED, '#ffa070', 0.45), k=1.25, d=_norm3((0.85, -0.3, -0.2)))]
+        return '#5a4a48', [Lamp(kind='dir', c='#ffa868', k=1.2, d=_norm3((0.85, -0.3, -0.2)))]      # review: orange, so only the square is red
     if tod in ('warm', 'summer'):
         return '#8a7a6a', [Lamp(kind='dir', c='#ffe0a8', k=1.15, d=_norm3((0.4, -0.75, -0.4)))]
     if tod == 'night':
@@ -1346,11 +1362,11 @@ class OmPlay(Room):
         tod = _otod(o)
         om_sky(pen, v, tod)
         F = floor_face(-80.0, 80.0, -90.0, -27.0, 0.0)                    # the field beyond the fence
-        g = {'sunset': '#5a4a3a', 'night': '#121c16', 'summer': '#6a9a48', 'warm': '#7a9a50'}.get(tod, '#6a8a48')
+        g = {'sunset': '#6e5838', 'night': '#121c16', 'summer': '#6a9a48', 'warm': '#7a9a50'}.get(tod, '#6a8a48')
         draw_face(pen, v, F, lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'grunge', 0.6, 'overlay', 5.0), g, ao=False, line=False)
         for i, (x, y, h) in enumerate([(-12.0, -38.0, 6.0), (-5.0, -44.0, 6.5), (6.5, -40.0, 5.5), (13.0, -46.0, 6.5), (-17.0, -48.0, 6.0), (1.0, -50.0, 6.0)]):
             _om_tree(pen, v, x, y, 0.0, h, 'sunset' if tod == 'sunset' else ('night' if tod == 'night' else 'day'), i + 20)
-        tar = {'sunset': '#5a4c50', 'night': '#202228', 'summer': '#7a7a80', 'warm': '#8a8480'}.get(tod, '#6c6e74')
+        tar = {'sunset': '#6a5c54', 'night': '#202228', 'summer': '#7a7a80', 'warm': '#8a8480'}.get(tod, '#6c6e74')
         T = floor_face(-16.0, 16.0, -27.0, 0.0, 0.0)
         def tart(p_, W, H):
             p_.texture(rect(0, 0, W, H), 'asphalt', 0.5, 'overlay', 1.6); p_.texture(rect(0, 0, W, H), 'grunge', 0.22, 'overlay', 4.0)
@@ -1530,7 +1546,7 @@ def om_tape_fx(warp=0.0, rewind=None):
     return fx
 
 
-def om_tape_stamp(cv, t, date='JUL. 14 1996', counter0=12 * 60 + 47, mode='play', alpha=255, warp=0.0):
+def om_tape_stamp(cv, t, date='JUL. 14 2019', counter0=12 * 60 + 47, mode='play', alpha=255, warp=0.0):
     """The camcorder's on-screen stamp (draw it in the HUD, over the VHS look): PLAY > (blinking for the first seconds;
     mode 'rew' shows << REW and the counter running backward; 'pause' || PAUSE), the tape counter top right
     (H:MM:SS from counter0 s), the date bottom left. warp jitters it."""
