@@ -1,11 +1,12 @@
-"""The voice edit of "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET" (Night Policy; adapted from the
-Walls film's tool): the owner's 12 ElevenLabs takes -> one clean, paced voice track (English).
+"""The voice edit of "If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME" (Night Policy;
+adapted from the Buttons film's tool): the owner's 13 ElevenLabs takes -> one clean, paced voice track (English).
     python3 tools/vo_edit.py analyze     line -> take mapping, recogniser vs script per line, dropped islands (prints)
     python3 tools/vo_edit.py build       -> W/narration/narration_en.wav (48 kHz mono, 24-bit) + edit_list.json
     python3 tools/vo_edit.py check       scans of the built file (gaps vs plan, residual breaths, clicks at cuts,
                                          levels per voice, peaks); then run tools/align.py and tools/vo_asrcheck.py --every
-Sources: W/narration/raw/index.json (7 narrator parts in order, one take per character; Owen and his son share one
-adult take: Owen's 6 lines, then the son's 2), words from tools/vo_asr.py (W/narration/asr/<take>.json: Parakeet TDT word start/end times, used as anchors),
+Sources: W/narration/raw/index.json (7 narrator parts in order, one take per character; Adam's 9 lines (the song at
+seven first) and Danny's 5 share one narrator-voice take ('kids'); 'danny2' is a second Danny take: DANNY_SRC picks
+the better reading per line, and the unused reading stays in the cut plan as a ghost so no cut lands inside it), words from tools/vo_asr.py (W/narration/asr/<take>.json: Parakeet TDT word start/end times, used as anchors),
 lines from film/script/lines.py (tools/vo_lines.py: who, fx, pause per line, in script order).
 How it works
   1. Map: per source (the narrator's six parts as one word stream; each character take), the lines' words are matched
@@ -47,19 +48,27 @@ sys.path.insert(0, os.path.join(FILM, 'script'))
 sys.path.insert(0, HERE)
 SR = 48000
 NARR = ['narrator_part%d' % k for k in range(1, 8)]
-TAKE = {'mom': 'mom', 'blank': 'blank', 'owen': 'kids_adult_take', 'son': 'kids_adult_take', 'dunn': 'dunn',
-        'mensah': 'mensah'}
-KIDS = ('owen', 'son')                             # re-voiced from the adult take (tools/vo_voices.py)
-VOICE_LU = {'mom': 0.0, 'blank': 0.0, 'dunn': 0.0, 'mensah': 0.0, 'owen': -0.5, 'son': -1.0}            # dB vs the narrator's median speech level (before any fx offset)
+TAKE = {'evie': 'evie', 'lina': 'lina', 'mom': 'mom', 'rahman': 'rahman', 'adam': 'kids', 'adam7': 'kids',
+        'danny': 'danny2'}
+# Danny's better reading per line (default danny2, the second take: slower, softer, each full stop a real stop, which
+# suits "soft, slightly hesitant"; the kids take has the real question on "Can we sit here? All of us?")
+DANNY_SRC = {'danny_can_we_sit': 'kids'}
+VOICE_LU = {'evie': 0.0, 'lina': -0.5, 'mom': 0.0, 'rahman': 0.0, 'adam': -0.5, 'adam7': -1.0, 'danny': -1.0}   # dB vs the narrator's median speech level (before any fx offset)
 THR = -60.0                                        # island threshold (dBFS, 5 ms RMS)
 LEAD, TAIL = 0.30, 0.60
 NAT_MIN = 0.14                                     # shortest gap between two narrator sentences (s)
 CLAMP = {',': (0.10, 0.30), ';': (0.20, 0.35), ':': (0.20, 0.35), '...': (0.22, 0.45), '.': (0.15, 0.30),
          '?': (0.15, 0.30), '!': (0.15, 0.30), '': (0.0, 0.25)}
-LINE_LU = {'owen_no': 5.0}                       # dB on top of the voice level: "NO!" is a full shout
-HOLD = {}                                          # x the clamp's upper bound for character lines (default 1.5)
-# hand fixes (raw take seconds), checked by ear-free measurement: {tag: {...}} (none needed so far)
+LINE_LU = {}                                       # dB on top of the voice level, per tag
+HOLD = {'adam7': 1.0, 'lina': 1.0}                 # x the clamp's upper bound for character lines (default 1.5); the
+                                                   # songs keep their own phrasing (their rests are short anyway)
+# hand fixes (raw take seconds), checked by measurement: CUTS {tag: start cut}; ENDS {tag: end of the line} (Evie's
+# last sung line is cut off inside the second "here": the take sings it whole, the script stops on "he-")
 CUTS = {}
+ENDS = {}
+# words the first transcript missed (take key -> [(word, t0, t1)]), placed by the take's energy: the narrator's "Adam."
+# after Lina's line is a lone word between two silences (-86 dB), 84.25-84.80 s of part 4
+ASR_ADD = {'narrator_part4': [('Adam', 84.25, 84.80)]}
 
 NUM = {'zero': '0', 'one': '1', 'two': '2', 'to': '2', 'too': '2', 'three': '3', 'four': '4', 'five': '5', 'six': '6',
        'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10', 'twelve': '12', 'fourteen': '14', 'fifty': '50',
@@ -69,7 +78,7 @@ SAME = {'larksburg': 'larkspur', 'larkspurs': 'larkspur', 'markspur': 'larkspur'
         'hushaby': 'hushabye', 'hushabi': 'hushabye', 'okay': 'ok', 'goodnight': 'good night', 'dabrowskis': 'dabrowski',
         'misses': 'missus', 'dubrowski': 'dabrowski', 'grill': 'grille', 'larksbury': 'larkspur', 'larksburgh': 'larkspur',
         'larksford': 'larkspur', 'hashabai': 'hushabye', 'hashaby': 'hushabye', 'hushabuy': 'hushabye',
-        'mamma': 'mama', 'mammas': 'mamas', 'mensa': 'mensah', 'mensas': 'mensah', 'maam': 'madam', 'mam': 'madam'}
+        'mamma': 'mama', 'mammas': 'mamas', 'favorite': 'favourite', 'color': 'colour', 'flashlight': 'torch'}
 PAIRS = {('larks', 'per'): 'larkspur', ('larks', 'for'): 'larkspur', ('arm', 'chair'): 'armchair', ('door', 'frame'): 'doorframe', ('2', 'night'): 'tonight', ('dead', 'bolt'): 'deadbolt',
          ('grown', 'up'): 'grownup', ('grown', 'ups'): 'grownups', ('flash', 'light'): 'flashlight', ('head', 'board'): 'headboard'}
 HUSH = [('hush', 'a', 'bye'), ('hush', 'a', 'by'), ('hush', 'a', 'bi'), ('hush', 'a', 'bai'), ('hush', 'abye'),
@@ -122,11 +131,21 @@ def text_punct(s):
     return out
 
 
+def rawfile(key):
+    """Take key -> file name in W/narration/raw (index.json 'files': {file: label})."""
+    ix = json.load(open(os.path.join(RAWDIR, 'index.json')))['files']
+    for f, lab in ix.items():
+        k = lab.split()[0]
+        k = {'kids_adult_take': 'kids'}.get(k, k)
+        if lab.startswith('danny (second'): k = 'danny2'
+        if k == key: return f
+    raise KeyError(key)
+
+
 def asr_tokens(key, part=0):
-    ix = json.load(open(os.path.join(RAWDIR, 'index.json')))
-    d = json.load(open(os.path.join(ASRDIR, os.path.splitext(ix[key])[0] + '.json')))
+    d = json.load(open(os.path.join(ASRDIR, os.path.splitext(rawfile(key))[0] + '.json')))
     flat = []
-    for w, t0, t1 in d['words']:
+    for w, t0, t1 in sorted(d['words'] + [list(a) for a in ASR_ADD.get(key, [])], key=lambda r: float(r[1])):
         for t in _raw_toks(w): flat.append((t, float(t0), float(t1)))
     return [dict(tok=t, src=key, t0=a[1], t1=b[2]) for t, a, b in _join(flat, key=lambda x: x[0])]
 
@@ -137,6 +156,8 @@ def load_lines():
 
 
 def take_of(l):
+    if l.get('take'): return l['take']
+    if l['who'] == 'danny': return DANNY_SRC.get(l['tag'], TAKE['danny'])
     return 'narrator' if l['who'] == 'narrator' else TAKE[l['who']]
 
 
@@ -144,12 +165,17 @@ def map_lines(L):
     """Every line -> its recognised words in its take: l['asr'] = [token dicts with 'li' (line token index)];
     l['diff'] = the mismatches (op, script words, heard words)."""
     groups = {}
-    for l in L: groups.setdefault(take_of(l), []).append(l)
+    ghosts = []                                        # Danny's unused reading: mapped and cut around, never output
+    for l in L:
+        if l['who'] == 'danny':
+            g = dict(l, ghost=True); g['take'] = 'kids' if take_of(l) == 'danny2' else 'danny2'; ghosts.append(g)
+    for l in L + ghosts: groups.setdefault(take_of(l), []).append(l)
     for g, ls in groups.items():
         if g == 'narrator': A = [t for k in NARR for t in asr_tokens(k)]
         else:
             A = asr_tokens(g)
-            if g == TAKE['owen']: ls = sorted(ls, key=lambda l: (l['who'] != 'owen', l['i']))
+            if g == 'kids': ls = sorted(ls, key=lambda l: (l['who'] == 'danny', l['i']))
+            else: ls = sorted(ls, key=lambda l: l['i'])
         S = [(l['i'], k, t) for l in ls for k, t in enumerate(toks(l['say']))]
         by = {l['i']: l for l in ls}
         for l in ls: l['asr'], l['diff'] = [], []
@@ -167,7 +193,7 @@ def map_lines(L):
         for l in ls:
             l['asr'].sort(key=lambda a: (NARR.index(a['src']) if a['src'] in NARR else 0, a['t0']))
             l['head_unmatched'] = any(op == 'delete' and sw and sw[0] == toks(l['say'])[0] for op, sw, _ in l['diff'][:1])
-    return L
+    return L + ghosts
 
 
 # ============================================================================ audio analysis
@@ -176,8 +202,7 @@ _TAKES = {}
 
 def take(key):
     if key not in _TAKES:
-        ix = json.load(open(os.path.join(RAWDIR, 'index.json')))
-        x, sr = sf.read(os.path.join(RAWDIR, ix[key]), dtype='float64')
+        x, sr = sf.read(os.path.join(RAWDIR, rawfile(key)), dtype='float64')
         assert sr == SR, (key, sr)
         x = highpass(x)                                # 70 Hz first: levels are measured on what is heard (a whisper
         e = envelope(x)                                # line's sub-bass rumble read 5 dB of "speech")
@@ -266,6 +291,7 @@ def line_spans(L):
         cut[-1] = (rs[0][0] if rs else dur, None, False)
         for k, l in enumerate(ls):
             l['span'] = (src, cut[k][1], cut[k + 1][0], cut[k][2], cut[k + 1][2])
+            if l['tag'] in ENDS: l['span'] = (src, cut[k][1], ENDS[l['tag']], cut[k][2], True)
     return L
 
 
@@ -376,7 +402,7 @@ def true_peak(y):
 # ============================================================================ commands
 def prepared():
     L = map_lines(load_lines())
-    return line_spans(L)
+    return [l for l in line_spans(L) if not l.get('ghost')]
 
 
 def cmd_analyze():
@@ -408,7 +434,6 @@ def cmd_build():
     for l in L:
         if l['who'] != 'narrator': take_med.setdefault(l['who'], []).append(l['lvl'])
     take_med = {k: float(np.median(v)) for k, v in take_med.items()}
-    from vo_lines import BEAT_LEAD, BEAT_STEP
     parts, t, el, beats = [np.zeros(int(LEAD * SR))], LEAD, [], []
     for l, y in zip(L, dry):
         if l.get('drop'):                              # owner: no dialogue tags; keep the longer of the two pauses
@@ -416,7 +441,7 @@ def cmd_build():
                 want = float(l['pause'])
                 nxt = next((m for m in L[L.index(l) + 1:] if not m.get('drop')), None)
                 if nxt is not None and nxt['who'] == el[-1]['who'] != 'narrator':   # one speaker's two quotes now meet:
-                    want = max(want, 0.55 if nxt['who'] == 'pell' else 0.40)        # a natural phrase pause between them
+                    want = max(want, 0.40)        # a natural phrase pause between them
                 extra = max(0.0, want - el[-1]['pause'])
                 if extra > 0:
                     parts.append(np.zeros(int(round(extra * SR)))); t += extra
@@ -431,7 +456,7 @@ def cmd_build():
         g += LINE_LU.get(l['tag'], 0.0)
         y = y * 10 ** (g / 20)
         vst = None
-        if l['who'] in KIDS:
+        if l['who'] in vo_voices.VOICES:          # the re-voiced characters (tools/vo_voices.py)
             y, vst = vo_voices.voice_line(y, l)
         if l.get('fx'):
             y = vo_fx.apply(y, l['fx'])
@@ -448,8 +473,8 @@ def cmd_build():
                        pause=round(gap, 3), gain_db=round(g, 2), level_dry=round(l['lvl'], 1), src=l['span'][0],
                        src_span=[round(l['span'][1], 3), round(l['span'][2], 3)], forced=[l['span'][3], l['span'][4]],
                        pieces=l['pieces'], dropped=l['dropped'], voice=vst, fx_tail=tail))
-        for k, b in enumerate(l.get('beats') or []):   # the Tik / Ping sounds of the script, placed in this gap
-            beats.append(dict(kind=b, t=round(t + n0 / SR + BEAT_LEAD + BEAT_STEP * k, 3), line=l['i'], tag=l['tag']))
+        for k, b in enumerate(l.get('beats') or []):   # the Ping / Clank sounds of the script, placed in this gap
+            beats.append(dict(kind=b, t=round(t + n0 / SR + l['beat_t'][k], 3), line=l['i'], tag=l['tag']))
         t += n0 / SR + gap
     y = np.concatenate(parts)
     mask = np.zeros(len(y))                            # the gaps gated to digital silence (fx tails kept)
@@ -467,7 +492,7 @@ def cmd_build():
                    narrator_median_db=round(nar_med, 2), take_median_db={k: round(v, 2) for k, v in take_med.items()},
                    lines=el), open(EDL, 'w'), indent=1)
     os.makedirs(os.path.join(W, 'align'), exist_ok=True)
-    json.dump(dict(note='Tik / Ping beats of the script (sounds, not in the voice track): t = where the sound starts (s, '
+    json.dump(dict(note='Ping / Clank beats of the script (sounds, not in the voice track): t = where the sound starts (s, '
                         'narration_en.wav time); line = the timeline line it follows', beats=beats),
               open(os.path.join(W, 'align', 'beats.json'), 'w'), indent=1)
     m, s = divmod(len(y) / SR, 60)

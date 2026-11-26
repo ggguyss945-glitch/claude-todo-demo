@@ -1,14 +1,15 @@
-"""The line map of "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET" (Night Policy): writes
+"""The line map of "If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME" (Night Policy): writes
 F/script/lines.py from the full script (script/narration_en.txt) and the exact interleaving of the takes
 (script/voices/index.json "order": every narrator paragraph and character line, in script order, with who speaks).
     python3 tools/vo_lines.py          -> film/script/lines.py (prints the narrator-vs-order word check)
 Every quote of the script that is the next character line of the order is that character's line (cut later from its
-own take); any other quote ("Your mom doesn't even see you"... don't answer.) is the narrator's.
+own take); any other quote (the cold open's "I can see your light's still on") is the narrator's.
 Narration is split into sentences (an ellipsis before a lower-case word stays inside its sentence); a character's
-quote is one line. en = the caption (the script's words, with the on-screen capitals); say = what the take says when
-it differs (FRI. read as "Friday", the board messages in normal case): the edit and the aligner match 'say'.
-The "Tik." and "Ping." beats are SOUNDS (not in any take): each becomes a beat after the line before it
-(beats=['tik'] ...); the edit leaves room for it and writes its time to W/align/beats.json.
+quote is one line. en = the caption (the script's words, with the on-screen capitals: ONLY ME, DANNY, ADAM); say =
+what the take says when it differs (Evie's "Under ONLY ME." is read "Under only me."): the edit and aligner match 'say'.
+The "Ping." and "Clank." paragraphs are SOUNDS (not in any take): each becomes a beat after the line before it
+(beats=['ping', ...], beat_t = each sound's offset after that line's end); the edit leaves room for them and writes
+their times to W/align/beats.json.
 PACE / FX below are the hand-set columns (by the caption text); the gap rules are in gap_after().
 """
 import json, os, re
@@ -17,111 +18,100 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FILM = os.path.dirname(HERE)
 SCRIPT = os.path.join(os.path.dirname(FILM), 'script')
 OUT = os.path.join(FILM, 'script', 'lines.py')
-CHARS = ['mom', 'blank', 'owen', 'son', 'dunn', 'mensah']
+CHARS = ['evie', 'lina', 'mom', 'rahman', 'adam', 'adam7', 'danny']
 
-# lines kept whole (the sentence split would break them at FRI. / A.M.); caption -> spoken (the take's words)
-SAY = {
-    "On the fridge: FRI. O'S BIRTHDAY.": "On the fridge: Friday. O's birthday.",
-    "Under FRI, I wrote: MOM IT'S OWEN I'M HERE.": "Under Friday, I wrote: Mom, it's Owen. I'm here.",
-    "THE CHAT. THE PHOTO. THE COAT. THE CAR. 2 A.M. I WISHED FOR A DIFFERENT MOM.":
-        "The chat. The photo. The coat. The car. Two a.m. I wished for a different mom.",
-}
+# narrator lines kept whole (the sentence split would break them at each letter), caption -> spoken
+SAY = {"O. N. L. Y.": "O. N. L. Y.", "Chalk fingers wrote M... E... toward the kitchen.":
+       "Chalk fingers wrote M... E... toward the kitchen."}
 
-# voice FX by staging (the Blank's lines by text; Mom's phone line). Everything else is dry (None).
-WHISPER = ["Your mom doesn't even see you. I can be her. Tell me about her.", "What color are her eyes?",
-           "That's okay. I'll see you for both of us.", "You're so grown-up. Send me your view, so I can picture you.",
-           "I see you.", "Because she never even looked. Don't tell her.",
-           "Tell her about me, and she'll know you wished for a different mom. Your fault.",
-           "Come to the kitchen, baby.", "I could be your dad. What color are his eyes?"]
-DOUBLE = ["Sit. Say something. I like to hear where you are.", "Or I tell her what you wished.",
-          "It's not a secret. It's a surprise. Your mom finds out when we're gone. On your birthday, you button up... and I take you home.",
-          "Watch. She doesn't even see you.", "Only I see you."]
-TALL = ["Button up, sweetheart. We're going home.",
-        "Happy birthday. She can't hear you. Only me. Button up. We're going home.",
-        "One for warm... two for snug... three for Mama's button hug...",
-        "Top one's yours, sweetheart. Mama keeps you. Say goodbye.", "Tell me where you are."]
-FX = dict([(k, 'whisper') for k in WHISPER] + [(k, 'double') for k in DOUBLE] + [(k, 'tall') for k in TALL] +
-          [("Get in, sweetheart. I got off early. Pancakes?", 'car'), ("Baby? I'm at the table. Where are you?", 'phone')])
+# voice FX by staging (story bible registers). Everything else is dry (None); the narrator is never processed.
+MESSAGE = ["Are you awake?", "Why aren't you answering?", "There. Now it's only me.",
+           "Your mom's always on the phone about you. She thinks something's wrong with you.",
+           "Your sister's a baby. Only I get you.",
+           "Please stop. You're scaring me."]          # Danny's old message, read off Adam's phone
+LETTERBOX = ["After everything I gave you.", "If you leave, it's your fault. I'll stand here forever.",
+             "Write your name. Under ONLY ME."]
+FX = dict([(k, 'message') for k in MESSAGE] + [(k, 'letterbox') for k in LETTERBOX] +
+          [("Only me. I'm here, I'm he-", 'thin'),
+           ("Me and you, and you and me, stick like glue, and you will see. Everywhere you go, I'm near. Only me. I'm here, I'm here.", 'tape')])
 
 # gap after the line (s), set by hand for its moment (overrides gap_after's rules): the scare beats sit just after
-# their key word; the holds are the few dread beats the picture needs. Tight and energetic, like the Walls edit.
+# their key word; the holds are the few dread beats the picture needs. Tight and energetic, like the Buttons edit.
 PACE = {
-    "And if your mom holds your coat open at midnight, with two shiny black buttons where her eyes should be...": 0.35,
-    "Button up, sweetheart. We're going home.": 0.45,
-    "...don't.": 0.45,
-    "Talking to the police.": 0.85,                     # the hook lands: title sting
-    "The Brave List.": 0.40,
-    "At eleven, I broke four of them in one week.": 0.45,
-    "By midnight on my birthday, a police officer stood in our kitchen, my mom was crying my name... and I was standing right next to her.": 0.60,
-    "In a jar by my headset.": 0.70,
-    "One minute.": 0.40,
-    "She didn't even look.": 0.45,
-    "She hadn't sung it in years.": 0.45,
-    "I wish I had a different mom.": 0.65,             # + the ping
-    "Our song.": 0.35,
-    "I don't know.": 0.40,
-    "So I named her.": 0.15, "The Blank.": 0.45,
-    "Her kind hunt one thing: a kid who feels invisible... and tells strangers instead of home.": 0.60,
-    "Send.": 0.40,
-    "On my closet door, rule one went pale.": 0.45,
-    "Two black buttons flashed.": 0.45,
-    "I see you.": 0.40,
-    "Gone.": 0.45,
-    "And she was outside... wearing my mom.": 0.65,
-    "Buttons, or Mom?": 0.65,
-    "I hid it in my closet.": 0.40,
-    "Like a photo left in the sun.": 0.45,
-    "I opened the closet.": 0.35,
-    "Like somebody was inside it.": 0.40,
-    "Then, slowly, it sagged.": 0.20,
-    "And I'd typed that.": 0.45,
-    "Buttons.": 0.45,
-    "And kept coming.": 0.25,
-    "Fingers tapping the air, reaching for my hood.": 0.45,
-    "Then, just tire tracks.": 0.50,
-    "Half a secret is still a secret.": 0.45,
-    "She turned, and took the glasses off.": 0.20,
-    "The Blank was in front of it.": 0.45,
-    "Rule four faded.": 0.45,
-    "Standing behind me.": 0.50,
-    "She didn't even sit down.": 0.50,
-    "Her bun brushed the lamp.": 0.40,
-    "For one second, I couldn't tell my mothers apart.": 0.45,
-    "Only you.": 0.45,
-    "Her head set the lamp swinging.": 0.45,
-    "The headset lady was still on the phone.": 0.65,
-    "I couldn't see me.": 0.60,
-    "I was standing in my own kitchen.": 0.50,
-    "Like she'd heard a whisper.": 0.50,
-    "My birthday.": 0.45,
-    "Holding open... the red coat.": 0.40,
-    "Happy birthday. She can't hear you. Only me. Button up. We're going home.": 0.60,
-    "One for warm... two for snug... three for Mama's button hug...": 0.30,
-    "The song stopped.": 0.45,
-    "Top one's yours, sweetheart. Mama keeps you. Say goodbye.": 0.45,
-    "NO!": 0.40,
-    "She was left holding a red coat with nobody in it.": 0.50,
-    "Tell me where you are.": 0.50,
-    "And I told my mom.": 0.50,
-    "The marker squeaked.": 0.20,
-    "Tell me. I'm listening.": 0.45,
-    "The long fingers were an inch from my hood.": 0.40,
-    "And my mom's eyes found me.": 0.35,
-    "There you are.": 0.45,
-    "Mid-reach.": 0.45,
-    "Green.": 0.60,
-    "Now I was looking.": 0.50,
-    "She did look.": 0.45,
-    "Mama sees you. Say goodnight.": 0.95,              # the story ends
-    "Just like her.": 0.50,
-    "The jar was empty.": 0.65,
-    "At the window next to his.": 0.50,
-    "Brown. Your eyes are brown.": 0.45,
-    "Still waiting.": 0.85,
-    "Breathe.": 0.30,
-    "You should know what color they are.": 0.00,
+    "Especially if she doesn't blink.": 0.55,
+    "If your phone is off... and it still lights up: \"I can see your light's still on\"... don't look out the window.": 0.45,
+    "Wake a grown-up.": 0.50,
+    "I know who it is.": 0.85,                          # the hook lands: title sting
+    "At the top, one name, scribbled out in blue pen.": 0.45,
+    "By Saturday midnight, she was on our doormat, my sister was reading a name under the landing light... and I was halfway down the stairs to let her in.": 0.65,
+    "I ate alone.": 0.45,
+    "Nobody else knows it.": 0.40,
+    "The green-and-gold bracelet I wove him in third grade... gone.": 0.45,
+    "She looked a beat too long.": 0.45,
+    "The Keeping Square.": 0.45,
+    "That person will never leave you.": 0.40,
+    "Nobody was cruel enough to try it.": 0.55,
+    "A smile that didn't stop.": 0.55,
+    "Somebody waiting for me, for once.": 0.40,
+    "We'd met on Monday.": 0.45,
+    "Sleep.": 0.45,
+    "Forty-seven.": 0.40,
+    "I can see your light's still on.": 0.50,
+    "ONLY ME.": 0.45,
+    "She didn't blink.": 0.45,
+    "Evie lay down flat, like a chalk drawing... and slid away.": 0.50,
+    "Must have rained.": 0.40,
+    "Good.": 0.40,
+    "Pointing in.": 0.55,
+    "If someone did that for you... would you feel Special, or Trapped?": 0.60,
+    "Chalk dust on it.": 0.40,
+    "It was Danny's bracelet.": 0.55,
+    "Now I owed her.": 0.45,
+    "Just past the corners.": 0.45,
+    "Then in my room.": 0.40,
+    "Nobody.": 0.35,
+    "Just one white chalk fingerprint... on the inside of my window.": 0.50,
+    "Outside, ONLY ME had reached the foot of our step.": 0.45,
+    "There. Now it's only me.": 0.55,
+    "There.": 0.40,
+    "She never ran.": 0.45,
+    "In my seven-year-old voice.": 0.60,
+    "I was.": 0.65,                                     # the first reveal
+    "The chalk slid out, flat across the playground... and stood up.": 0.45,
+    "I ran.": 0.50,
+    "Waiting for a name.": 0.55,
+    "You're my only friend.": 0.55,
+    "Right against our green front door.": 0.45,
+    "There's a girl at our door. She's smiling up at your window.": 0.45,
+    "Her chalk smile almost touched her ears.": 0.60,
+    "Midnight.": 0.40,
+    "O. N. L. Y.": 0.45,
+    "Write your name. Under ONLY ME.": 0.55,
+    "Halfway.": 0.45,
+    "It says your name.": 0.45,
+    "ADAM.": 0.65,
+    "From me.": 0.75,                                   # whose rules they were
+    "The letters crept across the tiles... and stopped at her chair.": 0.50,
+    "And she'd kept asking, until I let her in.": 0.55,
+    "Sent by me.": 0.45,
+    "Please stop. You're scaring me.": 0.55,
+    "That blue front door was Danny's.": 0.50,
+    "It was me.": 0.90,                                 # the truth lands
+    "He woke his mom.": 0.45,
+    "Only me. I'm here, I'm he-": 0.70,                 # silence after the cut
+    "Her colour drained to chalk-white, and the wind carried her off like dust.": 0.70,
+    "Me and you, and others too, friends for me and friends for you. Go wherever, near or far. I'll still care, wherever you are.": 0.55,
+    "That had to be okay.": 0.55,
+    "The caretaker painted over the Keeping Square.": 0.55,
+    "He's one of my best.": 0.60,
+    "ONLY.": 0.45,
+    "I only call once.": 0.95,                          # the story ends
+    "You can turn a light on now.": 0.45,
+    "Special, or Trapped?": 0.50,
 }
-BEAT_LEAD, BEAT_STEP, BEAT_AFTER = 0.15, 0.35, 0.42   # beat: sound at line end + lead (+ step per extra tik), then room
+# the sounds: offset of each from the line's end (s): the first after LEAD, the next in its paragraph STEP later, a new
+# paragraph of sounds GAP later; then AFTER of room before the next line (each paragraph of sounds is a 0.5-0.9 s beat)
+BEAT_LEAD, BEAT_STEP, BEAT_GAP, BEAT_AFTER = 0.12, 0.30, 0.55, 0.45
 
 
 def strip_tags(s):
@@ -134,7 +124,7 @@ def toks(s):
 
 SENT = re.compile(r'(?<=[.?!])\s+(?=["A-Z])')
 ABBR = re.compile(r'(?:\bMrs?|\bL)\.$')
-BEAT = re.compile(r'(?:(?<=^)|(?<=\s))(Tik|Ping)\.(?=\s|$)')
+BEAT = re.compile(r'(?:(?<=^)|(?<=\s))(Ping|Clank)\.(?=\s|$)')
 
 
 def sentences(s):
@@ -170,8 +160,11 @@ def build():
             if not seg.strip(): continue
             if seg.startswith('"'):
                 q = seg[1:-1].strip()
-                if chars and chars[0][1] == q:
-                    lines.append(dict(who=chars.pop(0)[0], en=q, para=pi, beats=[])); continue
+                if chars and toks(chars[0][1]) == toks(q):
+                    w_, t_ = chars.pop(0)
+                    lines.append(dict(who=w_, en=q, para=pi, beats=[]))
+                    if t_ != q: lines[-1]['say'] = t_
+                    continue
                 if lines and lines[-1]['who'] == 'narrator' and lines[-1]['para'] == pi and not re.search(r'[.?!]$', lines[-1]['en']):
                     lines[-1]['en'] += ' ' + seg; lines[-1]['glue'] = True; continue
                 lines.append(dict(who='narrator', en=seg, para=pi, beats=[], glue=True)); continue
@@ -180,11 +173,17 @@ def build():
                 txt = seg[pos:m.start() if m else len(seg)]
                 for sn in sentences(txt): add_narr(sn, pi)
                 if m:
-                    lines[-1]['beats'].append(m.group(1).lower()); pos = m.end()
+                    lines[-1]['beats'].append(m.group(1).lower()); lines[-1].setdefault('bpara', []).append(pi); pos = m.end()
         if lines and lines[-1].get('glue'): lines[-1].pop('glue')
     assert not chars, chars
     for l in lines:
         if l['en'] in SAY: l['say'] = SAY[l['en']]
+        if l['beats']:                                 # each sound's offset after the line's end
+            bt, t = [], BEAT_LEAD
+            for k, bp in enumerate(l['bpara']):
+                if k: t += BEAT_STEP if bp == l['bpara'][k - 1] else BEAT_GAP
+                bt.append(round(t, 2))
+            l['beat_t'] = bt
     return lines, paras, order
 
 
@@ -208,8 +207,8 @@ def gap_after(L, i):
     elif n['para'] != l['para']: g = 0.32
     elif len(toks(l['en'])) <= 3 or len(toks(n['en'])) <= 3: g = 0.18   # staccato fragments
     else: g = 0.20
-    if l['beats']:                                     # room for the tik / ping, then a breath before the next line
-        g = max(g, BEAT_LEAD + BEAT_STEP * (len(l['beats']) - 1) + BEAT_AFTER + (0.05 if n['who'] != 'narrator' else 0))
+    if l['beats']:                                     # room for the pings / clank, then a breath before the next line
+        g = max(g, l['beat_t'][-1] + BEAT_AFTER + (0.05 if n['who'] != 'narrator' else 0))
     return g
 
 
@@ -245,24 +244,25 @@ def main():
     rows = []
     for i, l in enumerate(L):
         fx = FX.get(l['en']) if l['who'] != 'narrator' else None
-        ex = (', say=%r' % l['say'] if 'say' in l else '') + (', beats=%r' % l['beats'] if l['beats'] else '') + (', fixed=True' if fixed(L, i) else '')
+        ex = (', say=%r' % l['say'] if 'say' in l else '') + (', beats=%r, beat_t=%r' % (l['beats'], l['beat_t']) if l['beats'] else '') + (', fixed=True' if fixed(L, i) else '')
         rows.append('    L(%r, %r, %r, %.2f, tag=%r, para=%d%s),' % (l['who'], l['en'], fx, gap_after(L, i), l['tag'], l['para'], ex))
-    head = ('"""Every spoken line of "If Your Mom\'s Eyes Turn Into Buttons... DON\'T KEEP HER SECRET" (Night Policy), in\n'
-            'script order. GENERATED by film/tools/vo_lines.py from script/narration_en.txt and script/voices/index.json\n'
-            '(edit the tables there and re-run, not this file).\n'
-            'who: narrator (the grown-up Owen; also his own quoted words), mom, blank, owen, son, dunn, mensah. A character\n'
-            '     line is cut from that character\'s own take (W/narration/raw/index.json); Owen (11) and his son (10) are\n'
-            '     re-voiced from the adult take into child voices (tools/vo_voices.py).\n'
+    head = ('"""Every spoken line of "If a Girl Is OBSESSED With Being Your Only Friend... DON\'T WRITE YOUR NAME" (Night\n'
+            'Policy), in script order. GENERATED by film/tools/vo_lines.py from script/narration_en.txt and\n'
+            'script/voices/index.json (edit the tables there and re-run, not this file).\n'
+            'who: narrator (the grown-up Adam; also the cold open\'s quoted words), evie, lina (7), mom, rahman, adam (12),\n'
+            '     adam7 (his song at seven, on the old camcorder tape), danny (12). A character line is cut from its own take\n'
+            '     (W/narration/raw/index.json); Adam, little Adam and Danny are re-voiced from the narrator-voice kids takes,\n'
+            '     Evie (about 12) and Lina (7) from Evie\'s young-adult takes (tools/vo_voices.py).\n'
             'en: the caption (the script\'s words, on-screen capitals kept); say: what the take says, when it differs.\n'
             'fx: how the line is heard, BAKED into W/narration/narration_en.wav by tools/vo_fx.py (the mix must not add it\n'
-            '    again): whisper (the Blank\'s chat messages, the card, "I see you.", the sting: close whisper, faint cold\n'
-            '    digital sheen), car (her car line: as dry as the real Mom), double (2 a.m. and dinner: a subtle too-smooth\n'
-            '    double), tall (cold open, midnight, climax and her song: the tall form, a lower detuned double and size),\n'
-            '    phone (Mom on Owen\'s phone speaker); None = in the room, dry.\n'
-            'pause: the silence after the line (s) in the edit (fixed: exactly; else a ceiling, see vo_edit.py). beats: the Tik / Ping sounds (not in any take) placed in\n'
-            '    that pause (W/align/beats.json has their times). para: the script paragraph. tag: unique.\n"""\n')
-    src = head + ('def L(who, en, fx, pause, tag, para, say=None, beats=(), fixed=False):\n'
-                  '    return dict(who=who, en=en, say=say or en, fx=fx, pause=pause, tag=tag, para=para, beats=list(beats), fixed=fixed)\n\n\n'
+            '    again): message (Evie\'s messages and Danny\'s old one: close, a faint digital sheen), letterbox (through the\n'
+            '    slot: close, flat, a little muffled), thin (her last sung line: stretched thin, cut off on "he-"), tape (little\n'
+            '    Adam\'s song on the old VHS camcorder tape: warm, band-limited, wow and flutter); None = in the room, dry.\n'
+            'pause: the silence after the line (s) in the edit (fixed: exactly; else a ceiling, see vo_edit.py). beats: the\n'
+            '    Ping / Clank sounds (not in any take) placed in that pause, beat_t their offsets after the line\'s end\n'
+            '    (W/align/beats.json has their times). para: the script paragraph. tag: unique.\n"""\n')
+    src = head + ('def L(who, en, fx, pause, tag, para, say=None, beats=(), beat_t=(), fixed=False):\n'
+                  '    return dict(who=who, en=en, say=say or en, fx=fx, pause=pause, tag=tag, para=para, beats=list(beats), beat_t=list(beat_t), fixed=fixed)\n\n\n'
                   'LINES = [\n' + '\n'.join(rows) + '\n]\n')
     open(OUT, 'w').write(src)
     from collections import Counter
