@@ -1402,7 +1402,8 @@ def with_plan(mcues, tl):
         if hasattr(MP, 'identity_events') and not any(e.get('type') in ('show', 'winks', 'jingle', 'hold') for e in ev):
             idt = MP.identity_events(lines)
             have_motif = any(e.get('type') == 'motif' for e in ev)
-            add = [e for e in idt if not (have_motif and e['type'] == 'motif')]
+            have_tr = any(e.get('type') == 'trailer' for e in ev)          # the picture's own trailer wins
+            add = [e for e in idt if not (have_motif and e['type'] == 'motif') and not (have_tr and e['type'] == 'trailer')]
             spans = [(e['t'] - 1.0, e['t'] + float(e.get('len', 0)) + 1.0) for e in add
                      if e['type'] in ('show', 'winks', 'jingle')]
             # film.py's own 'theme' cues that fall inside a planned show / Winks theme would play the same tune twice
@@ -1411,6 +1412,10 @@ def with_plan(mcues, tl):
             ev = [e for e in ev if not any(e is d for d in drop)] + add
             what.append('identity (jingle / show / winks%s%s)' % ('' if have_motif else ' / motif',
                                                           f', {len(drop)} overlapping film.py theme cues dropped' if drop else ''))
+        if hasattr(MP, 'identity_events') and not any(e.get('type') == 'trailer' for e in ev):
+            tr_ = [x for x in MP.identity_events(lines) if x.get('type') == 'trailer']   # Obsession: the cold open's
+            if tr_:                                        # trailer bed (film.py's own 'trailer' event wins)
+                ev += tr_; what.append('trailer')
         out['events'] = sorted(ev, key=lambda e: float(e.get('t', 0)))
         if what:
             log(f'music plan: {" + ".join(what)} from music_plan.py ({len(out.get("track_map") or [])} sections)')
@@ -1631,6 +1636,8 @@ def main():
                 skipped.append(name0); fb(f'fail:{name}', f'{name} failed twice ({repr(e2)[:80]}); skipped'); continue
         try:
             gdb = float(c.get('gain_db', 0.0) or 0.0)
+            if c.get('gain_db') is None and name in getattr(SX, 'DEFAULT_GAIN', {}):   # the cast's level (Obsession)
+                gdb = float(SX.DEFAULT_GAIN[name])
         except (TypeError, ValueError):
             gdb = 0.0; fb(f'gain:{name}', f'{name}: gain_db {c.get("gain_db")!r} is not a number: 0 dB')
         y = y * 10 ** (gdb / 20)

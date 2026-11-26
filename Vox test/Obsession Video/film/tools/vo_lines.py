@@ -38,9 +38,10 @@ FX = dict([(k, 'message') for k in MESSAGE] + [(k, 'letterbox') for k in LETTERB
 # gap after the line (s), set by hand for its moment (overrides gap_after's rules): the scare beats sit just after
 # their key word; the holds are the few dread beats the picture needs. Tight and energetic, like the Buttons edit.
 PACE = {
-    "Especially if she doesn't blink.": 0.37,
-    "If your phone is off... and it still lights up: \"I can see your light's still on\"... don't look out the window.": 0.37,
-    "Wake a grown-up.": 0.33,
+    "Especially if she doesn't blink.": 0.85,           # trailer wave 1 hit (cold open widened +2.5 s total)
+    "If your phone is off... and it still lights up: \"I can see your light's still on\"... don't look out the window.": 0.85,                 # trailer wave 2 hit
+    "And if you look down at midnight... and someone at your blue front door is smiling up, two words chalked at their feet...": 0.80,   # wave 3: counter to 47, the blue door
+    "Wake a grown-up.": 1.25,                           # hard stop, a beat of black, the one silence
     "I know who it is.": 0.85,                          # the hook lands: title sting
     "At the top, one name, scribbled out in blue pen.": 0.33,
     "By Saturday midnight, she was on our doormat, my sister was reading a name under the landing light... and I was halfway down the stairs to let her in.": 0.45,

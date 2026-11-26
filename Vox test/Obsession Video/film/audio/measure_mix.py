@@ -119,6 +119,14 @@ SCARE_LU = (6.0, 10.0)                            # a planned scare hit, momenta
 FOLEY_MAX_LU = 0.0                                # everything else stays under the voice
 
 
+def _gain(c, name):
+    """A cue's gain as mix.py applies it: its gain_db, else (Obsession) the cast's level sfx.DEFAULT_GAIN[name]."""
+    g = c.get('gain_db')
+    if g is None:
+        return float(getattr(SX, 'DEFAULT_GAIN', {}).get(name, 0.0))
+    return float(g or 0.0)
+
+
 def edges(y):
     """(head_db, tail_db, body_db): RMS of the first and the last 10 ms, and of 50-150 ms in, against the peak."""
     m = np.abs(SX.mono(SX.st(y))).astype(np.float64); pk = float(m.max()) + 1e-12; k = max(1, int(EDGE_S * SR))
@@ -178,7 +186,7 @@ def cue_pass(sfx_cues, voice_m, mus_m, sfx_m, Lv, gdb, n_blocks, line_spans, sho
             y, pre = SX.render_event(name, seed=int(c.get('seed', rank)), space=space, **params)
         except Exception as e:
             flags.append(dict(t=c['t'], name=name, why=f'render failed: {e!r}'[:120])); continue
-        y = y * 10 ** (float(c.get('gain_db', 0.0)) / 20)
+        y = y * 10 ** (_gain(c, name) / 20)
         t = float(c['t'])
         pk = float(np.abs(y).max()) if len(y) else 0.0
         row = dict(t=round(t, 3), name=name, space=space, gain_db=c.get('gain_db', 0.0))
@@ -273,7 +281,7 @@ def events_main(path, voice=None, timeline=None):
             y = sf.read(fp, dtype='float32', always_2d=True)[0]; pre = float(e.get('pre', 0.0))
         else:
             y, pre = SX.render_event(e['name'], seed=int(e.get('seed', k)), space=e.get('space'), **(e.get('params') or {}))
-        y = SX.st(y) * np.float32(10 ** (float(e.get('gain_db', 0.0)) / 20))
+        y = SX.st(y) * np.float32(10 ** (_gain(e, e.get('name')) / 20))
         f, why = event_check(y, float(e['t']), pre, vm, Lv, lambda x: any(a - 0.05 <= x <= b + 0.05 for a, b in spans),
                              0.0, bool(e.get('scare')), bool(e.get('hard_end')))
         f.update(label=e.get('label') or e.get('name') or e.get('file'), t=e['t'], flags='; '.join(why))

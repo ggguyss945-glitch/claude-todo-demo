@@ -56,7 +56,35 @@ No new outside files: every recorded source below is already in the linked libra
 - Music: only tracks already catalogued from the owner's Epidemic sets (see `audio/score.py` TRACKS, this film's
   table).
 
-## This film: "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE"
+## THIS film: "If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME"
+
+Sound sources (catalogue: audio/catalog_epidemic_obsession.json, `python3 audio/epidemic_catalog.py --obsession`).
+All read in place from the sample folders; nothing is copied out or committed.
+
+- **The owner's new Epidemic Sound set** (`W/samples/epidemic_obsession`, one flat folder: 70 effects, 20 tracks).
+  Licence: Epidemic Sound, through the channel owner's subscription (keep the channel connected in the Epidemic
+  account to avoid Content ID claims; do not redistribute). Used:
+  - THE TAPE SONG: "At the Ballet" (Ludvig Moulin), on the camcorder tape, far, rotted as Evie's theme, and slowed
+    in the trailer (score.py VINTAGE / SHOW_THEME).
+  - Tracks (score.py TRACKS, music_plan.py TRACK_MAP): Borders (Beyza), Rylee's Tears and On the Other Hand (Franz
+    Gordon), For All Time (Megan Wofford), Sleep Forever (Luella Gren), The Deal (Ruiqi Zhao), Tears of a Shadow (Eva
+    Hummingbird), Ancestors Without Peace (Ludvig Moulin), Annihilated (Blue Saga), You Are Not Alone (Luella Gren),
+    They Come at Night (Etienne Roussel), Pulse Pressure (Max Anson: the trailer's pulse and the climax), When the
+    Sun Sets (Anna Landstrom), Movement (William Claeson), Sentient (Gavin Luke).
+  - Effects (audio/sfx_obsession.py): chalk on boards (strokes, writing, scratches), letterbox flaps and mail slots,
+    playground swing chains, metal locker doors, plastic buckets with water and water movement, scrub brushes,
+    paint rollers, cafeteria walla, metal drawers, cutlery on plates, car interior idles and turn indicators,
+    fluorescent hums, sneaker squeaks, shoebox lids, sand trickling, light swooshes, marker / dice / eraser drops.
+- **Earlier Epidemic sets** linked beside it (the ice, bus, doctor, bunny, dummy, delivery, police and mirror sets,
+  same licence): the earlier recipes reused here (footsteps, knocks, cloth, phone vibrate, porch light, suburb night,
+  house hum, wind).
+- **Synthesis** (ours): the message pings (each one note of our tune), chalk grit on pavement, the stub's roll, a
+  wood floor's body, the floodlight breaker's ring, the hum through the letterbox.
+- **Our own music**: "Stick Like Glue" (audio/motif_obsession.py), little Adam's chant in our original four-note
+  tune, played on the library's instruments below (music box, glockenspiel, celesta and piano samples: VS Chamber
+  Orchestra Community Edition and the CC0 instruments listed under the CC sources).
+
+## The Ice Cream film: "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE"
 
 Epidemic Sound (the owner's subscription; catalogued in audio/catalog_epidemic_ice.json, never copied out of
 _work/samples, never committed). The new set (_work/samples/epidemic_ice: 54 effects, 14 tracks, each judged in

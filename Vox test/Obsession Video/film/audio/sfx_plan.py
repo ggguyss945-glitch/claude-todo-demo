@@ -358,10 +358,17 @@ def off_words(out, lines, log):
     return out
 
 
+# THIS film (Obsession): the Buttons film's EDIT / ADD / OFF_WORDS rows name the Buttons script; they stay for
+# reference but are OFF until this film's first full mix fills its own (BUTTONS_ROWS = True brings them back)
+BUTTONS_ROWS = False
+
+
 def apply(cues, lines):
     """The picture's cue list -> the mixed cue list (a new list) and a log of every change."""
     out = [copy.deepcopy(c) for c in cues if isinstance(c, dict)]
     log = []
+    if not BUTTONS_ROWS:
+        return out, ['sfx plan: the Buttons rows are off for this film (sfx_plan.BUTTONS_ROWS)']
     out = picture_pass(out, lines, log)
     # EDIT
     for name, a, b, sub, ch, why in EDIT:

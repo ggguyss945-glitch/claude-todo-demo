@@ -1,4 +1,11 @@
-"""beats.py: the script's "Tik." and "Ping." beats as SFX cues ("If Your Mom's Eyes Turn Into Buttons... DON'T KEEP
+"""beats.py: THIS film ("If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME"): the script's
+"Ping." and "Clank." beats (W/align/beats.json: 3 pings after 'wednesday_night', the clank after 'evie_you_asked_for',
+2 pings in rule 7). Every ping is ONE NOTE of "Stick Like Glue" (audio/motif_obsession.py): the rule-1 pings play
+notes 1, 2, 3 of the song in order (params note = 0, 1, 2; kind 'note'); the rule-7 pings play on, slower and an
+octave lower (kind 'low', the notes after them, 'Ping. Ping. Each one a note of my song.'); the clank is the
+caretaker's floodlight breaker (name 'clank'). The Buttons film's notes follow.
+
+(Buttons) the script's "Tik." and "Ping." beats as SFX cues ("If Your Mom's Eyes Turn Into Buttons... DON'T KEEP
 HER SECRET"). The voice edit removed them from the narrator (they are sounds); W/align/beats.json lists each one
 ({kind tik|ping, t = where the sound starts in narration_en.wav time, line = the timeline line it follows, tag}).
 
@@ -25,19 +32,33 @@ TWEAK = {
     'empty': ({'kind': 'jar'}, -1.0, 0.0),                   # the coat sagging empty in the closet
     'my_fingers_rose': ({'kind': 'jar'}, -2.0, 0.0),        # his fingers rising to the top button: small, close
 }
+LOW_TAGS = ('mom_saved_every', 'ping_ping_each')        # the rule-7 pings (slower, lower)
 
 
 def load(path=None):
     p = path or BEATS
     if not os.path.exists(p):
         return []
-    return [b for b in json.load(open(p)).get('beats', []) if b.get('kind') in ('tik', 'ping')]
+    return [b for b in json.load(open(p)).get('beats', []) if b.get('kind') in ('tik', 'ping', 'clank')]
 
 
 def cues(beats=None):
     bs = load() if beats is None else beats
     out = []
+    npings = {'note': 0, 'low': 0}
     for i, b in enumerate(bs):
+        if b['kind'] in ('ping', 'clank'):                   # THIS film: the song's notes, the floodlight
+            if b['kind'] == 'ping':
+                kind = 'low' if float(b['t']) > 300.0 or b.get('tag') in LOW_TAGS else 'note'
+                params = {'kind': kind, 'note': npings[kind] + (3 if kind == 'low' else 0)}
+                npings[kind] += 1
+                g, pn = (-1.0, 0.0) if kind == 'low' else (0.0, 0.0)
+            else:
+                params, g, pn = {}, 0.0, 0.0
+            out.append({'t': round(float(b['t']), 3), 'name': b['kind'], 'gain_db': g, 'pan': pn, 'params': params,
+                        'space': 'close' if b['kind'] == 'ping' else 'outside', 'seed': 700 + i, 'src': 'beats',
+                        'tag': b.get('tag')})
+            continue
         params, g, pn = TWEAK.get(b.get('tag'), ({'kind': 'jar'} if b['kind'] == 'tik' else {}, 0.0, 0.0))
         if b.get('tag') == 'she_dropped_them':               # two buttons into Mom's jar: Tik. Tik.
             pn = -0.1 if i % 2 else 0.1
@@ -51,7 +72,7 @@ def merge(sfx_cues, beats=None, window=0.35):
     sheet = list(sfx_cues) if isinstance(sfx_cues, list) else []
     have = {}
     for c in sheet:
-        if isinstance(c, dict) and c.get('name') in ('tik', 'ping'):
+        if isinstance(c, dict) and c.get('name') in ('tik', 'ping', 'clank'):
             try:
                 have.setdefault(c['name'], []).append(float(c['t']))
             except (KeyError, TypeError, ValueError):

@@ -1,4 +1,6 @@
-"""Sound effects for "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET" (THIS film's names are
+"""Sound effects for "If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME" (THIS film's names
+are OBSESSION_NAMES in audio/sfx_obsession.py, executed last: Evie's chalk, the song's pings, the clank, this film's
+foley and beds; DEFAULT_GAIN gives the cast's levels to cues without gain_db). Before it: "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET" (THIS film's names are
 BUTTONS_NAMES in audio/sfx_buttons.py, executed last: tik, ping, this film's foley and beds). Before it: "If Your Little
 Brother Says Someone Lives In The Walls... DON'T LAUGH" (WALLS_NAMES in audio/sfx_walls.py, executed after
 sfx_ice.py). Before that: "If The Ice Cream Truck Plays Its Song In
@@ -6337,6 +6339,9 @@ exec(compile(open(os.path.join(HERE, 'sfx_walls.py')).read(), os.path.join(HERE,
 # THIS film, the Buttons film ("If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET"): audio/sfx_buttons.py
 # (tik, ping and this film's foley and beds; its aliases and keyword guesses come last, so they win)
 exec(compile(open(os.path.join(HERE, 'sfx_buttons.py')).read(), os.path.join(HERE, 'sfx_buttons.py'), 'exec'))
+# THIS film, the Obsession film ("If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME"):
+# audio/sfx_obsession.py (Evie's chalk, the song's pings, this film's foley and beds; DEFAULT_GAIN = the cast's levels)
+exec(compile(open(os.path.join(HERE, 'sfx_obsession.py')).read(), os.path.join(HERE, 'sfx_obsession.py'), 'exec'))
 
 RECIPES = {k: globals()['r_' + k] for k in NAMES}
 
@@ -6349,6 +6354,7 @@ PHONE_FIX = ('footsteps_wood_inside', 'footsteps_grass', 'footsteps_stairs', 'fo
 PHONE_FIX = PHONE_FIX + ICE_PHONE_FIX                  # the Ice Cream film (audio/sfx_ice.py)
 PHONE_FIX = PHONE_FIX + WALLS_PHONE_FIX                # the Walls film (audio/sfx_walls.py)
 PHONE_FIX = PHONE_FIX + BUTTONS_PHONE_FIX              # the Buttons film (audio/sfx_buttons.py)
+PHONE_FIX = PHONE_FIX + OBSESSION_PHONE_FIX            # THIS film (audio/sfx_obsession.py)
 
 
 def phone_presence(y, floor=-12.0, max_db=12.0):

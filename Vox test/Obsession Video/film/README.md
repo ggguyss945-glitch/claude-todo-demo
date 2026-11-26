@@ -1,61 +1,70 @@
-# "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET": film
+# "If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME": film
 
-Night Policy's rule-format horror film, built in the Walls film's machinery (`film_walls_ref.py`, kept for reference):
-the same 2.5D engine, the Film class / plan() / shot builders / BUILDERS, the header, captions, the global look and cue
-sheets derived from the picture. Everything is keyed to `W/align/timeline.json` (line starts / ends and per-line word
-times); there is no absolute time in the plan. The villain is the Blank (story bible; `CAST.md`, Buttons section).
-
-All commands run from this folder (`Vox test/Buttons Video/film`). The work dir is `W = film/_work`.
+Night Policy's rule-format horror film, built in the Buttons film's machinery (`film_buttons_ref.py`, kept for reference):
+the Film class / plan() / shot builders / BUILDERS, captions, the header, the global look and cue sheets derived from the
+picture. Every time in the plan is keyed to `W/align/timeline.json` (line starts / ends and per-line word times): there
+is no absolute time anywhere. All commands run from this folder (`Vox test/Obsession Video/film`); `W = film/_work`.
 
 | file | what |
 |---|---|
-| `film.py` | The shot list (about 357 shots, 13:43 with the 4 s end card). `plan()`: `plan_open` (L0-13 the cold open + hook), `plan_setup` (L14-33), `plan_chat` (L34-51 the game chat, the grey head filling in), `plan_rule1` (L52-77 the photo, the streetlight, the lobby glass), `plan_prompt` (L78-80), `plan_rule2` .. `plan_rule7`, `plan_after` (L297-316), `plan_sting` (L317-339), `plan_outro` (L340-384), `plan_globals` (the Button Song motif and the on-screen sounds no shot carries). |
-| `characters.py` + `characters_buttons.py` / `CAST.md` | The cast (Buttons section). |
-| `sets.py` + `sets_buttons.py` / `SETS.md` | Our block, the apartment, the school lane, the narrator's home now, the chat UI and the inserts (Buttons section). |
-| `render.py` | Stills, test clips and the full worker/slice render. |
-| `tools/validate.py` | The staging validator for EVERY shot type (its docstring lists the checks): anchors, floors, levels, ground lines, the car, overlaps, reach, props, kid-safe distances, cut positions, the STATE table, camera, lengths, lips. |
+| `film.py` | The shot list: 278 shots, 12:48.6 with the 4 s end card (median 2.3 s, 21.7 cuts/min). |
+| `characters.py` + `characters_evie.py` + `characters_obsession.py` / `CAST.md` | Evie (EVIE_ARC, her clips, LetterboxFingers, StubDrop, the slot smile, the chalk girl) and the family. |
+| `sets.py` + `sets_obsession.py` / `SETS.md` | The house (one plan), the path from his window, school, playground, the tape, the inserts. |
+| `tools/validate.py` | The staging validator for EVERY shot type (docstring lists the checks); `W/shots/validate.json`. |
 | `audio/` | The sound step (reads `W/cues/*.json`; owned by the sound teammate). |
 
-## Shot kinds (film.py builders `B_<kind>`)
-- `set`: a set view with figures on the plan (anchors or (x, y, Y)); `cam=MC(at, ang, d, S=)` frames from a plan point;
-  `mirror=[...]` draws figures reflected in the black microwave door (`ST.bt_mirror`); `acts` add the red coat (worn: back
-  behind him, front over him), the car arm, the rolling buttons, the flat cardigan, the narrator's hands.
-- `bust`: face close-ups over the blurred set (`rot=-90` for a face on the pillow); `ins`: `bt_insert` props (+ hands,
-  + a button dropping into the jar on its beat); `chat`: the tablet screen (`bt_chat`: the grey head filling in, Mom's
-  account at 2 a.m., the son's tablet now).
-- `rule`: the Brave List inside Owen's closet door. `list=True` is the whole list at "Rule number n" (the broken rules stay
-  pale: `INK(t)`), then rule n big, each word appearing as it is read. `blist`: the list inside a scene (a rule fading,
-  rule three staying blue, the ink coming back line by line as he writes on the fridge board).
-- `prompt`: the comment prompt (stage 'ask' L78-80, 'return' L371-377), every word on its word. `list`: the outro
-  checklist (L350-368), every item legible while read. `card`: the outro cards. `black`.
-
-## Continuity (film.py `escalate()` applies it to every actor; validate.py STATE checks it)
-Owen in pyjamas at night, the green coat outdoors (Monday, Wednesday pickup), the hoodie by day. `FADE(t)`: one step per
-secret (L60, L89, L144, L170, L203; cool, translucent, never past 0.8), gone from the microwave door only in rule six,
-back "like a photo developing" (L281-282). `PGREY(t)`: a little grey from L94, pencil grey from L205, colour back on
-"Mom" (L232). Mom's glare until she pulls her glasses off (L277); the two black circles L195-197. The Blank: form 1
-(sunglasses in the car, the reading glasses at 2 a.m.), form 2 (a little taller each time: `CH.BLANK_TALL`), form 3 from
-midnight (unfolds BESIDE the fridge, holds the coat by its seams, fingertips always short of him, collapses flat).
+- **Story layout** (`plan()`): `plan_trailer` (L0-6, the cold open as a TRAILER, below), `plan_hook` (L7-12: the card,
+  the scribbled name, the doormat / Lina / halfway flash-forwards), `plan_setup` (L13-51: Danny with Kofi and Sam, the
+  camcorder tape of the swings and the song, the bare wrist, the hoodie, the hopscotch legend and the chalk girl, Evie
+  arrives, the locker, "favourite person", Danny brings the card with Mrs. Rahman nodding in her doorway), `plan_rule1`
+  (L52-85: pings, 12 / 30 / 47, the dark screen, ONLY ME under the streetlight, the porch light, flat and slid away, the
+  wet path, Mom on the phone, the sneaker print, the comment prompt), `plan_rule2` .. `plan_rule7` (the card, then each
+  rule's beats), `plan_after` (L302-340: the scrub, Lina's song, Mrs. Rahman, the message, the painted square, the lunch
+  table, the shoebox, the card in blue pen, the coda with grown Adam's hands only), `plan_outro` (L341-382: the lamp, the
+  painted square, the checklist, the end card, the comment return, like / subscribe, the empty path).
+- **The trailer** (`plan_trailer`, `TRAILER`): three waves, every cut on a word or a hit: (1) the tape PLAY, the kids on
+  the swings, tearing on "met" / "says"; Evie at his shoulder on "favourite"; the tape chewing on "don't say it back"; her
+  ear-to-ear smile pushing in, eyes on the lens; HIT 1. (2) The dark phone lighting up "I can see your light's still on";
+  ONLY ME one stretch nearer on every word of "don't look out the window" (jump cuts from above, glitch cuts); HIT 2 the
+  neck stretching up to his window. (3) The letterbox fingers writing O-N-L-Y; a WHIP to the blue door from above; Evie
+  standing up out of the red Keeping Square at sunset; HIT 3 the counter racing 12 -> 47; the blue door again (slow tilt)
+  under "...don't go down."; Danny's mom's window lighting up on "Wake a grown-up."; HARD STOP: black and the one
+  silence; "I know who it is." lands on the scribbled name. The cold-open pauses were widened by 2.5 s for the hits
+  (`tools/vo_lines.py` PACE: L1 0.85, L2 0.85, L3 0.80, L5 1.25; words untouched, nothing stretched).
+- **Look and continuity** (`escalate()`, validate.py STATE): EVIE_ARC is set once from the timeline
+  (`CH.evie_arc_from_lines`); flash-forwards carry their own `stage`. Evie is chalk-flat at night (`is_night`). Adam's
+  hoodie sleeves are chalk-white only at Danny's blue door (`chalk=1`). The tracker stands where OM_TRACK says each night
+  and Evie stands ON it; every dawn the path is wet / scrubbed with the bucket. Door shots look down from the window:
+  standing figures there are drawn at their projected (foreshortened) length, leaning with the view (`figure()`
+  `fore`), so the figure is small and ONLY ME the biggest shape. Grown-ups share a frame with Evie only where their look
+  holds her back (porch light, floodlight, Mom's chair, Mom at the door) or with their back to her (dinner).
+- **The tape**: `B_tape` (om_tape + om_tape_stamp): little Adam and Danny ride the swings (`tape_kids`), little Adam sings
+  on his own sung line; it returns warped in rule 4 (L164-165) and as a rewind over the cold open's blue door in rule 7
+  (L280-284, `rewind_fx` + REW stamp).
 
 ## Commands
 ```
-python3 film.py --list                                         # the cut list + pace
-python3 tools/validate.py --fps 8                              # staging checks; exit 1 on any ERROR
-python3 film.py --sheet _work/shots/sheet --per 12 --tile 256 --size 640x360   # contact sheets: first | mid | last frame + the lines
-python3 film.py --still 105.2,451.0 --size 960x540             # stills -> W/tests/film/
-python3 film.py --cues                                         # W/cues/sfx_cues.json, music_cues.json, shots.json, beats_cues.json
-python3 render.py --size 640x360 --fps 30 --workers 2 --crf 23 --out _work/preview_tmp --audio _work/narration/narration_en.wav
-mv _work/preview_tmp/film.mp4 _work/preview/preview.mp4        # then delete _work/preview_tmp
+python3 film.py --list                                   # the cut list + pace
+python3 tools/validate.py --fps 8                        # staging checks; exit 1 on any ERROR (now: 0 ERROR, 23 WARN)
+python3 film.py --contact --size 640x360                 # W/shots/contact_00..05.jpg + contact_all.jpg (mid frame + line)
+python3 film.py --still 105.2,451.0 --size 960x540       # stills -> W/shots/
+python3 film.py --cues                                   # W/cues/*.json (below)
+python3 render.py --size 640x360 --fps 30 --workers 2 --crf 23 --out /dev/shm/prev --audio _work/narration/narration_en.wav
+mv /dev/shm/prev/film.mp4 _work/preview/preview.mp4      # then delete /dev/shm/prev
 ```
 
 ## Cue sheets: the sound step's contract
-`python3 film.py --cues` writes `W/cues/sfx_cues.json` (`{t, name, gain_db, pan, space, params}`: every action of the
-picture, from the shots' cue lists, the cast's acting events, the beds and `plan_globals`: coat buttons, microwave hum,
-music box winding, tablet face down), `music_cues.json` (`{duration, intensity, events}`: rule cards, hits, silences
-before the scares, the Button Song as `jingle` events with `version` 'box_clean' | 'box_slow' | 'hum_slow' | 'sung_loop'
-| 'detuned' | 'four_notes' | 'box_real' | 'tablet_chime'), `shots.json` (the cut list with each shot's space) and
-`beats_cues.json` (every Tik / Ping of `W/align/beats.json` with the shot on screen and its cause; the beats are also in
-the sfx sheet as `tik` / `ping` with `params.beat`). Acting 'tik' events that are not beats become `fingertip_tap`.
+`python3 film.py --cues` writes `W/cues/sfx_cues.json` (`{t, name, gain_db, pan, space, params}`: the cast's events
+(Evie's chalk_scrape kinds write / creep / slide / flatten / rise / stretch, chalk_tap, chalk_stub_drop, chalk_roll,
+chalk_dust_whoosh; the family's phone_tap, brush_scrub, paint_roll, footsteps, swing_creak, cloth_rustle), the shots' own
+sounds (letterbox_flap / rattle, locker_open, porch_light_click, floodlight_on, car_indicator, fork_down, card_drop,
+drawer_open, shoebox_lid, bucket_slosh, phone_buzz, light_switch, torch_click, door_open, knock_door), the beds and the
+trailer hits as impact_hit with `params.trailer`), `music_cues.json` (`{duration, intensity, events}`: rule cards, hits,
+silences, and the picture spans: `tape_song` (version sweet | warped | rewind, space 'tape'), `evie_theme` (the tape song
+rotted, every span with Evie near), `drag_stop` (I was. / From me. / It was me. / I'm he-), the trailer's `hit` (level
+0..1, why), its `silence` and `trailer_pulse` (three waves)), `shots.json` (the cut list with space / loc),
+`beats_cues.json` (each Ping / Clank of `W/align/beats.json` with the shot on screen and its cause) and `spans.json`
+(the same tape / Evie-near / drag / trailer spans in one file).
 
 ## Sound: the final mix
 `bash audio/final_mix.sh` (from anywhere; about 14 min; peaks about 8 GB RAM, so it can run beside a 1-2 worker render; it sets

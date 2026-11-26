@@ -1,4 +1,12 @@
-"""music_plan.py: the music map of "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET" (Night Policy),
+"""music_plan.py: the music map of "If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME" (Night
+Policy). THIS film: the trailer cold open (score 'trailer'), the hook on a dark pad, unease rising rule by rule (ARC),
+the reveals ("I was.", "From me.", "It was me.") on silence or on the tape song dragging to a halt, the relief and
+Lina's healed song at dawn, a calm low bed under the outro checklist, no "next time" teaser. THE TAPE SONG ('show',
+space 'tape' / 'far') and its rotted form as Evie's theme ('winks': the sweet tune plays while she moves), and STICK
+LIKE GLUE (MOTIF_MODULE 'motif_obsession'). Anchors are script phrases, 'tag#word' and 'end:tag' forms also work
+when a phrase is a line's tag (see resolve). The earlier film's notes follow.
+
+(Buttons) the music map of "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET" (Night Policy),
 built the earlier films' way (intensity curve, tension events, score.py), anchored to the script's WORDS: every anchor
 names a phrase of script/narration_en.txt and is found in the timeline's line texts at run time
 (W/align/timeline.json; word onsets from each line's own 'words'), so a re-paced voice edit needs no change here.
@@ -45,249 +53,198 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 W = os.path.normpath(os.path.join(HERE, '..', '_work'))
 TIMELINE = os.path.join(W, 'align', 'timeline.json')
 WORDS = os.path.join(W, 'align', 'asr_cache.json')        # fallback only: the timeline's own line words come first
-MOTIF_MODULE = 'motif_buttons'                             # the identity's renderer (score.JINGLE_MODULE)
+MOTIF_MODULE = 'motif_obsession'                           # the identity's renderer (score.JINGLE_MODULE)
 
 # ---------------------------------------------------------------------------------------------------- arrangement
-# (anchor, track slug, offset s in the varispeed track, why). Tracks and shifts: score.TRACKS (this film's table:
-# every track on A or D, the Button Song's A major and its relative / subdominant minors).
+# THIS film ("If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME"). (anchor, track slug, offset
+# s in the varispeed track, why). Tracks and shifts: score.TRACKS (this film's table: every track on A-flat major / F
+# minor / D-flat, +0.4 semitone: the chant's tuning). The cold open (the trailer) has no track: render_trailer is its
+# bed; the first section starts on the hook.
 TRACK_MAP = [
-    ('If someone online says', 'are_you_alone_victor_lundberg', 0.0,
-     'the hook: a dark sub drone that swells under the three "If... don\'t" lines and the Blank\'s "Button up"'),
-    ('At eight, my mom and I wrote seven rules', 'the_haunted_luella_gren', 0.0,
-     'the Brave List, a police officer in the kitchen at midnight: sparse piano, a thin high drone'),
-    ('Mom worked twelve-hour help-line shifts', 'unvaried_elin_piel', 0.0,
-     'the kitchen table, one finger, the jar, the coat in Barlow\'s window, her song: quiet unease, very low'),
-    ('That night, in a game chat', 'sleep_forever_luella_gren', 0.0,
-     'the wish, the grey head filling in, the buttons clicking on: a sinister lullaby in A'),
-    ('Rule number one', 'haunted_mind_etienne_roussel', 0.0,
-     'the photo out the window, the woman under the streetlight, the lobby door: a slow mid build'),
-    ('Before rule two: one word, in the comments', 'turning_stones_stefan_ekstrom', 0.0,
-     'the comment prompt: a pure low drone, room for the question'),
-    ('Rule number two', 'come_closer_belladonna_strings', 0.0,
-     'the box on the mat, the coat, the card, Mom going grey, the closet at 3 a.m.: horror strings'),
-    ('Rule number three', 'i_m_the_villain_dream_cave', 0.0,
-     'the snow-day pickup, the car, the sunglasses, the arm out of the window: a slow villain pulse'),
-    ("But locks don't stop something in your pocket", 'dark_forebodings_ethan_sloan', 0.0,
-     'half a secret: the flat dark drone under the ping and the tik'),
-    ('Rule number four', 'don_t_look_belladonna_strings', 0.0,
-     '2 a.m. at Mom\'s laptop, "Buttons.", the microwave door up / down: horror strings'),
-    ('Rule number five', 'midnight_wanderer_luella_gren', 0.0,
-     'Thursday dinner, the Blank in Mom\'s chair, "Only you.", the lamp, the windowsill'),
-    ('Rule number six', 'irene_kevin_dailey', 0.0,
-     'two minutes to midnight, Officer Mensah, "I couldn\'t see me.": near silent, then builds'),
-    ('Behind the fridge, something unfolded', 'code_of_violence_dian_shuai', 0.0,
-     'midnight: the creepy form unfolds, holding open the red coat: a dark pulsing build'),
-    ('Rule number seven', 'one_step_away_dian_shuai', 0.0,
-     'THE CLIMAX: the coat, the buttons, NO, the run, the marker, the long fingers an inch away'),
-    ("She'd put buttons where I'd never looked -0.4", 'when_the_sun_sets_anna_landstrom', 0.0,
-     'the relief after "Green.": a quiet warm pad; the Blank folds into an empty cardigan, Tik. Tik.'),
-    ('Mom pulled out a tiny music box', 'end_of_rain_beyza', 0.0,
-     'the real music box, the lock screen, "She did look.", the real words: a very quiet warm pad under the box'),
-    ('My son is ten now', 'the_forgotten_memories_luella_gren', 0.0,
-     'twenty-five years later, the empty jar, the chime down the hall: a sparse sad piano'),
-    ('Under the streetlight, someone waved', 'are_you_alone_victor_lundberg', 30.0,
-     'the sting: the wave at the window next to his, the grey head, "I don\'t know."'),
-    ('Okay. Breathe', 'at_first_light_gavin_luke', 0.0,
-     'the outro checklist: a calm bed, low, every word clear; no "next time" teaser'),
+    ('When I was twelve, my best friend handed me', 'borders_beyza', 0.0,
+     'the hook: a dark quiet pad under the card, the new girl, "halfway down the stairs"'),
+    ('Danny had been my best friend since we were seven', 'rylee_s_tears_franz_gordon', 0.0,
+     'lonely: Danny with Kofi and Sam, "I ate alone."; the tape song takes over at "At seven, on the swings"'),
+    ('Behind our school: an old hopscotch', 'for_all_time_megan_wofford', 0.0,
+     'the Keeping Square legend, the chalk girl in the square: slow, mysterious'),
+    ('That day, a new girl sat behind me', 'sleep_forever_luella_gren', 0.0,
+     'Evie arrives, the locker, "favourite person": a sinister lullaby, sweet on top'),
+    ('Then Danny crossed the hall', 'borders_beyza', 40.0, 'the card: quiet'),
+    ('Rule number one', 'the_deal_ruiqi_zhao', 0.0, 'rule 1: the pings, the dark screen, the streetlight, the porch light'),
+    ('Thursday morning, our path was wet and clean', 'borders_beyza', 80.0,
+     'the wet path, Mom on the phone, the sneaker print, the comment prompt: quiet'),
+    ('Rule number two', 'tears_of_a_shadow_eva_hummingbird', 0.0, 'rule 2: the bracelet, "Only me?", halfway up the path'),
+    ('Rule number three', 'on_the_other_hand_franz_gordon', 0.0, 'rule 3: the password, the dots, 2 a.m., the fingerprint'),
+    ('Rule number four', 'ancestors_without_peace_ludvig_moulin', 0.0,
+     'rule 4: the red lights, the swings, the square at sunset: a driving build'),
+    ('The chalk slid out, flat across the playground', 'annihilated_blue_saga', 0.0,
+     'the chalk stands up, "Here I am.", the clank, "I ran."'),
+    ('Rule number five', 'you_are_not_alone_luella_gren', 0.0, 'rule 5: dinner, the window, the doorstep, the neck'),
+    ('Rule number six', 'they_come_at_night_etienne_roussel', 0.0, 'rule 6: midnight, the letterbox, O-N-L-Y, the stub'),
+    ('Rule number seven', 'pulse_pressure_max_anson', 60.0,
+     'rule 7: the kitchen, M-E creeping, the pings, Block: the climax pulse (the trailer\'s, later in the track)'),
+    ('Danny didn\'t go down. He woke his mom', 'annihilated_blue_saga', 50.0, 'after "It was me.": low, then the door'),
+    ('At dawn, we scrubbed the path together', 'when_the_sun_sets_anna_landstrom', 0.0,
+     'relief: the scrub at dawn; Lina\'s healed song (the bed steps back under her)'),
+    ('Monday, I told Mrs. Rahman too', 'movement_william_claeson', 0.0, 'Mrs. Rahman, Danny\'s message, the lunch table'),
+    ('Last week, Danny didn\'t answer all day', 'rylee_s_tears_franz_gordon', 60.0, 'the coda: the old pull, ONLY.'),
+    ('Okay. Breathe', 'sentient_gavin_luke', 0.0, 'the outro checklist: calm and LOW, every word clear'),
 ]
-
-# slug -> share of the track's own dynamics evened out (score.FLATTEN 0.3 otherwise)
-FLATTEN = {'are_you_alone_victor_lundberg': 0.3, 'the_haunted_luella_gren': 0.45, 'unvaried_elin_piel': 0.5,
-           'sleep_forever_luella_gren': 0.45, 'haunted_mind_etienne_roussel': 0.45,
-           'turning_stones_stefan_ekstrom': 0.5, 'come_closer_belladonna_strings': 0.4,
-           'i_m_the_villain_dream_cave': 0.4, 'dark_forebodings_ethan_sloan': 0.4,
-           'don_t_look_belladonna_strings': 0.4, 'midnight_wanderer_luella_gren': 0.5, 'irene_kevin_dailey': 0.3,
-           'code_of_violence_dian_shuai': 0.4, 'one_step_away_dian_shuai': 0.35,
-           'when_the_sun_sets_anna_landstrom': 0.6, 'end_of_rain_beyza': 0.6,
-           'the_forgotten_memories_luella_gren': 0.45, 'at_first_light_gavin_luke': 0.6}
-# slug -> level trim (dB): quiet pads up (end of rain -20.7, sun sets -20.9 LUFS), the outro bed down (low under the
-# checklist: every word clear)
-GAIN = {'are_you_alone_victor_lundberg': 2.0, 'turning_stones_stefan_ekstrom': 4.5, 'unvaried_elin_piel': 1.0,
-        'end_of_rain_beyza': 3.0, 'when_the_sun_sets_anna_landstrom': 3.0, 'irene_kevin_dailey': 1.0,
-        'don_t_look_belladonna_strings': 2.5, 'come_closer_belladonna_strings': 3.0, 'sleep_forever_luella_gren': 2.0,
-        'dark_forebodings_ethan_sloan': 2.5, 'one_step_away_dian_shuai': -1.0, 'at_first_light_gavin_luke': -4.0}
+FLATTEN = {'borders_beyza': 0.5, 'rylee_s_tears_franz_gordon': 0.45, 'for_all_time_megan_wofford': 0.45,
+           'sleep_forever_luella_gren': 0.45, 'the_deal_ruiqi_zhao': 0.4, 'tears_of_a_shadow_eva_hummingbird': 0.4,
+           'on_the_other_hand_franz_gordon': 0.4, 'ancestors_without_peace_ludvig_moulin': 0.35,
+           'annihilated_blue_saga': 0.4, 'you_are_not_alone_luella_gren': 0.4,
+           'they_come_at_night_etienne_roussel': 0.3, 'pulse_pressure_max_anson': 0.35,
+           'when_the_sun_sets_anna_landstrom': 0.6, 'movement_william_claeson': 0.55, 'sentient_gavin_luke': 0.6}
+# slug -> level trim (dB): quiet pads up (borders -17.9, sun sets -20.9, annihilated -18.6 LUFS), the loud pulses and
+# the outro bed down (low under the checklist: every word clear)
+GAIN = {'borders_beyza': 2.5, 'when_the_sun_sets_anna_landstrom': 3.0, 'annihilated_blue_saga': 2.5,
+        'pulse_pressure_max_anson': -2.0, 'they_come_at_night_etienne_roussel': -1.0, 'sentient_gavin_luke': -5.0,
+        'movement_william_claeson': -1.0}
 
 # ---------------------------------------------------------------------------------------------------- intensity
 INTENSITY = [
-    # the hook, then the setup (the Brave List, the police at midnight)
-    ('If someone online says', 0.55), ('If a present says', 0.62), ('And if your mom holds your coat open', 0.7),
-    ('Your real mom is in the kitchen', 0.6), ('At eight, my mom and I wrote', 0.3), ('At eleven, I broke four', 0.35),
-    ('By midnight on my birthday', 0.45), ('I kept the buttons', 0.35),
-    # the kitchen (the calmest stretch), her song, the chat
-    ('Mom worked twelve-hour help-line shifts', 0.18), ('When I was little, she buttoned', 0.15),
-    ('She hadn\'t sung it in years', 0.2), ('That night, in a game chat', 0.32), ('With every word, the grey head', 0.4),
-    ('Two black buttons clicked onto the face', 0.55), ('So I named her', 0.45), ('Her kind hunt one thing', 0.4),
-    # rule 1: the streetlight
-    ('Rule number one', 0.35), ('A photo out my window', 0.4), ('That night, a woman stood', 0.55),
-    ('Two black buttons flashed', 0.68), ('She was waving at the window next to mine', 0.6), ('I ducked', 0.66),
-    ('She was at our lobby door', 0.7), ('I looked again. Gone', 0.55), ("She wasn't far away", 0.5),
-    ('Before rule two: one word', 0.25),
-    # rule 2: the box, the coat, 3 a.m.
-    ('Rule number two', 0.38), ('Tuesday, a box on our doormat', 0.4), ('I hid it in my closet', 0.45),
-    ('That night, rule two faded', 0.45), ('Three a.m. Inside my closet', 0.55), ('I opened the closet', 0.62),
-    ('Full. Like somebody was inside it', 0.72), ('Then, slowly, it sagged', 0.6),
-    # rule 3: the car
-    ('Rule number three', 0.42), ('Wednesday pickup', 0.45), ('The door swung open', 0.55),
-    ('Mom never got off early', 0.58), ('First ring', 0.6), ('She lowered the sunglasses', 0.75),
-    ('Her arm slid out of the window', 0.82), ('I ran to Mr. Dunn', 0.7), ('You did right', 0.5),
-    ('The arm folded back in', 0.45), ('Mom came running', 0.35), ('Rule three stayed blue', 0.3),
-    ("But locks don't stop something", 0.4), ('Half a secret is still a secret', 0.48),
-    # rule 4: 2 a.m., the microwave door
-    ('Rule number four', 0.45), ('Two in the morning', 0.5), ('She sat at her laptop', 0.55),
-    ('She turned, and took the glasses off', 0.75), ('I glanced at Mom\'s door', 0.66),
-    ("It's not a secret. It's a surprise", 0.6), ('With a surprise, everyone finds out soon', 0.45),
-    ('After school, Mom sat behind me', 0.55), ('And the Blank. Standing behind me', 0.68), ('Mom looked down', 0.74),
-    ("The Blank's chin was almost on my shoulder", 0.8),
-    # rule 5: dinner, the lamp, the windowsill
-    ('Rule number five', 0.5), ('Thursday dinner', 0.45), ('In Mom\'s chair sat the Blank', 0.62),
-    ('I waved at my mom', 0.62), ("For one second, I couldn't tell", 0.66), ('The Blank leaned in', 0.7),
-    ('I heard myself', 0.7), ('On my closet door, every line but rule three', 0.6), ('The Blank stood', 0.72),
-    ('That night, Mom sat on my windowsill', 0.6), ('The headset lady was still on the phone', 0.55),
-    # rule 6: midnight
-    ('Rule number six', 0.52), ('Two minutes to midnight', 0.55), ("I couldn't see me", 0.75),
-    ("She wasn't ignoring me", 0.6), ('So I kept rule six', 0.55), ('Midnight. My birthday', 0.75),
-    ('Behind the fridge, something unfolded', 0.85), ('Happy birthday. She can\'t hear you', 0.85),
-    # rule 7: THE CLIMAX
-    ('Rule number seven', 0.6), ('She wrapped the coat around me', 0.78), ('Six closed', 0.8),
-    ('The top one waited', 0.82), ('My fingers rose', 0.85), ('As loud as I could', 0.9),
-    ('She was left holding a red coat', 0.85), ('Those buttons were blind', 0.75), ('And I told my mom', 0.72),
-    ('I grabbed the fridge marker', 0.85), ('The marker squeaked', 0.92), ('Officer Mensah read it first', 0.85),
-    ('So I wrote everything', 0.85), ('With every word, I came back', 0.9), ('The long fingers were an inch', 1.0),
-    ('And my mom\'s eyes found me', 0.9), ('The Blank froze', 0.8), ('Mom stepped between us', 0.65),
-    ('And I looked into my mother\'s eyes', 0.55),
-    # "Green." the relief, the empty cardigan, the real music box
-    ("She'd put buttons where I'd never looked -0.4", 0.3), ('The Blank folded in on herself', 0.4),
-    ('She dropped them in her jar', 0.3), ('From the empty cardigan', 0.22), ('Mom pulled out a tiny music box', 0.2),
-    ('She did look', 0.18), ('None of this is your fault', 0.18), ('She wound the music box', 0.15),
-    # the sting
-    ('My son is ten now', 0.25), ('Tonight, the lid was off the jar', 0.4), ('The jar was empty', 0.48),
-    ('Down the hall, my son\'s tablet chimed', 0.5), ('Under the streetlight, someone waved', 0.62),
-    ('On his screen, a grey default head', 0.66), ('Look at me. How are you, really', 0.4),
-    ('Brown. Your eyes are brown', 0.3), ('Face down on the bed', 0.45),
+    ('If someone you met three days ago', 0.75), ('I know who it is', 0.5),          # the trailer, then the hook
+    ('When I was twelve, my best friend handed me', 0.4), ('Danny had been my best friend', 0.2), ('I ate alone', 0.15),
+    ('Behind our school: an old hopscotch', 0.3), ('In the square, someone had chalked a little girl', 0.4),
+    ('That day, a new girl sat behind me', 0.25), ('By Tuesday, she was waiting', 0.25),
+    ("Wednesday, at my shoulder... she didn't blink", 0.45), ('Then Danny crossed the hall', 0.3),
+    # rule 1
+    ('Rule number one', 0.35), ('Every ping, one note of my song', 0.5), ('The dark screen lit up anyway', 0.6),
+    ('Under the streetlight, Evie smiled up', 0.66), ('I switched off my light', 0.6),
+    ('Thursday morning, our path was wet', 0.22), ('Forty-seven messages, in one night. Before rule two', 0.18),
+    # rule 2 .. 4: unease rising rule by rule (ARC adds to each)
+    ('Rule number two', 0.38), ('Suddenly Evie was one inch from my shoulder', 0.55), ('That night, ONLY ME was halfway', 0.58),
+    ('Rule number three', 0.4), ('Two a.m. Her dot was on our house', 0.62), ('Just one white chalk fingerprint', 0.68),
+    ('Friday. Mrs. Rahman', 0.35), ('There. Now it\'s only me', 0.55),
+    ('Rule number four', 0.45), ('At break, on the swings, she sang my song', 0.5), ('At sunset, I went to sort it out', 0.62),
+    ('It was covered in chalk', 0.7), ('From the square, slowed down', 0.72), ('I was. Last Sunday', 0.5),
+    ('The chalk slid out', 0.78), ('Floodlight. The caretaker', 0.6), ('That night, ONLY ME was on our step', 0.55),
+    ('Rule number five', 0.5), ('Behind Mom, outside the dark window', 0.66), ("ONLY ME moved onto our doorstep", 0.7),
+    ("Evie's neck was bending", 0.8),
+    ('Rule number six', 0.55), ('From the landing, I heard our letterbox lift', 0.75), ('Chalk-white fingers slid through', 0.85),
+    ('A chalk stub dropped through', 0.88), ('My feet moved. One step down', 0.92), ('It says your name', 0.6),
+    ('From me.', 0.5),
+    ('Rule number seven', 0.6), ('Behind me, the letterbox rattled', 0.9), ('Thank you for telling me', 0.55),
+    ('It never rained', 0.35), ('Mom saved every message from Evie', 0.6), ('The same words. Word for word', 0.7),
+    ('It was me.', 0.5), ("Danny didn't go down", 0.35), ('Evie was on our doormat', 0.75), ("Write your name? No. I'm not", 0.8),
+    ('I hope you find lots of people', 0.6), ('Her colour drained to chalk-white', 0.55),
+    ('At dawn, we scrubbed the path', 0.15), ('Monday, I told Mrs. Rahman too', 0.15), ('Weeks later, Danny stopped', 0.15),
+    ('Last week, Danny didn\'t answer all day', 0.3), ('Next morning, one chalk word', 0.45), ('Then I called Danny', 0.15),
     # the outro: calm, low, every word clear
-    ('Okay. Breathe', 0.15), ('Now. Buttons, or Mom', 0.18), ('Sleep well', 0.15),
+    ('Okay. Breathe', 0.12), ('Now. Special, or Trapped', 0.15), ('Sleep well', 0.12),
 ]
-
-# the bed thickens rule by rule (the kitchen the calmest, the climax the loudest): (from, to, + intensity)
+# the bed thickens rule by rule: (from, to, + intensity)
 ARC = [('Rule number two', 'Rule number three', 0.02), ('Rule number three', 'Rule number four', 0.04),
        ('Rule number four', 'Rule number five', 0.05), ('Rule number five', 'Rule number six', 0.06),
-       ('Rule number six', "She'd put buttons where I'd never looked", 0.08)]
+       ('Rule number six', 'Rule number seven', 0.08), ('Rule number seven', 'At dawn, we scrubbed', 0.08)]
 
 # ---------------------------------------------------------------------------------------------------- events
-# (anchor, type, level, len, extra). Hits: 'boost' (>= 3.5 -> +10 LU momentary over the voice, >= 2.5 -> +9, else
-# +8) only on the planned scares, each just after its word ('nosnap' keeps the word's time). Silences sit under the
-# line before a scare and end on it. The bed dips (silence 0.6) under Mom's sung song: nothing doubles her voice.
+# (anchor, type, level, len, extra). Hits: 'boost' only on the planned scares, each just after its word ('nosnap'
+# keeps the word's time). The reveals ("I was.", "From me.", "It was me.") land on SILENCE (or on the tape song
+# dragging to a halt, IDENTITY). Rule stings on every "Rule number N". No "next time" teaser: the end cue at the outro.
 EVENTS = [
-    # the hook
-    ("end:Button up, sweetheart. We're going home +0.05", 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
-    ('Your real mom is in the kitchen', 'sub_drop', 0.45, None),
-    ('By midnight on my birthday', 'sub_drop', 0.4, None),
-    # her song (the voice carries it): the bed steps back
-    ('One for warm and two for snug -0.3', 'silence', 0.6, 10.8),
-    # the chat
-    ('Two black buttons clicked onto the face', 'hit', 0.6, None),
-    ('So I named her. The Blank', 'sub_drop', 0.45, None),
-    # rule 1: the streetlight
+    ('When I was twelve, my best friend handed me', 'sub_drop', 0.45, None),
     ('Rule number one -0.1', 'rule', 0.6, None, {'nosnap': True}),
-    ('Headlights swept her face -0.2', 'silence', 0.7, 1.5),
-    ('end:Two black buttons flashed +0.05', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
-    ('She was at our lobby door', 'pulse_on', 0.45, None),
-    ('I looked again. Gone', 'pulse_off', 0.4, None),
-    ('wearing my mom', 'sub_drop', 0.5, None),
-    # rule 2: the coat in the closet
+    ('The dark screen lit up anyway -0.15', 'silence', 0.7, 1.4),
+    ('end:lit up anyway. I can see your light\'s still on +0.05', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),
+    ('end:ONLY ME. +0.05', 'sub_drop', 0.5, None),
     ('Rule number two -0.1', 'rule', 0.6, None, {'nosnap': True}),
-    ('Like a photo left in the sun', 'sub_drop', 0.4, None),
-    ('Three a.m. Inside my closet', 'silence', 0.6, 3.0),
-    ('The red coat hung there -0.1', 'silence', 0.8, 2.6),
-    ('end:Like somebody was inside it +0.05', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
-    # rule 3: the car
+    ('end:Suddenly Evie was one inch from my shoulder +0.05', 'hit', 0.75, None, {'boost': 2.0, 'nosnap': True}),
     ('Rule number three -0.1', 'rule', 0.6, None, {'nosnap': True}),
-    ('Pancakes were Saturdays', 'pulse_on', 0.5, None),
-    ('She lowered the sunglasses -0.1', 'silence', 0.8, 1.3),
-    ('end:She lowered the sunglasses. Buttons +0.05', 'hit', 0.9, None, {'boost': 3.0, 'nosnap': True}),
-    ('Her arm slid out of the window', 'swell', 0.65, 5.0),
-    ('You did right', 'pulse_off', 0.45, None),
-    ('Half a secret is still a secret', 'sub_drop', 0.5, None),
-    # rule 4: 2 a.m., the microwave door
+    ('Then in my room -0.1', 'silence', 0.7, 1.2),
+    ('end:on the inside of my window +0.05', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),
     ('Rule number four -0.1', 'rule', 0.6, None, {'nosnap': True}),
-    ('She turned, and took the glasses off -0.1', 'silence', 0.8, 1.6),
-    ('end:She turned, and took the glasses off. Buttons +0.05', 'hit', 0.9, None, {'boost': 3.0, 'nosnap': True}),
-    ('is a secret wearing a bow', 'sub_drop', 0.45, None),
-    ('And the Blank. Standing behind me', 'pulse_on', 0.55, None),
-    ("The Blank's chin was almost on my shoulder -0.1", 'silence', 0.75, 1.4),
-    ("end:The Blank's chin was almost on my shoulder +0.08", 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
-    # rule 5: dinner, the lamp
+    ('Next red light. There -0.1', 'sub_drop', 0.45, None),
+    ('It was covered in chalk', 'pulse_on', 0.5, None),
+    ('I was. Last Sunday -0.25', 'silence', 1.0, 1.6),                       # REVEAL 1 on silence (the tape song drags out first)
+    ('end:and stood up +0.05', 'hit', 0.9, None, {'boost': 3.0, 'nosnap': True}),
+    ('Floodlight. The caretaker -0.1', 'pulse_off', 0.4, None),
     ('Rule number five -0.1', 'rule', 0.6, None, {'nosnap': True}),
-    ('Two black, shiny circles', 'sub_drop', 0.5, None),
-    ('Only you', 'sub_drop', 0.55, None),
-    ('Her head set the lamp swinging', 'hit', 0.7, None),
-    # rule 6: midnight, the unfolding
-    ('Rule number six -0.1', 'rule', 0.65, None, {'nosnap': True}),
-    ("I couldn't see me -0.1", 'silence', 0.8, 1.0),
-    ("end:I couldn't see me +0.05", 'hit', 0.9, None, {'boost': 3.0, 'nosnap': True}),
-    ('Midnight. My birthday', 'pulse_on', 0.6, None),
-    ('Behind the fridge, something unfolded', 'swell', 0.8, 8.0),
-    ('Holding open -0.1', 'silence', 0.8, 1.6),
-    ('end:Holding open... the red coat +0.05', 'hit', 0.95, None, {'boost': 3.5, 'nosnap': True}),
-    # rule 7: THE CLIMAX
-    ('Rule number seven -0.1', 'rule', 0.65, None, {'nosnap': True}),
-    ('Six closed. -0.05', 'silence', 0.85, 2.4),                  # the song stops: the bed holds its breath
-    ('As loud as I could -0.3', 'hit', 0.85, None, {'nosnap': True}),          # just after "NO!"
-    ('I dropped down out of the coat and ran', 'pulse_on', 0.7, None),
-    ('The marker squeaked. The Blank lunged', 'hit', 0.8, None),
-    ('The long fingers were an inch from my hood', 'swell', 0.9, 4.0),
-    ('The Blank froze. Mid-reach -0.05', 'silence', 0.9, 1.4),
-    ("She'd put buttons where I'd never looked -0.4", 'pulse_off', 0.5, None),
-    # the sting
-    ('The jar was empty', 'sub_drop', 0.45, None),
-    ('Under the streetlight, someone waved', 'hit', 0.65, None),
-    ('On his screen, a grey default head', 'sub_drop', 0.5, None),
+    ('end:toward my window +0.05', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
+    ('Rule number six -0.1', 'rule', 0.6, None, {'nosnap': True}),
+    ('From the landing, I heard our letterbox lift -0.2', 'silence', 0.6, 2.0),
+    ('end:Chalk-white fingers slid through +0.05', 'hit', 0.85, None, {'boost': 3.0, 'nosnap': True}),
+    ('Behind me, the landing light clicked on -0.1', 'sub_drop', 0.5, None),
+    ('From me. -0.3', 'silence', 1.0, 1.7),                      # REVEAL 2 on silence
+    ('Rule number seven -0.1', 'rule', 0.6, None, {'nosnap': True}),
+    ('Behind me, the letterbox rattled', 'pulse_on', 0.6, None),
+    ('Thank you for telling me -0.2', 'pulse_off', 0.4, None),
+    ('That blue front door was Danny\'s', 'riser', 0.6, 3.0),
+    ('It was me. -0.3', 'silence', 1.0, 2.0),                    # REVEAL 3 on silence
+    ("No. I'm not your only -0.25", 'sub_drop', 0.55, None),
+    ('Her colour drained to chalk-white', 'swell', 0.5, 6.0),
+    ('Next morning, one chalk word on my path', 'sub_drop', 0.4, None),
+    ('Okay. Breathe -0.2', 'end', 0.3, None),
 ]
 
 # ---------------------------------------------------------------------------------------------------- identity
-# THE BUTTON SONG (audio/motif_buttons.py; score.py 'jingle' events). (anchor, type, level, len, extra): 'version',
-# 'until' (an anchor: sets len), stop ('fade' | 'cut' | 'drag'), fade (fade-in s), loops, phrases (bars '1234'), n
-# (notes played), amount, tempo, anchors [(beat, anchor)], 'gap_at'. It never doubles a sung line: Mom's song (line
-# 'mom_one_for_warm') has no motif; the climax box is bent onto the Blank's own sung words and stops one note short;
-# the real box under Mom's last line is bent onto her words so they agree. 'wN:word' anchors name timeline line N
-# (316 = 'mom_mama_sees_you', whose words also open line 32: a phrase would find line 32).
+# (anchor, type, level, len, extra). 'show': THE TAPE SONG from Mom's camcorder tape (score.render_show: space 'tape'
+# = the camcorder speaker, 'far'; warp up to 9 semitones, stop 'drag' / 'cut'); 'winks': the same tune ROTTED as
+# EVIE's theme (score.render_winks: slowed, detuned, seasick; stop 'drag' on the reveals); 'jingle': STICK LIKE GLUE
+# (audio/motif_obsession.py versions); 'trailer': the cold open (score.render_trailer). The sweet tune plays while she
+# moves. 'until' (an anchor) sets len; anchors inside 'warp_at', 'stop', 'stop_at', 'waves', 'hits', 'silence' are
+# resolved to film seconds ('warp_at' to seconds after the event).
 IDENTITY = [
-    # 2. the chat: Owen types "Our song." and a clean music box plays, quietly
-    ('Our song -0.25', 'jingle', 0.3, None,
-     dict(version='box', until='Two black buttons clicked onto the face -0.3', stop='fade', fade=0.2)),
-    # 3. R2, 3 a.m.: inside the closet, the stolen music box winding down, too slow; it drags to a halt as he opens
-    ('Then our song, slow -0.15', 'jingle', 0.42, None,
-     dict(version='winddown', n=10, until='The red coat hung there -0.2', stop='drag', fade=0.15)),
-    # 4. R3: hummed, slowed, through the car's open window
-    ('Mom at the wheel in sunglasses -0.3', 'jingle', 0.42, None,
-     dict(version='hum', until='Get in, sweetheart -0.25', stop='fade', fade=0.4)),
-    # 5. R5: the windowsill: sung perfectly, like a recording, again and again (bars 3-4 looped, sample-exact)
-    ('That night, Mom sat on my windowsill -0.2', 'jingle', 0.38, None,
-     dict(version='sill', phrases='34', loops=3, tempo=78.0, until='Rule number six -0.35', stop='fade', fade=0.6)),
-    # 6. R7: the box under the Blank's counting song, one button per sung beat (the picture's six coat_button_close
-    #    cues land on One / warm / two / snug / three / hug), bent onto her words and playing HER sung notes in her
-    #    tuning (follow: WORLD/pyin medians per word of timeline line 248, 24 Nov voice track; 'and' repeats 'warm',
-    #    she does not sing it), so it sits under her in tune; only the worn tines and the wow are 'detuned'. Six
-    #    buttons, fourteen notes (bars 1-2, through "hug"), then it STOPS at "Six closed." (the top button's bar
-    #    never plays)
-    ('warm two for snug#One -0.05', 'jingle', 0.4, None,
-     dict(version='detuned', n=14, amount=0.5, until='Six closed +0.1', stop='fade', fade=0.05,
-          follow=[51.69, 58.89, 56.69, 56.69, 51.69, 57.69, 55.09, 58.09, 58.74, 55.69, 55.69, 51.89, 51.89, 52.59],
-          anchors=[(0.0, 'warm two for snug#One'), (0.75, 'warm two for snug#warm'), (1.5, 'warm two for snug#two'),
-                   (2.0, 'warm two for snug#snug'), (3.0, 'warm two for snug#three'),
-                   (3.75, "warm two for snug#mamma's"), (4.5, 'warm two for snug#button'),
-                   (5.0, 'warm two for snug#hug')])),
-    # 7. aftermath: four notes from the empty cardigan (the real music box)
-    ('From the empty cardigan#four -0.1', 'jingle', 0.35, None,
-     dict(version='cardigan', until='Mom pulled out a tiny music box -0.1', stop='fade', fade=0.02)),
-    #    Mom winds it and sings the real words: the real box, bar 4 on her "Mama sees you. Say goodnight."
-    ('end:She wound the music box and sang along +0.1', 'jingle', 0.4, None,
-     dict(version='real', phrases='34', until='My son is ten now +0.2', stop='fade', fade=0.05,
-          anchors=[(3.0, 'w316:Mama'), (3.75, 'w316:sees'), (4.0, 'w316:you'), (4.5, 'w316:Say'),
-                   (4.75, 'w316:goodnight')])),
-    # 8. the sting: the son's tablet chimes the first four notes, down the hall, in the gap before the narrator names it
-    ('Down the hall -0.6', 'jingle', 0.35, None,
-     dict(version='chime', space='inside', until="end:Down the hall, my son's tablet chimed +1.0", stop='fade', fade=0.0)),
+    # THE TRAILER: three waves (the three "If..." lines), a hard stop after "Wake a grown-up.", ONE silence, the last
+    # line "I know who it is.", then the hook. film.py's own 'trailer' event (picture hit times, silence) wins.
+    ('s0', 'trailer', 0.85, None,
+     dict(stop='end:Wake a grown-up +0.12', waves=['s0', 'If your phone is off -0.25', 'And if you look down at midnight -0.25'],
+          hits=['If your phone is off#lights', 'And if you look down at midnight#smiling', '...don\'t go down -0.05',
+                'end:Wake a grown-up +0.1'],
+          silence=['end:Wake a grown-up +0.12', 'I know who it is -0.05'])),
+    # the tape at seven, on the swings: THE TAPE SONG from the camcorder, little Adam's chant on top (voice track)
+    ('At seven, on the swings -0.4', 'show', 0.42, None, dict(until='end:I made it up. Nobody else knows it +0.6',
+                                                            space='tape', stop='fade', fade=0.4)),
+    # Evie arrives: the tune rotted, far, as she sits behind him
+    ('That day, a new girl sat behind me', 'winks', 0.3, 6.0, dict(depth=0.5)),
+    # Wednesday: she doesn't blink
+    ("Wednesday, at my shoulder", 'winks', 0.36, None, dict(until='We\'d met on Monday +0.5', depth=0.8)),
+    # rule 1: the pings, one note each: the looped run under "Every ping, one note of my song."
+    ('Every ping, one note of my song -0.1', 'jingle', 0.45, None,
+     dict(version='pings', loops=2, accel=0.6, until='"Are you awake?" -0.1', stop='fade', fade=0.02)),
+    # the streetlight: she lies flat and slides away (she moves: the sweet tune, rotted)
+    ('Under the streetlight, Evie smiled up', 'winks', 0.42, None, dict(until='Thursday morning, our path -0.3',
+                                                                       stop='fade', depth=1.0)),
+    # rule 2 / rule 3 nights
+    ('That night, ONLY ME was halfway up our path', 'winks', 0.45, 7.0, dict(depth=1.1)),
+    ('Two a.m. Her dot was on our house', 'winks', 0.5, None, dict(until='I swung my torch -0.1', stop='drag', depth=1.2)),
+    # rule 4: the swings: her perfect bright version (music box + glockenspiel), then the car
+    ('At break, on the swings, she sang my song -0.2', 'jingle', 0.4, None,
+     dict(version='swings', until='I found Danny -0.2', stop='fade', fade=0.05)),
+    # the square: my song from the square, slowed, in my seven-year-old voice: THE TAPE, warping, dragging to a halt
+    #   on "I was." (reveal 1)
+    ('From the square, slowed down, came my song -0.2', 'show', 0.5, None,
+     dict(until='I was. Last Sunday -0.3', space='far', warp=0.9, warp_at='I told you nobody was cruel enough', stop='drag',
+          fade=0.6, off=50.0)),
+    # the chalk stands up: Evie, washed in red (she moves)
+    ('The chalk slid out', 'winks', 0.6, None, dict(until='Floodlight. The caretaker -0.15', stop='cut', depth=1.3)),
+    # rule 5: the neck stretching up toward his window
+    ("Evie's neck was bending", 'winks', 0.62, None, dict(until='Rule number six -0.4', stop='drag', depth=1.4)),
+    # rule 6: hummed through the letterbox, slow and a semitone flat, a chalk scrape on every beat
+    ('Through the slot, a smile, ear to ear -0.1', 'jingle', 0.5, None,
+     dict(version='letterbox', until='"After everything I gave you." -0.15', stop='fade', fade=0.1)),
+    # "It says your name." ... "From me." (reveal 2): the rotted tune drags to a halt into the silence
+    ('Lina, under the bare bulb', 'winks', 0.45, None, dict(until='From me. -0.3', stop='drag', depth=1.2)),
+    # rule 7: the pings again, slower and lower, under Mom saving; they STOP DEAD on Block
+    ('Mom saved every message from Evie -0.1', 'jingle', 0.42, None,
+     dict(version='block', phrases='12', until='Then I scrolled to Danny -0.1', stop_at='Then I scrolled to Danny -0.35',
+          stop='fade', fade=0.02)),
+    # the replay at Danny's blue door ("It was me.", reveal 3): the tape rewinds (rule-7 cold-open replay), drags to a halt
+    ('Sunday. Midnight. Chalk-white sleeves', 'show', 0.45, None,
+     dict(until='It was me. -0.3', space='tape', warp=0.6, warp_at='Smiling up at his dark window', stop='drag',
+          off=60.0, fade=0.3)),
+    # the doormat: "Write your name?" sweet again: the tune, rotted, then her own song stretched thin (voice) and cut
+    ('Evie was on our doormat', 'winks', 0.5, None, dict(until="Write your name? No. I'm not -0.1", stop='drag', depth=1.0)),
+    # dawn: Lina's healed song in a major key under her (her key, D-flat): bent onto her bars
+    ('Me and you, and others too#Me -0.05', 'jingle', 0.38, None,
+     dict(version='healed', until="end:I'll still care, wherever you are +2.5", stop='fade', fade=0.05,
+          anchors=[(0.0, 'Me and you, and others too#Me'), (4.0, 'friends for me and friends for you#Friends'),
+                   (8.0, 'Go wherever, near or far#Go'), (12.0, "I'll still care, wherever you are#I'll"),
+                   (16.0, "end:I'll still care, wherever you are")])),
+    # the coda: ONLY. on the path: the tape song far away, once, dragging out
+    ('Next morning, one chalk word on my path', 'show', 0.28, None,
+     dict(until='I scrubbed it off -0.2', space='far', stop='drag', off=70.0, fade=0.5)),
 ]
 
 
@@ -522,6 +479,24 @@ def identity_events(lines):
             u = _try(x.pop('until'), lines, 'identity until')
             if u is not None:
                 ln = max(0.5, u - t)
+        if isinstance(x.get('warp_at'), str):                # Obsession: anchors inside the extras
+            wa = _try(x['warp_at'], lines, 'identity warp')
+            x['warp_at'] = round(max(0.0, wa - t), 3) if wa is not None else None
+            if x['warp_at'] is None:
+                x.pop('warp_at')
+        for k_ in ('stop_at', 'stop'):
+            if isinstance(x.get(k_), str) and x[k_] not in ('fade', 'cut', 'drag'):
+                v_ = _try(x[k_], lines, 'identity ' + k_)
+                if v_ is None:
+                    x.pop(k_)
+                else:
+                    x[k_] = round(v_, 3)
+        for k_ in ('waves', 'hits', 'silence'):
+            if isinstance(x.get(k_), list):
+                vs = [_try(q, lines, 'identity ' + k_) if isinstance(q, str) else q for q in x[k_]]
+                x[k_] = [round(v, 3) for v in vs if v is not None]
+                if k_ == 'silence' and len(x[k_]) != 2:
+                    x.pop(k_)
         if x.get('anchors'):
             an = [(float(b), _try(s, lines, 'identity beat')) for b, s in x['anchors']]
             x['anchors'] = [[b, round(s, 3)] for b, s in an if s is not None]

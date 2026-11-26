@@ -1,46 +1,35 @@
-"""tools/validate.py: the staging validator for "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET" (film.py).
+"""tools/validate.py: the staging validator for "If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR
+NAME" (film.py).
 
     python3 tools/validate.py --fps 8             # every check on every shot at 8 fps; exit code 1 on any ERROR
     python3 tools/validate.py --shots 100-140     # a range (the cut / state checks still look at the neighbours)
-    python3 tools/validate.py --part A            # lines 0-211 (.. rule five); --part B the rest
+    python3 tools/validate.py --part A            # lines 0..212 (.. rule six); --part B the rest
 
-It reads the plan the way the renderer builds it (Film(timeline) -> shots -> builders: sets with their anchors, floors and
-furniture footprints, the microwave-door reflections, inserts with their props, actors with their clips) and checks what
-can be checked without looking at pixels. EVERY shot type is covered (the owner's rule, 23 Nov):
+It reads the plan the way the renderer builds it (Film(timeline) -> shots -> builders: sets with their anchors, the
+inserts, the tape, actors with their clips) and checks what can be checked without looking at pixels, on EVERY shot type:
 
-  ANCHOR   every standing / seat / kneel anchor of a set lies on the floor of its level (the apartment BT_UP, the street /
-           lobby / school ground 0, the narrator's home BT_UP)
-  FLOOR    feet inside a room's floor and clear of furniture footprints (sp.walkable), sampled along every walk path;
-           seated figures on seat anchors; nobody standing on a seat anchor
-  LEVEL    feet at the floor height of where they stand
-  GROUND   the ground LINE, sampled at --fps: a standing / kneeling figure's lowest contact (soles, knee caps) sits on
-           its feet line (tolerance 4 px + 1.2 % of the figure's height); close shots: the rolling buttons and the flat
-           cardigan on the floor line, a button dropped into the jar lands inside the jar's mouth (inserts)
-  VEHICLE  a figure's plan point inside the silver car's rectangle (the school lane; the driver sits at 'driver')
+  FLOOR    feet clear of furniture footprints (sp.walkable where the set has floors), seated figures on seat anchors,
+           nobody standing on a seat anchor (on the furniture)
+  LEVEL    feet at the height of a floor of the set (the levels of its stand anchors: the house's two floors, the path,
+           the step, the stairs' treads)
+  GROUND   the ground LINE at --fps: a standing / kneeling figure's lowest contact (soles, knee caps) sits on its feet
+           line (tolerance 4 px + 1.2 % of the figure's height), also in the door shots seen from above (foreshortened)
   OVERLAP  two figures closer than 0.32 m on the plan (bodies inside each other)
   REACH    reach / hold contacts that miss their target at full weight (Acting.misses, > 20 design px)
-  PROP     a prop held by two hands at once; a prop drawn by the set AND held (the tablet on the bed, the headset on the
-           desk); the music box / phone / tablet held in a hand that is not there
-  KIDSAFE  form 3's fingertips closer than 2.5 cm to Owen's head, neck or hands (her fingers always stop short)
-  LIEFRAME a lying figure in a wide shot
-  VANISH   a person in the shots before AND after (same room) missing from a people shot between them
-  NEAR     a strong push (f >= 2) on a perspective set with people: WARN
-  CEILING  form 3 (unfolded) touches the apartment ceiling at her plan point: neck / crown not through it, not in mid-air
-  ROOF     the driver's head top under the silver car's roof (1.43 m above the road)
-  BUSTLIE  a bust turned >= 45 degrees used as a lying figure (lying figures are drawn lying, on the bed)
-  PROPGONE the red coat missing from a set shot of the Blank between two shots that show it (it never pops away / back)
-  HANDFACE the Blank's hand (any form) within 2.5 cm of Owen's face or neck (kid-safe; < 0.5 cm is an ERROR)
+  PROP     a prop held by two hands at once; a held prop that changes hands by jumping
+  TOUCH    Evie never touches anyone: her hands / body within 3 % of a figure's height of anyone else's head, chest or
+           hands at any sample is an ERROR (her first limit)
   CUTPOS   the same person jumping > 0.8 m across a cut on the same plan
-  STATE    the story's states (see states()): who wears what (Owen in pyjamas at night, the green coat outdoors), which
-           form of the Blank in which beat, Mom's glasses (glare until L277, the two circles only L195-L197), the headset
-           lady grey from L205 to "Mom" (L232), Owen's fade level (readable: <= 0.8; gone from the microwave door only in
-           rule six), the Brave List's pale rules (R1 after L61, R2 after L93, R4 after L171, all but three after L204,
-           blue again by the end of L280)
+  STATE    the story's states (states()): Adam's hoodie sleeves chalk-white only at Danny's blue door; Evie's stage and
+           smile width per EVIE_ARC (or the flash-forward's own stage); her night flatness in night shots; the chalk
+           tracker ONLY ME at its night's place (OM_TRACK) and Evie standing ON it; the card (rule n written in order,
+           ADAM shows through the scribble only under the landing bulb); grown-ups looking at Evie only in the beats
+           where their look holds her back (the porch light, the floodlight, Mom's chair, Mom at the door)
   CAM      a move > 4.2 s; only the camera moving over still figures; an empty set under a moving camera
   LEN      shot lengths + the median / cuts per minute
   LIP      lips move only on the actor's own lines (film.lip_check)
 Severity: ERROR (a visible mistake: fix it), WARN (look at it on the strips), INFO. Allowed exceptions are listed in ALLOW
-with the reason. The result table goes to stdout and --json.
+with the reason. The result table goes to stdout and --json (W/shots/validate.json).
 """
 import argparse, json, math, os, sys, time
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,10 +40,10 @@ import numpy as np
 ap = argparse.ArgumentParser()
 ap.add_argument('--shots', default=None)
 ap.add_argument('--fps', type=float, default=8.0, help='sampling rate of the acting checks')
-ap.add_argument('--json', default=os.path.join(HERE, '_work', 'tests', 'polish', 'validate.json'))
+ap.add_argument('--json', default=os.path.join(HERE, '_work', 'shots', 'validate.json'))
 ap.add_argument('--quiet', action='store_true')
 ap.add_argument('--no-lip', action='store_true')
-ap.add_argument('--part', default=None, help='A (lines 0-211) or B (212-384)')
+ap.add_argument('--part', default=None, help='A (lines 0-212) or B (213-382)')
 a = ap.parse_args()
 
 from engine.core import set_render_size
@@ -106,14 +95,17 @@ def _during(*ii):
     return lambda s, who=None: any(F.t(i) - 0.3 <= s.t0 <= F.e(i) + 0.3 or s.t0 <= F.t(i) < s.t1 for i in ii)
 
 
-ALLOW = [
-    ('LIP', lambda s, who: who.startswith('blank') and _during(115, 208, 209, 210)(s), "the Blank hums the song (a closed mouth): L115 the car, L208-L210 the windowsill"),
-    ('CUTPOS', _during(144, 154, 172, 185, 208, 227, 231, 259, 267, 270, 288, 309, 312), "a time ellipsis or a move between cuts the narration covers (that night; I went; after school; standing in my own kitchen; he ran; he walked back to the board)"),
-    ('KIDSAFE', _during(273), "the lunge sweeps the counter behind him: the fingertips cross his head on screen a metre behind him in depth"),
-    ('LIP', lambda s, who: bool(s.p.get('no_lip')), "a held open mouth (a shout pose): a pose, not speech"),
-    ('LIP', lambda s, who: who == 'mom' and _during(219)(s), "L219 is four short phrases with long pauses: the mouth rests in the gaps (it moves on every phrase)"),
-]
 
+ALLOW = [
+    ('CUTPOS', _during(56, 67, 71, 104, 119, 123, 126, 181, 201, 206, 227, 231, 245, 251, 262, 288, 290, 302), "a time ellipsis or a move between cuts the narration covers (the next dawn, a memory)"),
+    ('CUTPOS', lambda s, who='': s.p.get('era') == 'trailer', "the trailer's jump cuts: ONLY ME (and Evie on it) one stretch nearer on every cut"),
+    ('LIP', lambda s, who: who == 'evie' and _during(148, 149)(s), "she sings his song on the swings (the score's sung take, not a voice line)"),
+    ('LIP', lambda s, who: s.d < 0.5, "a shot under half a second: the mouth-motion rate is noise"),
+    ('PROP', _during(302, 303), "two scrubbing brushes (Mom's and Adam's), one bucket"),
+    ('LIP', lambda s, who: who == 'evie' and _during(188, 220, 221, 222)(s), "Evie's lips move at the dark window (L188 'Evie's lips moved') / she hums through the slot"),
+    ('LIP', lambda s, who: who == 'adam7', "little Adam sings on the tape (his sung line; the tape's lip sync is the song's syllables)"),
+    ('STATE', lambda s, who='': s.p.get('era') in ('trailer', 'memory'), "a flash-forward / flashback: the beat's own state"),
+]
 
 def allowed(check, sh, who=''):
     for (chk, pred, reason) in ALLOW:
@@ -125,23 +117,18 @@ def allowed(check, sh, who=''):
     return None
 
 # ---------------------------------------------------------------------------------------------------- build helpers
-APT = ('apt', 'owen')
-HOUSE = ('apt', 'owen', 'now')
-PLAN_OF = {'apt': 'apt', 'owen': 'apt', 'street': 'block', 'lobby': 'block', 'school': 'school', 'now': 'now'}
-LEVELS = {}
+
+PLAN_OF = {'front': 'house', 'room': 'house', 'hall': 'house', 'kitchen': 'house', 'school': 'school', 'play': 'play'}
+HOUSE = ('front', 'room', 'hall', 'kitchen')
 
 
-def stair_Y(x, y):
-    """No stairs are walked on camera in this film."""
-    return None
+def stair_Y(x, y): return 0.0          # the stairs' footprint is walkable on its treads (walkers go step anchor to step anchor)
 
 
 def film_level(sp, room, X, Yp, Y):
-    """Expected feet height at plan (X, Yp): the apartment and the narrator's home at BT_UP; the street, the lobby and the
-    school lane at ground 0 (the road -0.15)."""
-    if room in HOUSE: return [ST.BT_UP]
-    return [ST.BT_G, ST.BT_ROAD]
-
+    """The set's floor heights: the levels of its stand / kneel anchors (rounded to the centimetre)."""
+    lv = sorted({round(s_.Y, 2) for nm, s_ in sp.anchors.items() if '.' not in nm and s_.kind in ('stand', 'kneel')})
+    return lv or [0.0]
 
 def in_poly(pt, q, pad=0.0):
     if pad:
@@ -278,6 +265,7 @@ def _ground_one(k, a, line, kind, ts, who, where='set'):
     for t in ts:
         P = a.at(t)
         if abs(getattr(P, 'lie', 0.0)) > 0.05 or getattr(P, 'sit', 0.0) > 0.3 or getattr(P, 'walk_amt', 0.0) > 0.1: continue
+        if abs(getattr(P, 'dy', 0.0)) > 2.0: continue            # a clip that carries the figure to another ground point (her chalk slide)
         h = a.height
         # the lowest ground contact (soles, knee caps, and on all fours the palms) must sit ON the line
         cs = [a.where(t, 'foot_l')[1] + ANKLE * h, a.where(t, 'foot_r')[1] + ANKLE * h,
@@ -298,174 +286,47 @@ def _ground_one(k, a, line, kind, ts, who, where='set'):
                                                                                           'below' if g > 0 else 'above', t), t)
 
 
-def extra_checks(k, sh, ts, acts, held):
-    p = sh.p
-    if sh.kind == 'set':
-        sp = sh.sp
-        for q in p.get('ppl', []):
-            ident = q.get('id', q['who']); a_ = (getattr(sh, 'A', None) or {}).get(ident)
-            if a_ is None or q.get('path') or q['who'] == 'blank3': continue
-            kind, s0 = figure_kind(sp, q)
-            if kind in ('stand', 'kneel'):
-                _ground_one(k, a_, a_.y0, kind, ts, ident)
-            if kind == 'lie':                                                # LIEFRAME: lying figures only close / medium
-                try:
-                    cs = sh.spec_cam.at((sh.t0 + sh.t1) / 2)
-                    mag = cs.zoom * cs.fz * cs.pz
-                except Exception:
-                    mag = 1.0
-                L_ = a_.height * mag
-                if L_ < 0.30 * 1920:
-                    add('ERROR', k, 'LIEFRAME', '%s lies in a wide shot (%.0f px long on screen; lying figures only in close or medium shots)' % (ident, L_))
-        for q in p.get('ppl', []):                                           # form 3: her feet on the floor line
-            a_ = (getattr(sh, 'A', None) or {}).get(q.get('id', q['who']))
-            if a_ is None or q['who'] != 'blank3': continue
-            for t in ts[::3]:
-                if getattr(a_.at(t), 'b3_collapse', 0.0) > 0.05: continue
-                fy = CH.b3_point(a_, t, 'foot')[1]
-                if abs(fy - a_.y0) > _tol(a_.height * 0.6):
-                    add('ERROR', k, 'GROUND', 'form 3 %s %.0f px %s her floor line at %.2f s' % (q.get('id'), abs(fy - a_.y0), 'below' if fy > a_.y0 else 'above', t), t); break
-        cm_ = p.get('c') or {}
-        if cm_.get('mv') == 'push' and float(cm_.get('f', 1.0)) >= 2.0 and p.get('ppl'):
-            add('WARN', k, 'NEAR', 'push x%.1f on a perspective set with people: check near-plane geometry crossing a face' % float(cm_['f']))
-        st = p.get('set') or {}
-        if p['room'] == 'school' and st.get('car', True):                    # VEHICLE: nobody inside the silver car but its driver
-            cx, cy = ST.SC_CAR
-            for ident, (p0, p1, walks) in (getattr(sh, '_plan_pos', None) or {}).items():
-                q = next((q_ for q_ in p.get('ppl', []) if q_.get('id', q_['who']) == ident), {})
-                if q.get('at') == 'driver': continue
-                for (X, Yp, Y) in (p0, p1):
-                    if abs(X - cx) < 2.35 and abs(Yp - cy) < 0.95:
-                        add('ERROR', k, 'VEHICLE', '%s stands inside the silver car at plan (%.2f, %.2f)' % (ident, X, Yp))
-        tabs = [pr for pr in held if pr.startswith('tab')]
-        if p['room'] in ('owen', 'now') and st.get('tablet_bed') and tabs:
-            add('ERROR', k, 'PROP', 'the tablet lies on the bed (tablet_bed) AND is in %s' % ', '.join(sorted(w for pr in tabs for w, _ in held[pr])))
-        if p['room'] == 'now' and st.get('headset') and 'headset' in held:
-            add('ERROR', k, 'PROP', 'the headset is on the desk AND in a hand')
-        if p['room'] == 'apt' and st.get('carton') and any(w in ('owen', 'owen_pj') for pr in tabs for w, _ in held[pr]):
-            add('WARN', k, 'PROP', "Owen holds a tablet while his tablet stands on the milk carton")
-        # KIDSAFE: form 3's fingertips never within 2.5 cm of Owen's skin (head, neck, hands)
-        A = getattr(sh, 'A', None) or {}
-        b3 = [a_ for a_ in acts if a_.who == 'blank3']
-        kids = [a_ for a_ in acts if a_.who in ('owen', 'owen_pj', 'owen_coat') and not getattr(a_, '_mirror', False)]
-        for b in b3:
-            for o in kids:
-                ppc = o.height / 145.0
-                worst = None
-                for t in ts:
-                    Pb = b.at(t)
-                    if getattr(Pb, 'b3_collapse', 0.0) > 0.05: continue
-                    for tip in ('tips_l', 'tips_r'):
-                        try: tx, ty = CH.b3_point(b, t, tip)
-                        except Exception: continue
-                        for part in ('head', 'neck', 'hand_l', 'hand_r'):
-                            px, py = o.where(t, part)
-                            r = (0.09 if part == 'head' else 0.03) * o.height
-                            d = (math.hypot(tx - px, ty - py) - r) / ppc
-                            if worst is None or d < worst[0]: worst = (d, t, tip, part)
-                if worst and worst[0] < 2.5:
-                    why_ = allowed('KIDSAFE', sh)
-                    add('INFO' if why_ else ('ERROR' if worst[0] < 0.5 else 'WARN'), k, 'KIDSAFE', "form 3's %s is %.1f cm from Owen's %s at %.2f s (her fingers stop short: >= 2.5 cm)" % (worst[2], worst[0], worst[3], worst[1]), worst[1])
-    for (name, x, y, box) in getattr(sh, '_lands', None) or []:                  # inserts: a dropped button lands in the jar
-        if not (box[0] <= x <= box[2] and box[1] <= y <= box[3]):
-            add('ERROR', k, 'GROUND', '%s lands at (%.0f, %.0f), outside the jar mouth %s' % (name, x, y, box))
-    for (name, bottom, line) in getattr(sh, '_props', None) or []:               # floor props: on the floor line
-        if abs(bottom - line) > 3.0:
-            add('ERROR', k, 'GROUND', '%s %s %.0f px %s its floor line' % (sh.kind, name, abs(bottom - line), 'below' if bottom > line else 'above'))
 
-
-def extra_checks2(k, sh, ts, acts):
-    """Review round 1 (Buttons): CEILING, ROOF, BUSTLIE, HANDFACE (see the module doc)."""
-    p = sh.p
-    if sh.kind == 'bust' and abs(float(p.get('rot', 0.0) or 0.0)) >= 45.0:
-        add('ERROR', k, 'BUSTLIE', 'a %s bust turned %.0f deg stands in for a lying figure' % (p.get('who'), float(p['rot'])))
+def ground_check(k, sh, ts):
+    """GROUND: every standing / kneeling figure of a set shot keeps its lowest contact ON its feet line (its spot's
+    screen y), sampled at --fps; the door shots seen from above included (the figure is drawn foreshortened on its spot)."""
     if sh.kind != 'set': return
-    sp = sh.sp; A = getattr(sh, 'A', None) or {}
-    for q in p.get('ppl', []):
-        ident = q.get('id', q['who']); a_ = A.get(ident)
+    I = getattr(sh, 'I', {}) or {}; A = getattr(sh, 'A', {}) or {}
+    for q in sh.p.get('ppl', []):
+        ident = q.get('id', q['who'])
+        if q.get('path') or ident not in I or q.get('check') is False: continue
+        kind, s0 = figure_kind(sh.sp, q)
+        if kind not in ('stand', 'kneel'): continue
+        a_ = dict.get(A, ident)
         if a_ is None: continue
-        if q['who'] == 'blank3' and p.get('room') == 'apt' and not q.get('path'):
-            s0 = FM.spot_of(sp, q['at'])
-            ceil = sp.view.p(s0.X, ST.BT_UP + ST.BT_CEIL, s0.Yp)[1]
-            tol = 3.0 + 0.012 * a_.height
-            for t in ts[::2]:
-                P_ = a_.at(t)
-                if getattr(P_, 'b3_collapse', 0.0) > 0.02 or getattr(P_, 'b3_unfold', 1.0) < 0.99: continue
-                G = CH._b3_geom(a_.x0 + P_.dx, a_.y0, a_.height, P_, t)
-                top = min(min(y for _, y in G['neck']) - G['nr'], G['head'][1] - 0.5 * G['head_h'])
-                if top < ceil - tol:
-                    add('ERROR', k, 'CEILING', "form 3's head / neck %.0f px through the ceiling at %.2f s" % (ceil - top, t), t); break
-                if top > ceil + tol:
-                    add('ERROR', k, 'CEILING', "form 3's head stops %.0f px under the ceiling at %.2f s (it must touch it)" % (top - ceil, t), t); break
-        if q.get('at') == 'driver' and p.get('room') == 'school':
-            s0 = FM.spot_of(sp, 'driver')
-            roof = sp.view.p(s0.X, ST.SC_ROAD + 1.43, s0.Yp)[1]
-            for t in ts[::3]:
-                hy = a_.where(t, 'head')[1] - 0.075 * a_.height
-                if hy < roof - 2.0:
-                    add('ERROR', k, 'ROOF', "the driver's head is %.0f px above the car roof line at %.2f s" % (roof - hy, t), t); break
-    kids = [a_ for a_ in acts if a_.who in ('owen', 'owen_pj', 'owen_coat') and not getattr(a_, '_mirror', False)]
-    blanks = [a_ for a_ in acts if a_.who in ('blank1', 'blank1_shades', 'blank2', 'blank3') and not getattr(a_, '_mirror', False)]
-    for b in blanks:
-        for o in kids:
-            ppc = o.height / 145.0; worst = None
+        _ground_one(k, a_, s0.y + q.get('dy', 0.0), kind, ts, q['who'])
+
+
+TOUCH_PARTS = ('head', 'chest', 'hand_l', 'hand_r', 'neck')
+
+
+def touch_check(k, sh, ts, acts):
+    """TOUCH: Evie's hands and head never come within 3 % of a figure's height of anyone else's head, neck, chest or hands
+    (in the same shot, both drawn): she cannot touch anyone (her first limit; kid-safe)."""
+    ev = [x for x in acts if getattr(x, 'who', '') == 'evie']
+    others = [x for x in acts if getattr(x, 'who', '') not in ('evie',) and hasattr(x, 'x0')]
+    pp = getattr(sh, '_plan_pos', None) or {}
+    for e_ in ev:
+        for o in others:
+            if 'evie' in pp:                              # on a plan: only figures that stand near her in depth can touch
+                oo = pp.get(o.who) or pp.get('adam' if o.who in ('adam', 'adam_night') else o.who)
+                if oo is not None and math.hypot(oo[0][0] - pp['evie'][0][0], oo[0][1] - pp['evie'][0][1]) > 0.45: continue
+            h = max(40.0, min(e_.height, o.height))
             for t in ts:
-                if b.who == 'blank3':
-                    if getattr(b.at(t), 'b3_collapse', 0.0) > 0.05: continue
-                    hands = [CH.b3_point(b, t, n) for n in ('tips_l', 'tips_r', 'hand_l', 'hand_r')]
-                else:
-                    hands = [b.where(t, n) for n in ('hand_l', 'hand_r')]
-                for (hx, hy) in hands:
-                    for part, r in (('head', 0.09), ('neck', 0.035)):
-                        px, py = o.where(t, part)
-                        d = (math.hypot(hx - px, hy - py) - r * o.height) / ppc
-                        if worst is None or d < worst[0]: worst = (d, t, part)
-            if worst and worst[0] < 2.5:
-                why_ = allowed('HANDFACE', sh)
-                add('INFO' if why_ else ('ERROR' if worst[0] < 0.5 else 'WARN'), k, 'HANDFACE', "the Blank's hand is %.1f cm from Owen's %s at %.2f s" % (worst[0], worst[2], worst[1]), worst[1])
-
-
-_PROPS = {}
-
-
-def check_propgone():
-    """PROPGONE: the red coat in a set shot with the Blank before AND after (< 20 s apart, same room) must be in the
-    set shots of the Blank between them (it never vanishes and comes back within a scene)."""
-    rows = sorted((k, v) for k, v in _PROPS.items())
-    for i, (k, (room, t0, t1, has_b, coat)) in enumerate(rows):
-        if not has_b or coat: continue
-        prev = next((r for r in reversed(rows[:i]) if r[1][0] == room and r[1][3] and r[1][4]), None)
-        nxt = next((r for r in rows[i + 1:] if r[1][0] == room and r[1][3] and r[1][4]), None)
-        if prev and nxt and t0 - prev[1][2] < 20.0 and nxt[1][1] - t1 < 20.0:
-            add('ERROR', k, 'PROPGONE', 'the red coat is in shots %d and %d but not here (the Blank holds it)' % (prev[0], nxt[0]))
-
-
-_CANON = {'owen_pj': 'owen', 'owen_coat': 'owen', 'blank1': 'blank', 'blank1_shades': 'blank', 'blank2': 'blank', 'blank3': 'blank'}
-
-
-def check_vanish():
-    """VANISH (review 1 M11): within one scene (same room, < 25 s apart), a person in the room's people shots before AND
-    after must not be missing from a people shot (or a wide / bed view) between them."""
-    rows = []
-    for k in range(N):
-        sh = SH[k]
-        if sh.kind != 'set': continue
-        ids = set()
-        for q in sh.p.get('ppl', []):
-            if q.get('until') is not None and q['until'] < sh.t1 - 0.2: continue
-            ids.add(_CANON.get(q.get('id', q['who']), q.get('id', q['who'])))
-            if q.get('hush') or q.get('carry'): ids.add((q.get('hush') or q.get('carry'))['who'])
-        rows.append((k, sh.p['room'], 'cam' if sh.p.get('cam') is not None else sh.p.get('view'), sh.t0, sh.t1, ids, sh.p.get('era', 'now')))
-    for i, (k, room, view, t0, t1, ids, era) in enumerate(rows):
-        if not ids and view not in ('wide',): continue
-        prev = next((r for r in reversed(rows[:i]) if r[1] == room and r[6] == era and r[5]), None)
-        nxt = next((r for r in rows[i + 1:] if r[1] == room and r[6] == era and r[5]), None)
-        if prev is None or nxt is None or t0 - prev[4] > 25.0 or nxt[3] - t1 > 25.0: continue
-        gone = (prev[5] & nxt[5]) - ids
-        if view not in ('wide',) and view != prev[2]: continue       # a detail of the room (a bed, the door) may leave people out
-        if gone and k in KS:
-            add('ERROR' if nxt[3] - prev[4] < 12.0 else 'WARN', k, 'VANISH', '%s in shots %d and %d but missing here (%s, %s)' % (', '.join(sorted(gone)), prev[0], nxt[0], room, view))
-
+                try:
+                    ep = [e_.where(t, p_) for p_ in ('hand_l', 'hand_r', 'head')]
+                    op = [o.where(t, p_) for p_ in TOUCH_PARTS]
+                except Exception:
+                    continue
+                d = min(math.hypot(a_[0] - b_[0], a_[1] - b_[1]) for a_ in ep for b_ in op)
+                if d < 0.03 * h:
+                    add('ERROR', k, 'TOUCH', 'Evie within %.0f design px of %s at %.2f s (she never touches anyone)' % (d, o.who, t), t)
+                    break
 
 def check_shot(k):
     sh = SH[k]
@@ -494,7 +355,6 @@ def check_shot(k):
     # ---- staging on the plan
     if sh.kind == 'set':
         sp = sh.sp
-        check_anchors(k, sp, p['room'])
         ppl = p.get('ppl', [])
         pos_end = {}
         for j, q in enumerate(ppl):
@@ -502,7 +362,7 @@ def check_shot(k):
             kind, s0 = figure_kind(sp, q)
             for t in ([sh.t0 + 0.01 + (sh.d - 0.02) * j / 8.0 for j in range(9)] if q.get('path') else [sh.t0 + 0.01]):
                 X, Yp, Y = plan_pos(sp, q, t)
-                outdoors = (p['room'] in HOUSE and Yp < -0.05) or (p['room'] == 'now' and q.get('at') == 'lamp_spot')
+                outdoors = p['room'] in ('front', 'play') or (p['room'] == 'hall' and Yp < 0.06)
                 if kind in ('stand', 'kneel', 'floor') and not q.get('sil') and q.get('check', True) and not outdoors:
                     ok, why = sp.walkable(X, Yp) if hasattr(sp, 'walkable') else (True, '')
                     if not ok and stair_Y(X, Yp) is not None and 'stairs' in why: ok = True        # standing on the treads
@@ -514,9 +374,9 @@ def check_shot(k):
                     if not ok and 'off the floor' in why and p['room'] in ('street', 'lobby', 'school'): ok = True     # outdoors: the sidewalk is no room
                     if not ok and (sp.info.get('floors')):
                         add('ERROR', k, 'FLOOR', '%s at plan (%.2f, %.2f): %s' % (who, X, Yp, why), t)
-                    if kind == 'stand' and not q.get('sil') :
+                    if kind == 'stand' and not q.get('sil') and q.get('surface') != 'stairs':
                         Ls = film_level(sp, p['room'], X, Yp, Y)
-                        if min(abs(L_ - Y) for L_ in Ls) > (0.12 if p['room'] in HOUSE else 0.3):
+                        if min(abs(L_ - Y) for L_ in Ls) > 0.12 and not (p['room'] == 'hall' and Yp < 0.06):
                             add('ERROR', k, 'LEVEL', '%s feet at %.2f m, expected %s (plan %.2f, %.2f)' % (who, Y, '/'.join('%.2f' % L_ for L_ in Ls), X, Yp), t)
                     if False:
                         L = floor_level(sp, X, Yp, Y)
@@ -580,7 +440,7 @@ def check_shot(k):
             # two holders over a shot is fine when it changes hands (give); check the same instant
             for t in ts:
                 now = [(act.who, side) for act in acts for side, pre in ((1, 'hl_'), (-1, 'hr_')) if getattr(act.at(t), pre + 'prop', None) == pr]
-                if len(now) > 1:
+                if len(now) > 1 and not allowed('PROP', sh):
                     add('ERROR', k, 'PROP', '%s is held by %s at the same time' % (pr, ' and '.join('%s %s hand' % (w, 'left' if s > 0 else 'right') for w, s in now)), t)
                     break
     # PropTracks inside acts: jumps at state changes are checked through their keys
@@ -595,13 +455,8 @@ def check_shot(k):
             if before[0] > -1e5 and after[0] > -1e5:
                 d = math.hypot(after[0] - before[0], after[1] - before[1])
                 if d > 40: add('ERROR', k, 'PROP', '%s jumps %.0f design px when it changes state (%s) at %.2f s' % (tr.name, d, stt[0], tk), tk)
-    extra_checks(k, sh, ts, acts, held)
-    extra_checks2(k, sh, ts, acts)
-    if sh.kind == 'set':
-        nms = [getattr(l, 'name', '') or '' for l in (spec.layers or [])]
-        has_b = any(q['who'] == 'blank3' for q in p.get('ppl', []))
-        coat = any(n.startswith('coat') or n == 'fallen_coat' for n in nms)
-        _PROPS[k] = (p.get('room'), sh.t0, sh.t1, has_b, coat)
+    touch_check(k, sh, ts, acts)
+    ground_check(k, sh, ts)
     # ---- length
     if sh.d < 0.6 and sh.kind not in ('black',) and not p.get('flash'):
         add('WARN', k, 'LEN', 'a %.2f s shot (too short to read?)' % sh.d)
@@ -643,75 +498,75 @@ def check_cuts():
 
 
 # ---------------------------------------------------------------------------------------------------- the story's states
+
+# ---------------------------------------------------------------------------------------------------- the story's states
 def T(i): return F.t(i)
 
 
-def _lv(v, t):
-    return v(t) if callable(v) else v
+TRACK_AT = [(56, 74, 'street'), (104, 108, 'half'), (119, 127, 'foot'), (181, 184, 'step'), (201, 210, 'door'), (213, 302, 'mat')]
+ADULTS = ('mom', 'rahman', 'caretaker')
+LOOK_OK = [(72, 74), (176, 180), (256, 260), (288, 302), (187, 197)]      # porch light, floodlight, Mom's chair / the door; dinner (her back to the window)
 
 
-NIGHT_PJ = [(0, 11), (34, 77), (93, 107), (143, 146), (150, 171), (208, 211), (212, 316)]     # Owen in pyjamas
-COAT = [(25, 30), (111, 140)]                                                                  # Owen outdoors: the green coat
-FORMS = {'blank1_shades': [(115, 136)], 'blank1': [(155, 159)], 'blank2': [(2, 3), (62, 77), (160, 182), (189, 211), (327, 339)],
-         'blank3': [(237, 297)]}
-
-
-def _in(rngs, t):
-    return any(T(a_) - 0.6 <= t <= F.e(b_) + 0.6 for a_, b_ in rngs)
+def _in_lines(rngs, t):
+    return any(T(i0) - 0.3 <= t < (T(i1) if i1 < len(F.L) else F.duration) for i0, i1 in rngs)
 
 
 def states():
-    """The story's states against the lines (see the docstring)."""
     for k in KS:
         sh = SH[k]; p = sh.p
-        era = p.get('era', 'now')
-        tm = (sh.t0 + sh.t1) / 2
-        who = [q['who'] for q in p.get('ppl', [])] + ([p.get('who')] if sh.kind == 'bust' else [])
-        who += [q['who'] for q in (p.get('mirror') or [])]
-        if era == 'now' and sh.kind in ('set', 'bust'):
-            for w in who:
-                if w in ('owen', 'owen_pj', 'owen_coat'):
-                    want = 'owen_pj' if _in(NIGHT_PJ, tm) else ('owen_coat' if _in(COAT, tm) else 'owen')
-                    if w != want: add('ERROR', k, 'STATE', 'Owen as %r here, the story has %r (pyjamas at night, the green coat outdoors)' % (w, want))
-                if w in FORMS and not _in(FORMS[w], tm):
-                    add('ERROR', k, 'STATE', 'the Blank as %r outside its beats (%s)' % (w, ', '.join('L%d-L%d' % r for r in FORMS[w])))
-        for a_ in getattr(sh, 'actors', []) or []:
-            if sh.kind not in ('set', 'bust'): continue
-            for t in (sh.t0 + 0.05, tm, sh.t1 - 0.05):
-                P = a_.at(t)
-                d = P.__dict__
-                if a_.who in ('owen', 'owen_pj', 'owen_coat'):
-                    if d.get('faded', 0.0) > 0.82: add('ERROR', k, 'STATE', 'Owen faded %.2f at %.2f s: the viewer must still read him (<= 0.8)' % (d['faded'], t), t)
-                    if d.get('refl_hide', 0.0) > 0.5 and not (T(219) <= t <= F.e(222) + 0.5):
-                        add('ERROR', k, 'STATE', 'Owen gone from the microwave door outside rule six (L220-L222)', t)
-                    if getattr(a_, '_mirror', False) and T(219) <= t <= F.e(222) and d.get('refl_hide', 0.0) < 0.5:
-                        add('ERROR', k, 'STATE', 'Owen still in the microwave door at L220-L222 ("I couldn\'t see me")', t)
-                if a_.who == 'mom' and era == 'now':
-                    g = d.get('pgrey', 0.0)
-                    if T(206) <= t <= F.w(232, 'mom') - 0.2 and g < 0.9 and p.get('pgrey') is None:
-                        add('ERROR', k, 'STATE', 'the headset lady not pencil grey (%.2f) between L205 and "Mom" (L232)' % g, t)
-                    if t >= F.w(232, 'mom') + 1.5 and g > 0.05:
-                        add('ERROR', k, 'STATE', 'Mom still grey (%.2f) after he says "Mom" (L232)' % g, t)
-                    if d.get('circles', 0.0) > 0.05 and not (T(195) - 0.5 <= t <= F.e(197) + 0.5):
-                        add('ERROR', k, 'STATE', "Mom's glasses as two black circles outside L195-L197", t)
-                    if d.get('specs', 1.0) < 0.5 and t < T(277) - 0.2:
-                        add('ERROR', k, 'STATE', 'Mom without her glasses (green eyes) before she pulls them off (L277)', t)
-                    if d.get('specs', 1.0) > 0.5 and t > F.e(277) + 1.0:
-                        add('ERROR', k, 'STATE', 'Mom wearing her glasses again after L277', t)
-    # the Brave List: pale rules stay pale on later cards; rule three stays blue; all blue again by the end of L280
-    INK = FM.INK
-    for i, pale, blue in ((81, [1], [2, 3]), (108, [1, 2], [3, 4]), (147, [1, 2], [3, 4]), (183, [1, 2, 4], [3, 5]),
-                          (212, [1, 2, 4, 5, 6, 7], [3]), (243, [1, 2, 4, 5, 6, 7], [3])):
-        ink = INK(T(i))
-        for n in pale:
-            if ink[n - 1] > 0.05: add('ERROR', None if not KS else KS[0], 'STATE', 'rule %d not pale on the card at L%d (ink %.2f)' % (n, i, ink[n - 1]))
-        for n in blue:
-            if ink[n - 1] < 0.95: add('ERROR', None if not KS else KS[0], 'STATE', 'rule %d not blue on the card at L%d (ink %.2f)' % (n, i, ink[n - 1]))
-    if min(INK(F.e(280) + 0.5)) < 0.95: add('ERROR', None if not KS else KS[0], 'STATE', 'the Brave List not all blue again after L280')
-    if min(INK(T(276))[n] for n in (2,)) < 0.95: add('ERROR', None if not KS else KS[0], 'STATE', 'rule three not blue at the climax')
+        if sh.kind not in ('set', 'bust', 'tape', 'ins', 'rule'): continue
+        why = allowed('STATE', sh)
+        F._build(sh)
+        acts = list(getattr(sh, 'actors', []) or [])
+        tm = sh.t0 + 0.5 * sh.d
+        for x in acts:
+            if not hasattr(x, 'at'): continue
+            P = x.at(tm)
+            if x.who in ('adam', 'adam_night'):
+                ch = float(getattr(P, 'ob_chalk', 0.0) or 0.0)
+                want = float(p.get('chalk', 0.0))
+                if abs(ch - want) > 0.5:
+                    add('ERROR', k, 'STATE', "Adam's hoodie sleeves chalk %.1f, the beat wants %.1f" % (ch, want))
+                if ch > 0.5 and (p.get('set') or {}).get('house') != 'danny' and not why:
+                    add('ERROR', k, 'STATE', "Adam's sleeves chalk-white away from Danny's blue door")
+            if x.who == 'evie':
+                exp = CH.evie_stage(tm)
+                got = float(getattr(P, 'e_chalk', exp.get('e_chalk', 0.0)) or 0.0)
+                if p.get('stage') is None and abs(got - exp.get('e_chalk', got)) > 0.06 and not why:
+                    add('ERROR', k, 'STATE', 'Evie smile width %.2f at %.1f s, EVIE_ARC wants %.2f' % (got, tm, exp['e_chalk']))
+                fl = float(getattr(P, 'e_night', getattr(P, 'night', 0.0)) or 0.0)
+                if FM.is_night(sh) and sh.kind in ('set', 'bust') and fl < 0.05 and p.get('night_k', 1.0) > 0.5 and hasattr(P, 'e_night'):
+                    add('WARN', k, 'STATE', 'Evie in a night shot without her chalk-flat night look')
+        # the chalk tracker and Evie standing ON it
+        if sh.kind == 'set' and p.get('room') == 'front' and (p.get('set') or {}).get('house', 'adam') == 'adam' and not why:
+            st = p.get('set') or {}
+            tr = st.get('track'); tod = st.get('tod', 'night')
+            for i0, i1, want in TRACK_AT:
+                if T(i0) - 0.3 <= sh.t0 < T(i1) and tod == 'night' and tr != want:
+                    add('ERROR', k, 'STATE', 'the tracker is %r on this night, OM_TRACK wants %r' % (tr, want))
+            for q in p.get('ppl', []):
+                if q['who'] == 'evie' and tr and q.get('at') != 'on_' + tr:
+                    add('ERROR', k, 'STATE', 'Evie at %r, not ON the tracker (on_%s)' % (q.get('at'), tr))
+        # the card
+        if sh.kind == 'ins' and p.get('name') == 'card':
+            kw = p.get('kw'); kw = kw(0.5) if callable(kw) else (kw or {})
+            bl = float(kw.get('backlit', 0.0) or 0.0)
+            if bl > 0.01 and not (T(233) - 0.3 <= sh.t0 < T(239)):
+                add('ERROR', k, 'STATE', 'the card backlit (ADAM through the scribble) outside the landing-bulb beat')
+        # grown-ups whose look would hold her back
+        if sh.kind == 'set' and any(q['who'] == 'evie' for q in p.get('ppl', [])):
+            ad = [q['who'] for q in p.get('ppl', []) if q['who'] in ADULTS]
+            if ad and not _in_lines(LOOK_OK, sh.t0):
+                add('ERROR', k, 'STATE', '%s in frame with Evie outside the beats where a grown-up\'s look holds her back' % '/'.join(ad))
+    # the rule cards in order, each on its own lines
+    rs = [(SH[k].t0, SH[k].p['n']) for k in range(N) if SH[k].kind == 'rule']
+    if [n for _, n in rs] != list(range(1, 8)):
+        add('ERROR', None, 'STATE', 'rule cards out of order: %s' % [n for _, n in rs])
+    for t0, n in rs:
+        i0 = FM.RULE_LINES[n][0] - 1
+        if abs(t0 - (T(i0) - FM.LEAD)) > 0.6: add('WARN', None, 'STATE', 'rule %d card cut at %.2f, its line starts %.2f' % (n, t0, T(i0)))
 
-
-# ---------------------------------------------------------------------------------------------------- lips
 def check_lips():
     rows = FM.lip_check(F)
     for r in rows:
@@ -741,8 +596,6 @@ for k in KS:
         add('ERROR', k, 'BUILD', 'the check failed: %r' % ex_)
     F._built.clear()
 check_cuts()
-check_vanish()
-check_propgone()
 states()
 if not a.no_lip: check_lips()
 

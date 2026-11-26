@@ -181,7 +181,17 @@ configurable (`set_render_size(w, h)`) so tests can run at 960×540.
   - Levels follow the reference measurements in `analysis/AUDIO_SPEC.md`. The music must be clearly audible, not
     buried.
   - Output: −14 LUFS, true peak ≤ −1.5 dBTP, `mix_en.wav` and `mix_ru.wav` (Russian dub, same cues).
-- THIS film (the Buttons film): the motif is `audio/motif_buttons.py` (THE BUTTON SONG, measured from Mom's sung
+- THIS film (Obsession): THE TAPE SONG ("At the Ballet", `score.SHOW_THEME`; 'show' events on Mom's camcorder tape,
+  space 'tape' = the camcorder speaker, 'far'; rotted as Evie's theme = 'winks' events, stop 'drag' on the reveals),
+  STICK LIKE GLUE (`audio/motif_obsession.py`, measured from little Adam's sung take: ping / pings / swings /
+  letterbox / block / healed / taps; `score.JINGLE_MODULE = 'motif_obsession'`), THE TRAILER (`score.render_trailer`:
+  a 'trailer' music event {t, stop, waves, hits, silence}; film.py exports the picture's hit times and silence, the
+  plan's anchors are the default), one tuning (A-flat +40 cents, `score.TUNE_ST`). The map is `audio/music_plan.py`;
+  SFX recipes and every cue name the cast emits are `audio/sfx_obsession.py` (the cast's gain_db is the LU level;
+  `sfx.DEFAULT_GAIN` fills a missing one); beats.json pings (one note each) and the clank go through `audio/beats.py`;
+  `audio/sfx_plan.py` rows are the Buttons film's and are off (`BUTTONS_ROWS`). Catalogue:
+  `audio/catalog_epidemic_obsession.json` (`epidemic_catalog.py --obsession`). Tests: `W/mix/tests`.
+- (the Buttons film): the motif was `audio/motif_buttons.py` (THE BUTTON SONG, measured from Mom's sung
   take: box / winddown / hum / sill / detuned / real / cardigan / chime; `score.JINGLE_MODULE = 'motif_buttons'`;
   `python3 audio/motif_buttons.py measure` checks the tune against her singing); the map, arc, scares and motif
   returns are `audio/music_plan.py` (anchored to script phrases); new SFX recipes (tik, ping, this film's foley and

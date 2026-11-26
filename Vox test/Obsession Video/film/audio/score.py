@@ -1,4 +1,11 @@
-"""score.py: the music for "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET". THIS film's identity is THE
+"""score.py: the music for "If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME". THIS film's
+identity is THE TAPE SONG ("At the Ballet", SHOW_THEME: 'show' events on Mom's camcorder tape, space 'tape' = the
+camcorder speaker: band-limited, wow and flutter, hiss; 'far'; rotted as Evie's theme = 'winks' events, -8 semitones,
+stop 'drag' on the reveals) and STICK LIKE GLUE (audio/motif_obsession.py through render_jingle, JINGLE_MODULE =
+'motif_obsession'), plus THE TRAILER ('trailer' event: render_trailer + _expand_trailer, the cold open in three waves
+to a hard stop). One tuning: A-flat +40 cents (TUNE_ST on every TRACKS shift). The earlier films' notes follow.
+
+(Buttons) the music for "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET". THIS film's identity is THE
 BUTTON SONG (audio/motif_buttons.py, our original waltz measured from Mom's sung take): 'jingle' events (version box /
 winddown / hum / sill / detuned / real / cardigan / chime; len, stop, loops, phrases, n, amount, tempo, anchors,
 space) render through render_jingle with JINGLE_MODULE = 'motif_buttons' (MOTIF_DUCK, MOTIF_LIFT updated for it); the
@@ -359,7 +366,58 @@ FLATTEN = 0.3                    # share of each track's own dynamics flattened 
 DEFAULT_LEN = {'braam': 3.5, 'riser': 6.0, 'silence': 1.7, 'swell': 12.0, 'end': 12.0, 'show': 10.0, 'winks': 8.0,
                'theme': 5.0, 'drone': 8.0}
 KNOWN_EVENTS = ('hit', 'stinger', 'braam', 'riser', 'sub_drop', 'silence', 'motif', 'swell', 'pulse_on', 'pulse_off',
-                'rule', 'end', 'scene', 'show', 'winks', 'theme', 'drone', 'jingle', 'hold')
+                'rule', 'end', 'scene', 'show', 'winks', 'theme', 'drone', 'jingle', 'hold', 'trailer')
+
+# ================================================================ THIS film (Obsession): the tape song, the motif, keys
+# One tuning for everything: little Adam's sung take sits at A-flat major +40 cents (audio/motif_obsession.py
+# measure), Lina's at D-flat +45: every track below carries +0.4 semitone on its key shift, so the tape song, the
+# motif and the voices agree. Keys: A-flat major (the chant), F minor (its relative: the dark beds), D-flat (IV: the
+# healed song), E-flat (V).
+TUNE_ST = 0.4
+TRACKS_BUTTONS = TRACKS
+TRACKS = {k: v + TUNE_ST for k, v in {
+    'borders_beyza': 0,                          # F minor, a dark quiet pad: the hook, the comment prompt
+    'rylee_s_tears_franz_gordon': 0,             # C# minor (= D-flat minor, iv of A-flat): "I ate alone."
+    'for_all_time_megan_wofford': 1,             # E minor -> F minor, slow: the Keeping Square legend
+    'sleep_forever_luella_gren': 0,              # G# major = A-flat, a sinister lullaby: Evie arrives, "Like forever"
+    'the_deal_ruiqi_zhao': 1,                    # A minor -> B-flat minor (ii), a steady pulse: rule 1, the pings
+    'tears_of_a_shadow_eva_hummingbird': 1,      # A minor -> B-flat minor: rule 2, the bracelet
+    'on_the_other_hand_franz_gordon': 1,         # A minor -> B-flat minor, busy and uneasy: rule 3, the dots
+    'ancestors_without_peace_ludvig_moulin': -1, # F# minor -> F minor, a driving build: rule 4, the car, the square
+    'annihilated_blue_saga': -1,                 # D -> D-flat, a dark low drone: the chalk stands up; "It was me."
+    'you_are_not_alone_luella_gren': -2,         # G minor -> F minor: rule 5, dinner, the window
+    'they_come_at_night_etienne_roussel': -1,    # F# minor -> F minor, a horror pulse: rule 6, the letterbox
+    'pulse_pressure_max_anson': 1,               # E -> F, the rising pulse: THE TRAILER, then the rule-7 climax
+    'when_the_sun_sets_anna_landstrom': 0,       # C# major = D-flat: dawn, the scrub, Lina's healed song
+    'movement_william_claeson': -1,              # A major -> A-flat: Mrs. Rahman, the lunch table, "All of you."
+    'sentient_gavin_luke': 1,                    # G major -> A-flat, calm: the outro checklist (low)
+}.items()}
+# THE TAPE SONG (owner, 26 Nov): "At the Ballet" (Ludvig Moulin, the owner's new set), measured the most innocent,
+# sunny, old-fashioned tune of the pack: G major with the clearest key of the set's major tunes (0.86), 112 bpm (the
+# chant's own tempo), a light bouncing pulse (0.63), no drums (percussive share 0.16), mid-bright; the vintage band
+# tunes of our library are the Dummy film's. On the camcorder tape: +1.4 semitones (G -> A-flat +40 cents, the chant's
+# key: the tape runs a little fast, 122 bpm); rotted as Evie's theme: -8 from there (C +40 cents, the dominant of F
+# minor, 0.63x, seasick).
+VINTAGE['at_the_ballet_ludvig_moulin'] = (1.0 + TUNE_ST, 46.5)    # 46 s: the tune's main section (catalogue sections)
+SHOW_THEME = 'at_the_ballet_ludvig_moulin'
+WINKS_SHIFT = 1.0 + TUNE_ST - 8.0
+WINKS_OFF = 46.5
+JINGLE_MODULE = 'motif_obsession'                 # STICK LIKE GLUE (audio/motif_obsession.py)
+MOTIF_DUCK.update({'ping': -3.0, 'pings': -6.0, 'swings': -8.0, 'letterbox': -7.0, 'block': -6.0, 'healed': -10.0,
+                   'taps': -2.0})
+MOTIF_LIFT.update({'ping': -4.0, 'pings': -3.0, 'swings': -2.0, 'letterbox': -1.0, 'block': -2.0, 'healed': -4.0,
+                   'taps': -6.0})
+KEYPREF = {8: 0.0, 5: 0.0, 1: 0.3, 3: 0.35, 10: 0.45, 0: 0.5}    # A-flat, F, D-flat, E-flat, B-flat, C
+FIXED_KEY = {}
+# THE TRAILER (the cold open, owner's top priority): event 'trailer' {t, stop (the hard stop, film s), waves [3 film
+# s], hits [film s] (the key cuts), silence [t0, t1] (ONE, just before the last line), slug (the tape song), pulse
+# (the pulse track), pulse_off (s), level}. film.py exports the picture's hit times and silence; anything missing
+# falls back to the music plan's anchors (music_plan.TRAILER) and then to thirds of the span.
+TRAILER_SHIFT = -5.0              # the tape song a fourth lower than on the tape (0.75x): slowed, detuned
+TRAILER_PULSE = 'pulse_pressure_max_anson'
+TRAILER_PULSE_OFF = 20.0
+TRAILER_SONG_DB = (12.0, 14.0, 16.0)   # per wave: the cover's short-term max over REF_LUFS (test 1: +2/+4/+6 sat
+TRAILER_PULSE_DB = (4.0, 10.0, 15.0)   # 18-24 LU under the voice; the mix's clarity rule keeps it 6 LU under words)
 
 
 # ----------------------------------------------------------------------------------------------------------- utils
@@ -474,7 +532,7 @@ class Bank:
 
     def __init__(self):
         self.raw, self.pitched, self.meta = {}, {}, {}
-        cp = next((os.path.join(HERE, f) for f in ('catalog_epidemic_ice.json', 'catalog_epidemic_bus.json', 'catalog_epidemic_doctor.json', 'catalog_epidemic_bunny.json', 'catalog_epidemic_dummy.json',
+        cp = next((os.path.join(HERE, f) for f in ('catalog_epidemic_obsession.json', 'catalog_epidemic_ice.json', 'catalog_epidemic_bus.json', 'catalog_epidemic_doctor.json', 'catalog_epidemic_bunny.json', 'catalog_epidemic_dummy.json',
                                                      'catalog_epidemic_delivery.json', 'catalog_epidemic.json')
                    if os.path.exists(os.path.join(HERE, f))))
         epi = json.load(open(cp))
@@ -684,8 +742,45 @@ def _events(cues):
         if d.get('len') is None and d['type'] in DEFAULT_LEN:
             d['len'] = DEFAULT_LEN[d['type']]
         ev.append(d)
+    ev = _expand_trailer(ev)
     ev.sort(key=lambda e: (e['t'], e['i']))
     return ev
+
+
+def _expand_trailer(ev):
+    """A 'trailer' event (THIS film's cold open) becomes its parts: the bed (kept, rendered by render_trailer), a big
+    low hit on each key cut, a riser into waves 2 and 3, and ONE silence from the hard stop to the last line. Hits /
+    a silence the sheet already carries inside the span are used as they are (the picture's frames win)."""
+    tr = [e for e in ev if e['type'] == 'trailer']
+    if not tr:
+        return ev
+    e = tr[0]
+    t0 = e['t']
+    stop = float(e.get('stop') or (t0 + float(e.get('len') or 24.0)))
+    e['stop'] = stop; e['len'] = stop - t0
+    w = [float(x) for x in (e.get('waves') or [])][:3]
+    if len(w) < 3:
+        w = [t0, t0 + (stop - t0) / 3.0, t0 + 2 * (stop - t0) / 3.0]
+    e['waves'] = w
+    have_h = [x for x in ev if x['type'] in ('hit', 'stinger', 'braam') and t0 - 0.2 <= x['t'] <= stop + 0.2]
+    have_s = [x for x in ev if x['type'] == 'silence' and stop - 1.0 <= x['t'] <= stop + 3.0]
+    hits = [float(h) for h in (e.get('hits') or [])] or ([] if have_h else w[1:] + [stop - 0.05])
+    sil = e.get('silence') or ([] if have_s else [stop, stop + 1.2])
+    n0 = max([x['i'] for x in ev] + [0]) + 1
+    add = []
+    for k, h in enumerate(hits):
+        last = k == len(hits) - 1
+        add.append({'type': 'hit', 't': h, 'level': 0.95 if last else 0.8, 'boost': 1.5 if last else 0.0, 'len': None,
+                    'trailer': True})
+    for k in (1, 2):                                       # a riser into waves 2 and 3
+        ln = float(np.clip(w[k] - w[k - 1] - 1.0, 1.5, 4.0))
+        add.append({'type': 'riser', 't': w[k], 'level': 0.45 + 0.2 * k, 'len': ln, 'boost': 0.0, 'trailer': True})
+    if sil:
+        a, b = float(sil[0]), float(sil[1])
+        add.append({'type': 'silence', 't': a, 'len': max(0.4, b - a), 'level': 1.0, 'boost': 0.0, 'trailer': True})
+    for k, d in enumerate(add):
+        d['i'] = n0 + k
+    return ev + add
 
 
 def _intensity(cues, dur):
@@ -1571,9 +1666,13 @@ class Score:
             m = np.tanh(2.0 * m / (np.abs(m).max() + 1e-9)) * (np.abs(m).max() + 1e-9)
             ck = (self.rng.uniform(size=len(m)) < 3.0 / SR).astype(np.float32) * self.rng.uniform(-1, 1, len(m)).astype(np.float32)
             m = m + _filt(ck, 'highpass', 1500, 2) * np.float32(np.abs(m).max() * 0.25)
-        elif space == 'tape':
-            m = _filt(_filt(m, 'highpass', 110, 2), 'lowpass', 7000, 4)
-            m = np.tanh(1.25 * m / (np.abs(m).max() + 1e-9)) * (np.abs(m).max() + 1e-9)
+        elif space == 'tape':                  # THIS film: Mom's camcorder tape played back (its tiny speaker)
+            m = _filt(_filt(m, 'highpass', 320, 4), 'lowpass', 4200, 4)
+            m = _peq(_peq(m, 1600, 3.5, 1.1), 700, 1.5, 1.5)
+            pk = np.abs(m).max() + 1e-9
+            m = np.tanh(1.6 * m / pk) / np.tanh(1.6) * pk
+            hs = _filt(self.rng.standard_normal(len(m)).astype(np.float32), 'bandpass', [2500, 9000], 2)
+            m = m + hs * np.float32(pk * 0.02)         # the tape's own hiss, over the speaker's
         else:
             m = _filt(_filt(m, 'highpass', 200, 4), 'lowpass', 4500 if space == 'tv' else 2300, 4)
             m = _peq(_peq(m, 1500, 3.0, 1.0), 330, 2.5, 2.0)
@@ -1619,8 +1718,9 @@ class Score:
             wa = float(e.get('warp_at', ln * 0.5))
             u = np.clip((np.arange(n) / SR - wa) / max(0.3, ln - wa), 0, 1) ** 1.5
             ratio *= 2 ** (-9.0 * warp * u / 12.0)
-        if space == 'old':
-            ratio *= self._wow_ratio(n, 0.004, 0.8, 0.0015, 9.0)
+        if space in ('old', 'tape'):                # the 1962 kinescope; THIS film's camcorder (wow and flutter)
+            ratio *= self._wow_ratio(n, 0.004 if space == 'old' else 0.003, 0.8 if space == 'old' else 0.55,
+                                     0.0015, 9.0 if space == 'old' else 11.0)
         if stop == 'drag':                                   # the tape winds down to a halt
             k = min(n, int(0.9 * SR))
             ratio[-k:] *= np.linspace(1.0, 0.04, k) ** 1.5
@@ -1688,12 +1788,14 @@ class Score:
         ver = str(e.get('version') or ('landline' if hold else 'musicbox'))
         keys = ('tempo', 'loops', 'phrases', 'who', 'transpose', 'n', 'minor', 'wind_down', 'speed', 'pass_at', 'far',
                 'cut', 'phrase3_only', 'wind', 'speeds', 'sag_to', 'hum_transpose', 'stop_beat',
-                'amount', 'hang', 'fall', 'short', 'dur', 'hush', 'inst', 'follow')   # (the chime's and the motif's keys)
+                'amount', 'hang', 'fall', 'short', 'dur', 'hush', 'inst', 'follow', 'first', 'accel', 'taps')   # (the chime's and the motif's keys)
         kw = {k: e[k] for k in keys if k in e and e[k] is not None}
         if 'phrases' in kw and not isinstance(kw['phrases'], str):    # the motif's phrases are a string ('AC')
             kw['phrases'] = tuple(int(p) for p in kw['phrases'])
         if e.get('anchors'):
             kw['anchors'] = [(float(b), float(x) - t) for b, x in e['anchors']]
+        if e.get('stop_at') is not None:                   # Obsession: Block tapped (film s -> s into the render)
+            kw['stop_at'] = float(e['stop_at']) - t
         if e.get('melody_anchors'):
             kw['melody_anchors'] = [(float(b), float(x) - t) for b, x in e['melody_anchors']]
         if hold and e.get('counts'):                       # the pulse count: film seconds -> seconds into the render
@@ -1726,7 +1828,7 @@ class Score:
             except Exception as ex:
                 print(f'[score] WARNING: jingle space {e.get("space")!r} failed ({repr(ex)[:80]}): dry', flush=True)
         st = short_term(y, 0.25).max() if len(y) > 3 * SR else momentary_max(y)
-        lifts = HOLD_LIFT if hold else (MOTIF_LIFT if JINGLE_MODULE in ('motif_walls', 'motif_buttons') else
+        lifts = HOLD_LIFT if hold else (MOTIF_LIFT if JINGLE_MODULE in ('motif_walls', 'motif_buttons', 'motif_obsession') else
                                         CHIME_LIFT if JINGLE_MODULE == 'chime_ice' else
                                         JINGLE_LIFT_BUS if JINGLE_MODULE == 'jingle_bus' else JINGLE_LIFT)
         target = REF_LUFS + 4.0 + 8.0 * (lv - 0.5) + IDENTITY_LIFT + lifts.get(ver, 0.0)
@@ -1734,14 +1836,79 @@ class Score:
         if hold:                                           # hold.py versions carry their own space: almost dry
             rev = {'recital': 0.05} if ver in ('studio', 'warm') else {}
         else:
-            rev = ({'recital': 0.06} if ver == 'warm' else {}) if JINGLE_MODULE in ('chime_ice', 'motif_walls', 'motif_buttons') else \
+            rev = ({'recital': 0.06} if ver == 'warm' else {}) if JINGLE_MODULE in ('chime_ice', 'motif_walls', 'motif_buttons', 'motif_obsession') else \
                 {'recital': 0.08} if ver in ('vhs', 'parade', 'outro', 'studio', 'warm') else {} if ver in (
                 'tv1994', 'pa', 'tapestop', 'sting') else \
                 ({'hall': 0.35} if ver in ('climax', 'count', 'speaker') else {'recital': 0.12})
         self.bus['show'].add(t, y, rev=rev)
-        duck = MOTIF_DUCK if (JINGLE_MODULE in ('motif_walls', 'motif_buttons') and not hold) else SHOW_DUCK['hold' if hold else 'jingle']
+        duck = MOTIF_DUCK if (JINGLE_MODULE in ('motif_walls', 'motif_buttons', 'motif_obsession') and not hold) else SHOW_DUCK['hold' if hold else 'jingle']
         self._duck_span(t, t + len(y) / SR, duck.get(ver, -4.0))
         self.log(f'{"hold" if hold else "jingle"} {ver} {t:.1f}-{t + len(y) / SR:.1f}s stop {stop}')
+
+    def render_trailer(self, e):
+        """THE TRAILER BED: the tape song slowed and detuned (the sweet-song-gone-wrong cover: TRAILER_SHIFT below its
+        tape key, a detuned twin, seasick wow, band-limited) over a rising pulse (TRAILER_PULSE), in three waves
+        (e['waves']; each wave louder and brighter, a short breath before the next wave where the riser lands), to a
+        HARD STOP at e['stop'] (a 20 ms edge: a deliberate dead stop; the silence after it is its own event). The
+        big low hits and the risers are separate events (see _expand_trailer). Everything sits under the voice: the
+        cover peaks at REF_LUFS + TRAILER_SONG_DB (short-term), the dark track bed steps back by 14 dB."""
+        t0, stop = float(e['t']), float(e['stop'])
+        w = list(e['waves']) + [stop]
+        n = int((stop - t0) * SR)
+        if n < SR:
+            return
+        tt = np.arange(n) / SR + t0
+        slug = e.get('slug') if e.get('slug') in self.bank.epi_music else SHOW_THEME
+        sh = VINTAGE.get(slug, (0.0, 1.0))[0] + TRAILER_SHIFT
+        y = _vintage_audio(self.bank, slug, sh)
+        r = 2 ** (sh / 12.0)
+        i0 = int(float(e.get('off', VINTAGE.get(slug, (0, 1.0))[1])) / r * SR)
+        ratio = self._wow_ratio(n, 0.014, 0.23, 0.003, 4.8)
+        for k in (1, 2):                                   # the tune sags a little more into each new wave
+            ratio *= 2 ** (-0.35 * np.clip((tt - (w[k] - 1.0)) / 1.0, 0, 1) / 12.0)
+        a = self._read(y, i0, ratio)[:n]
+        b = self._read(y, i0, ratio * 2 ** (0.22 / 12))[:n]
+        k_ = int(0.025 * SR)
+        song = _pan(a, -0.25) + np.concatenate([np.zeros((k_, 2), np.float32), _pan(b, 0.3)[:-k_]]) * np.float32(0.55)
+        song = _filt(_filt(song, 'highpass', 160, 2), 'lowpass', 3200, 2)
+        pk = np.abs(song).max() + 1e-9
+        song = (np.tanh(1.3 * song / pk) / np.tanh(1.3) * pk).astype(np.float32)
+        pslug = e.get('pulse') if e.get('pulse') in TRACKS else TRAILER_PULSE
+        p = _track_audio(self.bank, pslug)
+        j0 = int(float(e.get('pulse_off', TRAILER_PULSE_OFF)) * SR)
+        seg = p[j0:j0 + n]
+        while len(seg) < n:
+            seg = np.concatenate([seg, p[j0:j0 + n - len(seg)]])
+        gs = np.zeros(n); gp = np.zeros(n); lp_ = np.zeros(n)
+        for k in range(3):                                 # the three waves
+            m = (tt >= w[k]) & (tt < w[k + 1])
+            u = np.clip((tt - w[k]) / max(0.5, w[k + 1] - w[k]), 0, 1)
+            gs[m] = (TRAILER_SONG_DB[k] - 3.0 + 3.0 * u)[m]
+            gp[m] = (TRAILER_PULSE_DB[k] - 4.0 + 4.0 * u ** 1.5)[m]
+            lp_[m] = (900 + 1500 * k + 1200 * u)[m]
+            if k < 2:                                      # the breath before the next wave (the riser fills it)
+                d = np.clip((tt - (w[k + 1] - 0.45)) / 0.45, 0, 1) * m
+                gs -= 8.0 * d; gp -= 10.0 * d
+        gs[tt < w[0]] = TRAILER_SONG_DB[0] - 6.0; gp[tt < w[0]] = -30.0
+        pulse = np.zeros_like(seg)
+        for k, (a_, b_) in enumerate(zip(w[:3], w[1:4])):  # the filter opens wave by wave
+            i_, j_ = max(0, int((a_ - t0) * SR)), min(n, int((b_ - t0) * SR))
+            if j_ > i_:
+                pulse[i_:j_] = _filt(seg[i_:j_], 'lowpass', float(np.median(lp_[i_:j_])), 2)
+        sm = lambda x: np.convolve(x, np.ones(int(0.05 * SR)) / int(0.05 * SR), 'same')
+        song = song * db(sm(gs)).astype(np.float32)[:, None]
+        pulse = pulse * db(sm(gp)).astype(np.float32)[:, None]
+        song *= np.float32(db(REF_LUFS + TRAILER_SONG_DB[2] - short_term(song, 0.25).max()))
+        pulse *= np.float32(db(REF_LUFS + TRAILER_PULSE_DB[2] - short_term(pulse, 0.25).max()))
+        fi = int(0.4 * SR); fo = int(0.02 * SR)            # eased in; the end is the HARD STOP (20 ms)
+        for x in (song, pulse):
+            x[:fi] *= _fade(fi, 'in')[:, None]
+            x[-fo:] *= _fade(fo, 'out')[:, None]
+        self.bus['show'].add(t0, song, rev={'hall': 0.35})
+        self.bus['pulse'].add(t0, pulse.astype(np.float32), rev={'hall': 0.15})
+        self._duck_span(t0, stop, -14.0)
+        self.log(f'trailer {t0:.1f}-{stop:.1f}s waves {[round(x, 2) for x in w[:3]]} hits '
+                 f'{[round(x["t"], 2) for x in self.ev if x.get("trailer") and x["type"] == "hit"]}')
 
     def _duck_span(self, a, b, depth):
         tt = np.arange(self.nc) / CR
@@ -2062,6 +2229,11 @@ class Score:
                 self.render_swell(e)
             elif ty == 'rule':
                 self.render_rule(e)
+            elif ty == 'trailer':                         # THIS film's cold open (its parts were expanded in _events)
+                try:
+                    self.render_trailer(e)
+                except Exception as ex:
+                    print(f'[score] WARNING: trailer at {e["t"]:.2f} s failed ({repr(ex)[:160]}): skipped', flush=True)
             elif ty == 'drone':                           # film.py: a held swell under the ending
                 self.render_swell(dict(e, len=max(2.0, float(e.get('len') or 8.0))))
             elif ty in ('jingle', 'hold'):

@@ -1,6 +1,14 @@
 """Catalogue of the owner's Epidemic Sound downloads (licensed through the owner's subscription; never commit or copy
 the audio out of the sample folders).
 
+    python3 epidemic_catalog.py --obsession           THIS film ("If a Girl Is OBSESSED With Being Your Only Friend...
+                                                      DON'T WRITE YOUR NAME"): writes audio/catalog_epidemic_obsession.json
+                                                      from W/samples/epidemic_obsession (the owner's new set: ONE flat
+                                                      folder, 70 effects + 20 tracks, music told apart by name) FIRST,
+                                                      then every earlier set linked beside it (read only; rows of
+                                                      unchanged files are reused from the ice / bus / doctor
+                                                      catalogues). The film's source names are OBSESSION_MAP.
+
     python3 epidemic_catalog.py --ice                 THIS film ("If The Ice Cream Truck Plays Its Song In Winter...
                                                       DON'T GO OUTSIDE"): writes audio/catalog_epidemic_ice.json from
                                                       W/samples/epidemic_ice (the owner's new set: sfx/ 54 effects, music/
@@ -113,6 +121,9 @@ ICE_SETS = [('ice', os.path.join(W, 'samples', 'epidemic_ice')),
             ('police', os.path.join(W, 'samples', 'epidemic_police')),
             ('mirror', os.path.join(W, 'samples', 'epidemic_mirror'))]
 ICE_OUT = os.path.join(HERE, 'catalog_epidemic_ice.json')
+# THIS film (Obsession): the owner's new flat set first, then every earlier set
+OBSESSION_SETS = [('obsession', os.path.join(W, 'samples', 'epidemic_obsession'))] + ICE_SETS
+OBSESSION_OUT = os.path.join(HERE, 'catalog_epidemic_obsession.json')
 AUDIO_EXT = ('.wav', '.mp3', '.flac', '.ogg')
 NOTES = 'C C# D D# E F F# G G# A A# B'.split()
 
@@ -410,6 +421,34 @@ ICE_MAP = {
     'ice_fridge_hum': [['refrigerator_low_hum'], ['fridge_hum']],
 }
 MAP.update(ICE_MAP)
+# THIS film (Obsession, sfx_obsession.py OBSESSION_NAMES): the obsession set first (W/samples/epidemic_obsession, flat)
+OBSESSION_MAP = {
+    'ob_chalk_board': [['chalk', 'board'], ['chalk', 'blackboard']],
+    'ob_chalk_stroke': [['chalk_stick', 'single_stroke']],
+    'ob_stub_drop': [['eraser', 'drop_on_desk'], ['marker', 'drop_on_floor'], ['dice', 'drop_onto_table']],
+    'ob_letterbox': [['letterbox', 'flap'], ['metal_mail_slot'], ['mailbox', 'spring_open_close'],
+                     ['mailbox_2', 'open_close']],
+    'ob_swing_chain': [['playground_swing']],
+    'ob_locker': [['metal', 'keys_in_locker'], ['medicine_locker'], ['doors_metal_open_close_slam'],
+                  ['doors_metal_slam_hall_distant']],
+    'ob_bucket_down': [['bucket', 'set_down_on_concrete'], ['bucket', 'put_down_on_ground']],
+    'ob_water': [['water', 'bucket'], ['water_pour', 'basin'], ['water_drip', 'metal_bucket']],
+    'ob_scrub': [['brush', 'scrub'], ['brush_scub'], ['scrubbing_floor']],
+    'ob_paint_roller': [['paint_roller'], ['roller_painting']],
+    'ob_cafeteria': [['cafeteria']],
+    'ob_drawer': [['drawers', 'metal']],
+    'ob_fork_plate': [['cutlery', 'plate'], ['knife', 'china_plate']],
+    'ob_car_idle': [['interior', 'car', 'idle']],
+    'ob_indicator': [['turn_indicator'], ['turn_signal'], ['indicator', 'hazard']],
+    'ob_fluorescent': [['fluorescent_light']],
+    'ob_switch': [['light_switch'], ['switch_lamp'], ['pull_switch']],
+    'ob_dust': [['sand_trickling'], ['swoosh_light']],
+    'ob_whoosh': [['swoosh_light'], ['swoosh_wide']],
+    'ob_sneaker': [['sneakers', 'squeak'], ['shoe_squeaks']],
+    'ob_shoebox': [['shoe_box', 'lid'], ['cardboard_box', 'lid']],
+    'ob_cloth': [['hoodie'], ['arm_into_sleeve'], ['arm_slide_into_sleeve'], ['windbreaker'], ['coat_jacket_thick']],
+}
+MAP.update(OBSESSION_MAP)
 # the Ice Cream film's rejects (W/mix/sfx_review.md): the skip lorry's reverse tone is a modern beeper; the rural
 # ambience carries cicadas (summer insects on a minus-thirty night); the 'scifi' power-down is a laser-gun sweep
 NOT.update({'ice_lorry': ['reverse_tone'], 'ice_creaks': ['cicadas'], 'ice_power_down': ['scifi'],
@@ -583,7 +622,7 @@ def build(sets, out, sfx_only=False, reuse=()):
                 else:
                     print(f'  {kind} {set_name}: {f}', flush=True)
                     e = (sfx_entry if kind == 'sfx' else music_entry)(meter, p, set_name, slug)
-                if kind == 'sfx' and set_name in ('bus', 'ice') and _is_music(f):
+                if kind == 'sfx' and set_name in ('bus', 'ice', 'obsession') and _is_music(f):
                     e['stray'] = 'a music track in the effects folder'; e['serves'] = []   # never an SFX
                 cat[kind].append(e)
                 seen_slug[(kind, slug)] = e; seen_fp[(kind, fp)] = e
@@ -606,7 +645,10 @@ def build(sets, out, sfx_only=False, reuse=()):
 if __name__ == '__main__':
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     so = '--sfx-only' in sys.argv
-    if '--ice' in sys.argv:
+    if '--obsession' in sys.argv:
+        build(OBSESSION_SETS, OBSESSION_OUT, so, reuse=() if '--no-reuse' in sys.argv else (
+            OBSESSION_OUT, ICE_OUT, BUS_OUT, DOCTOR_OUT))
+    elif '--ice' in sys.argv:
         build(ICE_SETS, ICE_OUT, so, reuse=() if '--no-reuse' in sys.argv else (ICE_OUT, BUS_OUT, DOCTOR_OUT))
     elif '--bus' in sys.argv:
         build(BUS_SETS, BUS_OUT, so, reuse=() if '--no-reuse' in sys.argv else (

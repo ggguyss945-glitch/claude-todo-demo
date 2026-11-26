@@ -20,11 +20,11 @@ def L(who, en, fx, pause, tag, para, say=None, beats=(), beat_t=(), fixed=False)
 
 LINES = [
     L('narrator', "If someone you met three days ago says you're their favourite person in the whole world... don't say it back.", None, 0.14, tag='if_someone_you', para=0),
-    L('narrator', "Especially if she doesn't blink.", None, 0.37, tag='especially_if_she', para=0, fixed=True),
-    L('narrator', 'If your phone is off... and it still lights up: "I can see your light\'s still on"... don\'t look out the window.', None, 0.37, tag='if_your_phone', para=1, fixed=True),
-    L('narrator', 'And if you look down at midnight... and someone at your blue front door is smiling up, two words chalked at their feet...', None, 0.20, tag='and_if_you', para=2),
+    L('narrator', "Especially if she doesn't blink.", None, 0.85, tag='especially_if_she', para=0, fixed=True),
+    L('narrator', 'If your phone is off... and it still lights up: "I can see your light\'s still on"... don\'t look out the window.', None, 0.85, tag='if_your_phone', para=1, fixed=True),
+    L('narrator', 'And if you look down at midnight... and someone at your blue front door is smiling up, two words chalked at their feet...', None, 0.80, tag='and_if_you', para=2, fixed=True),
     L('narrator', "...don't go down.", None, 0.12, tag='dont_go_down', para=3),
-    L('narrator', 'Wake a grown-up.', None, 0.33, tag='wake_a_grown', para=3, fixed=True),
+    L('narrator', 'Wake a grown-up.', None, 1.25, tag='wake_a_grown', para=3, fixed=True),
     L('narrator', 'I know who it is.', None, 0.85, tag='i_know_who', para=4, fixed=True),
     L('narrator', 'When I was twelve, my best friend handed me seven rules on a card.', None, 0.14, tag='when_i_was', para=5),
     L('narrator', "His mom's purple handwriting.", None, 0.14, tag='his_moms_purple', para=5),
