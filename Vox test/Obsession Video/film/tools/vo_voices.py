@@ -1,7 +1,9 @@
-"""Child voices for "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET" (Night Policy; the Walls film's
-WORLD revoice). ElevenLabs will not design child voices, so Owen (11) and his son (10) were read in ONE adult take
-(W/narration/raw/index.json: kids_adult_take) and are re-voiced here, line by line, as tools/vo_edit.py cuts
-them (vo_edit calls voice_line(y, line) for every owen / son line). Every other character has its own take: untouched.
+"""The re-voiced cast of "If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME" (Night Policy; the
+Buttons film's WORLD revoice). ElevenLabs will not design child voices, so Adam (12; 7 on the old tape) and Danny (12)
+were read with the NARRATOR's voice (W/narration/raw/index.json: the kids take, and a second Danny take) and Lina (7)
+with Evie's young-adult voice; Evie herself is designed as a young woman and is shifted younger here (about 12).
+tools/vo_edit.py calls voice_line(y, line) for every line whose who is in VOICES; Mom and Mrs. Rahman stay untouched.
+LINE_SET overrides a voice's settings for one line (the songs keep their melody: no compression of the excursions).
 
 Method: WORLD vocoder (pyworld: Harvest F0, CheapTrick envelope, D4C aperiodicity, 1 ms frames). For each voice:
   - pitch: the line's F0 is moved to the voice's median (geometric), its excursions scaled (rng) and softly limited
@@ -19,7 +21,7 @@ Method: WORLD vocoder (pyworld: Harvest F0, CheapTrick envelope, D4C aperiodicit
     the line's speech level; voiceless sounds (h, s, th, f, t, k) pass through dry with 8 ms ramps;
   - a gentle tone EQ (no chest, a little presence).
 Each processed line is loudness-matched to the same line dry (+ the voice's offset), with 12 ms fades at its edges.
-Test: python3 tools/vo_voices.py --test [owen|son ...]   -> W/narration/tests/voices/<tag>_{dry,wet}.wav and
+Test: python3 tools/vo_voices.py --test [adam|danny|adam7|evie|lina ...]   -> W/narration/tests/voices/<tag>_{dry,wet}.wav and
   voices_test.json: F0 in -> out, the measured formant warp (measure_warp) and Parakeet + Whisper on each line alone.
 """
 import numpy as np
@@ -46,17 +48,36 @@ UNV = 0.35                                             # share of the formant wa
 _B = dict(f0=None, rng=1.0, comp=None, smooth=0.0, alpha=1.0, breath=0.0, trem=None, jit=0.0, under=None, eq=None,
           lu=0.0, wow=None, sag=None, morph=None, tape=None)
 _KID = dict(_B, rng=0.95, comp=0.42, breath=0.12, jit=0.004, unv=0.35, fric=True, ease=0.0, nasal=0.0)
+_GIRL = dict(_B, rng=1.0, comp=None, breath=0.04, jit=0.0, unv=0.5, fric=True, ease=0.0, nasal=0.0, follow=0.0,
+             ceil=800.0)
 VOICES = {
-    # Owen, 11 and his son, 10: two different boys from one adult take (Walls' Sam, 12: 232 Hz, x1.245, was the start).
-    # follow: a line read above KID_REF keeps that rise to this power (the shouted "NO!" stays a full shout).
-    'owen': dict(_KID, f0=236.0, alpha=1.24, rng=1.0, comp=0.45, breath=0.10, follow=0.7, lu=-0.5, nasal=0.0,
-                 eq=[('ls', 200, -3.0, 0.7), ('peak', 3200, 1.8, 1.0)],
-                 desc='Owen, 11: a boy before his voice breaks (236 Hz, formants x1.24), a lively melody (x1.0), '
-                      'bright (+1.8 dB at 3.2 kHz), a little breath (0.10), a lighter chest (-3 dB under 200 Hz)'),
-    'son': dict(_KID, f0=270.0, alpha=1.28, rng=0.85, comp=0.38, breath=0.16, follow=0.6, lu=-1.0, nasal=-20.0,
-                eq=[('ls', 220, -4.0, 0.7), ('peak', 3000, 0.5, 1.0), ('hs', 6500, -2.0, 0.7)],
-                desc='the son, 10: a touch younger and softer (270 Hz, formants x1.28), a quieter melody (x0.85), '
-                     'more breath (0.16), no chest (-4 dB under 220 Hz), a softer top (-2 dB from 6.5 kHz)'),
+    # Adam and Danny, both 12, from narrator-voice takes (Buttons' Owen, 236 Hz x1.24, was the start). Adam a little
+    # lower and warmer, Danny softer and lighter. follow: a line read above 'ref' keeps that rise to this power.
+    'adam': dict(_KID, f0=222.0, alpha=1.20, rng=1.0, comp=0.45, breath=0.08, follow=0.45, lu=-0.5, nasal=0.0,
+                 eq=[('ls', 200, -2.0, 0.7), ('peak', 380, 1.2, 0.9), ('peak', 3200, 1.2, 1.0)],
+                 desc='Adam, 12: a boy before his voice breaks, a little lower and warmer (222 Hz, formants x1.20), a lively '
+                      'melody, a warm low-mid (+1.2 dB at 380 Hz), a little breath (0.08)'),
+    'danny': dict(_KID, f0=266.0, alpha=1.30, rng=0.80, comp=0.36, breath=0.16, follow=0.0, lu=-1.0, nasal=-20.0,
+                  eq=[('ls', 220, -4.0, 0.7), ('peak', 3000, 0.5, 1.0), ('hs', 6500, -2.0, 0.7)],
+                  desc='Danny, 12: softer and lighter (266 Hz, formants x1.30), a quieter, hesitant melody (x0.80), more '
+                       'breath (0.16), no chest (-4 dB under 220 Hz), a softer top (-2 dB from 6.5 kHz)'),
+    # little Adam at seven, singing on the camcorder tape: younger and sweeter; the melody kept whole (no compression)
+    'adam7': dict(_KID, f0=300.0, alpha=1.34, rng=1.0, comp=None, breath=0.10, follow=0.0, lu=-1.0, nasal=-20.0,
+                  ceil=700.0, eq=[('ls', 240, -4.0, 0.7), ('peak', 2800, 1.0, 1.0)],
+                  desc='little Adam, 7, singing: a small boy (300 Hz median, formants x1.34), the tune kept whole'),
+    # Evie: the designed young woman, shifted younger (about 12): her own bright melody a touch higher, a shorter tract
+    'evie': dict(_GIRL, fmul=1.05, alpha=1.12, breath=0.03, lu=0.0,
+                 eq=[('ls', 180, -1.5, 0.7), ('peak', 3400, 0.8, 1.0)],
+                 desc='Evie, about 12: her own sing-song melody +5 %, formants x1.12 (a girl, not a woman), bright'),
+    # Lina, 7: Evie's voice read plain, shifted higher and younger than Evie
+    'lina': dict(_GIRL, fmul=1.10, alpha=1.18, breath=0.06, lu=-0.5,
+                 eq=[('ls', 220, -3.0, 0.7), ('peak', 3000, 0.6, 1.0), ('hs', 7000, -1.5, 0.7)],
+                 desc='Lina, 7: Evie\'s plain reading +10 % in pitch, formants x1.18 (a small girl), soft top'),
+}
+LINE_SET = {                                         # tag -> settings that override the voice's for that line
+    # her last sung line, "stretched thin": from 60 % of the line the playback slows to 0.88 by the cut-off "he-"
+    # (pitch and formants sink 2.2 semitones together, like a stretched tape), then tools/vo_fx.py 'thin'
+    'evie_only_me_im': dict(tape=(0.60, 0.88)),
 }
 
 
@@ -100,7 +121,7 @@ def new_f0(f0, s, t):
     out = np.zeros_like(f0)
     if not v.any(): return out
     lf = np.log(f0[v]); med = np.median(lf)
-    tgt = s['f0'] * max(1.0, float(np.exp(med)) / KID_REF) ** s.get('follow', 0.0) if s.get('f0') else float(np.exp(med))
+    tgt = s['f0'] * max(1.0, float(np.exp(med)) / s.get('ref', KID_REF)) ** s.get('follow', 0.0) if s.get('f0') else float(np.exp(med)) * s.get('fmul', 1.0)
     lo = s['rng'] * (lf - med)
     if s.get('comp'):                                                # soft limit: small movements pass, big slides bend
         c = s['comp'] * np.log(2.0)
@@ -200,13 +221,13 @@ def tape_slow(y, a, speed):
     return np.interp(src, pos, y), m / len(y)
 
 
-def revoice(x, key):
-    """One line of the narrator's voice -> the voice 'key'. Returns (y, stats); y is longer only with 'tape'."""
+def revoice(x, key, over=None):
+    """One line of its take -> the voice 'key' (+ the line's overrides). Returns (y, stats); longer only with 'tape'."""
     import pyworld as pw
-    s = VOICES[key]
+    s = dict(VOICES[key], **(over or {}))
     pad = np.zeros(int(PAD * SR))
     xp = np.ascontiguousarray(np.concatenate([pad, x, pad]), dtype=np.float64)
-    f0, t = pw.harvest(xp, SR, f0_floor=60.0, f0_ceil=500.0, frame_period=FP)
+    f0, t = pw.harvest(xp, SR, f0_floor=60.0, f0_ceil=s.get('ceil', 500.0), frame_period=FP)
     ap = pw.d4c(xp, f0, t, SR)
     f0 = f0 * voiced_gate(xp, f0, ap)
     sp = pw.cheaptrick(xp, f0, t, SR)
@@ -286,7 +307,7 @@ def voice_line(y, line):
     """vo_edit.py's hook: (voiced line, stats) for a character line, (y, None) for the narrator."""
     key = voice_for(line)
     if key is None: return y, None
-    z, st = revoice(y, key)
+    z, st = revoice(y, key, LINE_SET.get(line['tag']))
     f = int(0.012 * SR)
     ramp = np.sin(np.linspace(0, np.pi / 2, f)) ** 2
     if len(z) > 2 * f: z[:f] *= ramp; z[-f:] *= ramp[::-1]
@@ -403,7 +424,7 @@ def hear(y, pad=0.3):
     import soxr, sherpa_onnx, os
     m = os.environ.get('VO_MODELS', '/tmp/claude-0/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/scratchpad/models')
     if not _REC:
-        pk, wd = m + '/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8', m + '/sherpa-onnx-whisper-base.en'
+        pk, wd = m + '/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8', os.environ.get('WHISPER_DIR', m + '/sherpa-onnx-whisper-base.en')
         _REC['p'] = sherpa_onnx.OfflineRecognizer.from_transducer(
             encoder=f'{pk}/encoder.int8.onnx', decoder=f'{pk}/decoder.int8.onnx', joiner=f'{pk}/joiner.int8.onnx',
             tokens=f'{pk}/tokens.txt', model_type='nemo_transducer', num_threads=2)

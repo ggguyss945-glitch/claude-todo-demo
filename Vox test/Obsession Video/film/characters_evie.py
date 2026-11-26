@@ -1,0 +1,953 @@
+"""characters_evie.py: Evie ("Like forever"), the villain of "If a Girl Is OBSESSED With Being Your Only Friend...
+DON'T WRITE YOUR NAME", and her staging tools.
+
+Not imported on its own: characters.py runs it in its own namespace at the end of the module (exec), so everything here
+is part of `characters` (import characters as CH). Evie is a v3 cast entry on the existing people rig (faces, lip sync,
+poses, look_at, reach_to, hands, props) with her own hair (two braids), outfit (white blouse, navy pinafore), chalk smile,
+automatic arc on the film clock (EVIE_ARC) and four forms (normal, obsessed, creepy, drain). See EVIE_API and CAST.md.
+"""
+# NOTE: runs inside characters.py's globals (math, np, skia, Ctx, HeadMap, Body, CAST, Pose, Acting, _figure3 ... exist).
+
+EVIE_API = """
+Evie film cast id: 'evie' (12, shorter than Adam: 1.40 m). One id for every form; her look is driven by EVIE_ARC (film
+clock) and pose fields. draw / draw_bust / Acting work as for any cast member.
+Arc: EVIE_ARC = [(t, stage, transition)], stages 'mon' 'wed' 'r1'..'r7' 'drain' (EVIE_STAGES). The film sets the real
+  times once from the timeline: set_evie_arc({'wed': t, 'r1': t, ...}) or evie_arc_from_lines(lines) (EVIE_CUES = the
+  narration line that opens each stage). a.stage(t0, name, t1) overrides one window.
+Pose fields: e_chalk 0..1 (chalk smile width; 0 = her real gap-tooth smile), e_unravel 0..1 (braids), e_dust 0..1,
+  e_flatn 0..1 (chalk-flat colour at night, used when e_night = 1: a.night()), e_flat 0..1 (extra flatness, any time),
+  e_lie 0..1 (lying flat on the ground as a chalk drawing; e_flatk = ground foreshortening, e_lie_dir deg),
+  e_neck (neck stretch, body units; e_neck_dx sideways), e_glow 0..1 (phone glow under the chin), e_drain 0..1,
+  e_scale (size, for slides in depth), e_stub 0/1 (the chalk stub in her right hand), e_trail (slide smear).
+Clips: bounce, laugh_away, wave_hi, blink_now | head_tilt_hold, lens_lock, hold_smile, phone_glow, type_phone,
+  one_inch, block_wide, hold_out_bracelet, swing_ride (+ draw_swing), sing_song | lie_flat, slide_flat,
+  stand_from_ground, neck_up, drain_away | chalk_tap, night, stage.
+Free functions: draw_chalk_girl, draw_sneaker_print, draw_chalk_stub, draw_swing, draw_slot_smile, chalk_word,
+  LetterboxFingers (the long fingers through a slot writing on a floor), StubDrop (the stub falling through the slot).
+Colours: KEEPING_RED (the Keeping Square, her ribbons, the one sunset), CHALK.
+"""
+
+KEEPING_RED = '#b0584f'          # the Keeping Square's faded red: the square, her ribbons, the sunset glow. Nothing else.
+KEEPING_RED_SH = '#843f39'
+CHALK = '#f2f0e9'
+CHALK_SH = '#cbc9c2'
+CHALK_DK = '#8f8e8a'
+
+POSE_DEFAULTS.update(e_chalk=0.0, e_unravel=0.0, e_dust=0.0, e_flatn=0.0, e_night=0.0, e_flat=0.0, e_lie=0.0,
+                     e_flatk=0.24, e_lie_dir=0.0, e_neck=0.0, e_neck_dx=0.0, e_glow=0.0, e_drain=0.0, e_scale=1.0,
+                     e_stub=1.0, e_trail=0.0, e_tx=0.0, e_ty=0.0, e_wind=1.0, _noblink=0.0)
+
+# ====================================================================================================== the cast entry
+# Evie, "about 12": shorter than Adam, a round freckled face, a gap-tooth grin, pale grey-blue eyes that open a little too
+# wide, two dark braids from a centre parting tied with faded red ribbons, a long-sleeved white blouse with a high round
+# collar under an ankle-length navy pinafore (bib, straps, a chalky bib pocket), navy leggings, white sneakers. A worn
+# chalk stub always in her right hand, chalk dust on her fingertips.
+_EVIE_BODY = dict(sh=84, ch=84, wa=78, hip=82, arm=(34, 29), leg=(39, 32), neck=27, hand=0.8, arm_k=0.9)
+_EVIE_FACE = dict(hair='braids', sex='f', hh=226.0, child=True, m=1.40, head_ws=[0, 56, 82, 96, 100, 100, 95, 82, 61, 33, 0],
+                  eye_dx=40, eye_y=4, eye_r=21.5, iris_c='#6a8496', iris_k=0.7, lid_rest=0.05, pupil=1.0, brow_th=6.5,
+                  nose_len=13, mouth_y=64, mouth_w=16, nose='button', ears=1.0, skin='#f2d0b8', skin_sh='#cba28c',
+                  skin_dp='#88645c', blush='#efa497', lip='#c98680', lips=0.15, hair_c='#2a1c17', brow_c='#24170f',
+                  bags=0.05, age=0.0, blink_rate=0.35, lashes=0.7, part=0, freckles=1.5, gap=True, kidface=True, fold_k=0.0,
+                  mouth_in='#5a2a30', mouth_dk=0.55, mouth_line='#4a2428', tuck_a=110, evie=True)
+_EVIE_CL = dict(top='#f3f0e8', top_sh='#c9c3b6', top_hi='#ffffff', collar='#fbf9f3', collar_sh='#d2ccbf',
+                pina='#2b3760', pina_sh='#1a2242', pina_hi='#46548c', button='#ece7da', trousers='#243055',
+                trousers_sh='#151c36', shoes='#f1efe8', shoes_sh='#bdb9ae', socks='#f1efe8', socks_sh='#c9c5bc', tie=KEEPING_RED)
+CAST['evie'] = _v3cast(outfit='pinafore', feet='shoes', body=dict(_EVIE_BODY), cloth=dict(_EVIE_CL), **_EVIE_FACE)
+EVIE_CAST = ('evie',)
+
+EXPR.update({
+    'evie_grin': dict(smile=0.9, teeth=1.0, m_open=0.32, m_wide=0.25, brow_up=0.3, squint=0.15, pupil=1.05),   # Monday
+    'evie_laugh': dict(smile=1.0, teeth=1.0, m_open=0.5, m_wide=0.3, brow_up=0.45, squint=0.7, eye_open=0.45),
+    'evie_hold': dict(smile=0.85, teeth=0.75, m_open=0.12, m_wide=0.2, brow_up=0.32, wide=0.3, pupil=0.82),  # too long
+    'evie_hurt': dict(smile=0.35, teeth=0.2, brow_sad=0.65, brow_up=0.4, wide=0.2, pupil=0.9),               # "Don't you trust me?"
+    'evie_flat': dict(smile=0.25, brow_up=0.12, wide=0.35, pupil=0.62, still=0.7),                           # flat delight
+    'evie_hope': dict(smile=0.7, teeth=0.4, m_open=0.08, brow_up=0.6, brow_sad=0.15, wide=0.25),             # "Write your name?"
+})
+
+# ====================================================================================================== the arc
+# Stages on the film clock (like WINKS_ARC). Width of the chalk smile per the bible's table (R1 her real smile; R2 just
+# past the corners; R3 mid-cheek; R4 wider; R5 almost at her ears; R6-R7 ear to ear); blinking stops from Wednesday (the
+# OBSESSED form); the braids unravel; more chalk dust; at night (a.night()) her colour goes chalk-flat by e_flatn.
+_EV_KEYS = ('e_chalk', '_noblink', 'e_unravel', 'e_dust', 'e_flatn', 'h_tilt', 'wide')
+EVIE_STAGES = {
+    'mon':   dict(e_chalk=0.00, _noblink=0.0, e_unravel=0.00, e_dust=0.12, e_flatn=0.00, h_tilt=0.0, wide=0.0),
+    'wed':   dict(e_chalk=0.00, _noblink=1.0, e_unravel=0.08, e_dust=0.25, e_flatn=0.30, h_tilt=9.0, wide=0.14),
+    'r1':    dict(e_chalk=0.00, _noblink=1.0, e_unravel=0.16, e_dust=0.35, e_flatn=0.45, h_tilt=10.0, wide=0.16),
+    'r2':    dict(e_chalk=0.25, _noblink=1.0, e_unravel=0.30, e_dust=0.45, e_flatn=0.52, h_tilt=11.0, wide=0.18),
+    'r3':    dict(e_chalk=0.42, _noblink=1.0, e_unravel=0.42, e_dust=0.55, e_flatn=0.60, h_tilt=12.0, wide=0.20),
+    'r4':    dict(e_chalk=0.58, _noblink=1.0, e_unravel=0.55, e_dust=0.66, e_flatn=0.68, h_tilt=13.0, wide=0.22),
+    'r5':    dict(e_chalk=0.80, _noblink=1.0, e_unravel=0.70, e_dust=0.78, e_flatn=0.76, h_tilt=14.0, wide=0.24),
+    'r6':    dict(e_chalk=1.00, _noblink=1.0, e_unravel=0.84, e_dust=0.90, e_flatn=0.84, h_tilt=15.0, wide=0.26),
+    'r7':    dict(e_chalk=1.00, _noblink=1.0, e_unravel=0.92, e_dust=1.00, e_flatn=0.88, h_tilt=15.0, wide=0.26),
+    'drain': dict(e_chalk=1.00, _noblink=1.0, e_unravel=0.95, e_dust=1.00, e_flatn=0.92, h_tilt=12.0, wide=0.26),
+}
+# the narration line that opens each stage (the film looks up its start time; set_evie_arc takes the times)
+EVIE_CUES = {'mon': 'That day, a new girl sat behind me.', 'wed': "Wednesday, at my shoulder... she didn't blink.",
+             'r1': 'Rule number one.', 'r2': 'Rule number two.', 'r3': 'Rule number three.', 'r4': 'Rule number four.',
+             'r5': 'Rule number five.', 'r6': 'Rule number six.', 'r7': 'Rule number seven.',
+             'drain': 'Evie was on our doormat, smiling ear to ear.'}
+_EV_ORDER = ('mon', 'wed', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'drain')
+# placeholder times (word-count estimates) until the film calls set_evie_arc with the timeline's
+_EV_T0 = {'mon': 92.0, 'wed': 118.0, 'r1': 132.0, 'r2': 205.0, 'r3': 250.0, 'r4': 296.0, 'r5': 365.0, 'r6': 420.0,
+          'r7': 468.0, 'drain': 560.0}
+EVIE_ARC = []
+
+
+def set_evie_arc(times, transition=0.0):
+    """Set EVIE_ARC in place from {stage: start time} (missing stages keep their placeholder). Stages change on cuts
+    (between days and nights), so the default transition is 0; Acting objects made earlier see the new arc."""
+    tt = dict(_EV_T0); tt.update({k: float(v) for k, v in times.items() if k in EVIE_STAGES and v is not None})
+    arc = [(-1e9, 'mon', 0.0)] + [(tt[k], k, transition) for k in _EV_ORDER[1:]]
+    arc.sort(key=lambda a: a[0])
+    EVIE_ARC[:] = arc
+    return EVIE_ARC
+
+
+def evie_arc_from_lines(lines, transition=0.0):
+    """Arc from a timeline's lines: a list of dicts with the line text ('text') and its start ('t0' / 'start' / 't')."""
+    def norm(s): return ''.join(ch for ch in s.lower() if ch.isalnum())
+    found = {}
+    for st, cue in EVIE_CUES.items():
+        nc = norm(cue)
+        for ln in lines:
+            tx = norm(str(ln.get('text', '')))
+            if tx and (nc in tx or tx in nc and len(tx) > 8):
+                found[st] = ln.get('t0', ln.get('start', ln.get('t')))
+                break
+    return set_evie_arc(found, transition)
+
+
+def evie_stage(t, arc=None):
+    """Evie's arc parameters at film time t (dict of _EV_KEYS)."""
+    return stage_at(t, EVIE_ARC if arc is None else arc, EVIE_STAGES, _EV_KEYS)
+
+
+set_evie_arc({})
+CAST['evie'].update(arc=EVIE_ARC, stages=EVIE_STAGES, stage_keys=_EV_KEYS)
+
+
+# ====================================================================================================== small helpers
+def _cr(pts, n=48):
+    """Catmull-Rom spline through pts -> (n, 2) array (end points kept)."""
+    p = np.asarray(pts, float)
+    if len(p) < 2: return p
+    p = np.vstack([p[0] * 2 - p[1], p, p[-1] * 2 - p[-2]])
+    segs = len(p) - 3
+    out = []
+    for k in range(n):
+        u = k / (n - 1) * segs
+        i = min(int(u), segs - 1); s = u - i
+        p0, p1, p2, p3 = p[i], p[i + 1], p[i + 2], p[i + 3]
+        out.append(0.5 * ((2 * p1) + (-p0 + p2) * s + (2 * p0 - 5 * p1 + 4 * p2 - p3) * s * s + (-p0 + 3 * p1 - 3 * p2 + p3) * s ** 3))
+    return np.array(out)
+
+
+def _arclen(a):
+    d = np.hypot(np.diff(a[:, 0]), np.diff(a[:, 1]))
+    return np.concatenate([[0.0], np.cumsum(d)])
+
+
+def _at_len(a, s, L=None):
+    """Point and unit tangent at arc length s along polyline a."""
+    L = _arclen(a) if L is None else L
+    s = min(max(s, 0.0), L[-1])
+    i = int(np.searchsorted(L, s, side='right') - 1); i = min(max(i, 0), len(a) - 2)
+    seg = L[i + 1] - L[i] or 1e-6
+    u = (s - L[i]) / seg
+    p = a[i] + (a[i + 1] - a[i]) * u
+    tg = a[i + 1] - a[i]; tg = tg / (np.hypot(*tg) or 1e-6)
+    return p, tg
+
+
+def _sub_curve(a, s0, s1, n=24, L=None):
+    L = _arclen(a) if L is None else L
+    return np.array([_at_len(a, s, L)[0] for s in np.linspace(s0, s1, n)])
+
+
+def _smoothstep(a, b, x):
+    u = clamp((x - a) / (b - a)) if b != a else float(x >= a)
+    return u * u * (3 - 2 * u)
+
+
+def _chalk_paint(c_, a, w, dash=None, blur=0.0):
+    p = skia.Paint(Color=col(c_, a), AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=w,
+                   StrokeCap=skia.Paint.kRound_Cap, StrokeJoin=skia.Paint.kRound_Join)
+    if dash: p.setPathEffect(skia.DashPathEffect.Make(list(dash), 0.0))
+    if blur > 0: p.setMaskFilter(skia.MaskFilter.MakeBlur(skia.kNormal_BlurStyle, blur))
+    return p
+
+
+def _chalk_stroke(cv, path, w, a=1.0, c_=CHALK, seed=0):
+    """A chalk line on cv (path already in canvas coords): a soft dusty halo, a broken core (the grain of chalk on a
+    rough surface), and a thin bright centre."""
+    if a <= 0.004: return
+    cv.drawPath(path, _chalk_paint(c_, 60 * a, w * 1.9, blur=w * 0.35))
+    d = max(w * 0.9, 1.0)
+    cv.drawPath(path, _chalk_paint(c_, 215 * a, w, dash=(d * 3.1, d * 0.55, d * 1.7, d * 0.4)))
+    cv.drawPath(path, _chalk_paint(c_, 150 * a, w * 0.45, dash=(d * 2.3, d * 0.9)))
+
+
+# ====================================================================================================== hair: two braids
+_HAIR3 = _HAIR3 + ('braids',)
+_hairline_ev_prev = _hairline
+
+
+def _hairline(style, part):
+    """'braids': a centre parting, combed back behind the ears to two low braids."""
+    if style != 'braids': return _hairline_ev_prev(style, part)
+    def yf(ph):
+        a = np.abs(ph)
+        return np.maximum(np.interp(a, [0, 0.35, 0.8, 1.15, 1.35, 1.6, 1.9, 2.3, PI], [-80, -77, -58, -30, -16, -12, 36, 70, 84]),
+                          _nape(ph))
+    return yf, 8.0
+
+
+def _ev_braid_curve(hm, side, P, t):
+    """Screen points (head units, head frame) and depths of one braid: from behind the ear, down over the front of the
+    shoulder, to the chest. Lower points swing a little with the body (secondary motion)."""
+    sw = 6.0 * P.sec_x + 2.2 * math.sin(t * 1.3 + side * 1.7)
+    L3 = [(side * 86, 30, -46), (side * 90, 96, -34), (side * 86, 162, 6), (side * 77, 226, 44), (side * 70, 292, 54),
+          (side * 66, 352, 56)]
+    xs = np.array([q[0] for q in L3], float); ys = np.array([q[1] for q in L3], float); zs = np.array([q[2] for q in L3], float)
+    X, Y, Z = _rot_head(hm, xs, ys, zs)
+    k = np.array([0, 0, 0.3, 0.6, 0.85, 1.0])
+    X = X + sw * k
+    return _cr(list(zip(X, Y)), 40), Z
+
+
+def _ev_braid_draw(c, a, L, s0, s1, sp, P, det, t, side, cut_head=None):
+    """Draw arc-length range [s0, s1] of a braid curve a: the plait (herringbone lobes), the faded red ribbon at the plait's
+    end, and below it (pose.e_unravel) the loosened hair."""
+    hc = sp['hair_c']; hsh = mix(hc, '#000000', 0.45); hhi = mix(hc, '#ffffff', 0.3)
+    tie = sp['cloth'].get('tie', KEEPING_RED)
+    un = clamp(P.e_unravel)
+    S = L[-1]
+    sp_end = S * (1.0 - 0.5 * un)                    # the plait loosens from the bottom up
+    ctx = c.clip(cut_head, diff=True) if cut_head is not None else _noop()
+    with ctx:
+        # loose part first (under the ribbon)
+        if un > 0.02 and s1 > sp_end:
+            lo = max(s0, sp_end - 4)
+            base = _sub_curve(a, lo, S, 16, L)
+            nrm = np.array([[-tg[1], tg[0]] for tg in (_at_len(a, s, L)[1] for s in np.linspace(lo, S, 16))])
+            for j in (-1.0, 0.0, 1.0):
+                u = np.linspace(0, 1, 16)
+                off = (j * (8 + 16 * un) * u + 3.0 * np.sin(u * 7.0 + j * 2 + t * 0.8) * u)[:, None] * nrm
+                pts = base + off
+                q = _tube([tuple(p) for p in pts[::3]] + [tuple(pts[-1])], [12, 11, 10, 8, 6, 3][:len(pts[::3]) + 1], 0.9)
+                c.fill(q, hc); c.line(q, c.lw * 0.7)
+            if det >= 1:
+                for j in (-0.5, 0.5):
+                    off = (j * (10 + 12 * un) * np.linspace(0, 1, 16))[:, None] * nrm
+                    c.line(_pts_path((base + off)[:, 0], (base + off)[:, 1], False, 0.8), c.lw * 0.3, hsh, 160)
+        # the plait
+        e = min(s1, sp_end)
+        if e > s0 + 2:
+            seg = _sub_curve(a, s0, e, 14, L)
+            ws = [24 - 6 * (s / max(S, 1.0)) for s in np.linspace(s0, e, 14)]
+            ws[-1] *= 0.82
+            q = _tube([tuple(p) for p in seg[::2]] + [tuple(seg[-1])], ws[::2] + [ws[-1]], 0.9)
+            c.fill(q, hc)
+            c.fill(_crescent(q, side * 4, -2), hsh, 120)
+            if det >= 1:
+                n = max(2, int((e - s0) / 15.0))
+                lob, hi = [], []
+                for i in range(n):
+                    s = s0 + (i + 0.5) * (e - s0) / n
+                    p, tg = _at_len(a, s, L)
+                    nx, ny = -tg[1], tg[0]
+                    w = (24 - 6 * s / max(S, 1.0)) * 0.5
+                    sd = 1 if i % 2 == 0 else -1
+                    p0 = (p[0] + nx * sd * w * 0.95 - tg[0] * 6, p[1] + ny * sd * w * 0.95 - tg[1] * 6)
+                    pm = (p[0] + nx * sd * w * 0.35 + tg[0] * 2, p[1] + ny * sd * w * 0.35 + tg[1] * 2)
+                    p1 = (p[0] - nx * sd * w * 0.15 + tg[0] * 9, p[1] - ny * sd * w * 0.15 + tg[1] * 9)
+                    lob.append(smooth([p0, pm, p1], False))
+                    hi.append(smooth([(p[0] + nx * sd * w * 0.55, p[1] + ny * sd * w * 0.55),
+                                      (p[0] + nx * sd * w * 0.25 + tg[0] * 5, p[1] + ny * sd * w * 0.25 + tg[1] * 5)], False))
+                c.line(_multi(lob), c.lw * 0.5, hsh, 200)
+                c.line(_multi(hi), c.lw * 0.45, hhi, 110)
+                # flyaways: more as the braid loosens
+                fl = []
+                for i in range(int(1 + 7 * un)):
+                    s = s0 + (e - s0) * hash01(i, 71 + side)
+                    p, tg = _at_len(a, s, L)
+                    sd = 1 if hash01(i, 72) > 0.5 else -1
+                    nx, ny = -tg[1] * sd, tg[0] * sd
+                    ln = 8 + 10 * hash01(i, 73)
+                    fl.append(smooth([(p[0] + nx * 10, p[1] + ny * 10), (p[0] + nx * (12 + ln * 0.6) + tg[0] * ln * 0.4,
+                                       p[1] + ny * (12 + ln * 0.6) + tg[1] * ln * 0.4), (p[0] + nx * (10 + ln) + tg[0] * ln,
+                                       p[1] + ny * (10 + ln) + tg[1] * ln)], False))
+                if fl: c.line(_multi(fl), c.lw * 0.35, hc, 210)
+            c.line(q, c.lw)
+        # the ribbon at the plait's end: a neat bow, drooping as the braid loosens, at the end a loose hanging strip
+        if s0 <= sp_end <= s1 + 1:
+            p, tg = _at_len(a, sp_end, L)
+            nx, ny = -tg[1], tg[0]
+            tsh = KEEPING_RED_SH if tie == KEEPING_RED else mix(tie, '#000000', 0.3)
+            if un < 0.78:
+                droop = clamp(un / 0.78)
+                for sd in (-1, 1):
+                    if droop > 0.55 and sd > 0: continue            # one loop has slipped out
+                    ang = sd * (1.0 - 0.75 * droop)
+                    lx, ly = nx * ang + tg[0] * (0.25 + 0.6 * droop), ny * ang + tg[1] * (0.25 + 0.6 * droop)
+                    ll = 17 * (1.0 - 0.25 * droop)
+                    loop = smooth([(p[0], p[1]), (p[0] + lx * ll - tg[0] * 7, p[1] + ly * ll - tg[1] * 7),
+                                   (p[0] + lx * ll * 1.15 + tg[0] * 5, p[1] + ly * ll * 1.15 + tg[1] * 5), (p[0] + tg[0] * 3, p[1] + tg[1] * 3)], True, 0.7)
+                    c.fill(loop, tie); c.fill(_crescent(loop, 2, 2), tsh, 150); c.line(loop, c.lw * 0.7)
+                for sd, ln in ((-1, 22 + 18 * droop), (1, 18 + 10 * droop)):
+                    tl = smooth([(p[0], p[1]), (p[0] + nx * sd * 5 + tg[0] * ln * 0.5, p[1] + ny * sd * 5 + tg[1] * ln * 0.5),
+                                 (p[0] + nx * sd * 8 + tg[0] * ln, p[1] + ny * sd * 8 + tg[1] * ln)], False)
+                    c.line(tl, 6.5, LINE); c.line(tl, 4.6, tie)
+                c.shape(oval(p[0], p[1], 5.0, 4.2), mix(tie, '#ffffff', 0.12), c.lw * 0.6)
+            else:
+                ln = 46.0
+                tl = smooth([(p[0] - nx * 6, p[1] - ny * 6), (p[0] + nx * 4 + tg[0] * ln * 0.4, p[1] + ny * 4 + tg[1] * ln * 0.4),
+                             (p[0] - nx * 2 + tg[0] * ln, p[1] - ny * 2 + tg[1] * ln)], False)
+                c.line(tl, 7.0, LINE); c.line(tl, 5.0, tie)
+
+
+def _ev_braids(c, hm, sp, P, det, t, behind):
+    """Both braids. behind=True (before the neck): every braid's top (behind the ear, beside the neck) plus the lower part
+    of a braid that hangs behind the body; behind=False (with the hair): the lower part of each braid that lies on the
+    front of the shoulder and chest, clipped behind the jaw."""
+    for side in (-1, 1):
+        a, Z = _ev_braid_curve(hm, side, P, t)
+        L = _arclen(a)
+        s_cut = L[-1] * 0.28
+        front = float(Z[3]) > 0.0
+        if behind:
+            _ev_braid_draw(c, a, L, 0.0, s_cut + 6.0 if front else L[-1], sp, P, det, t, side)
+        elif front:
+            grow = _hairline('braids', 0)[1]
+            _ev_braid_draw(c, a, L, s_cut, L[-1], sp, P, det, t, side, cut_head=hm.silhouette(grow=grow + 2.0))
+
+
+_hair3_back_ev_prev = _hair3_back
+
+
+def _hair3_back(c, hm, sp, P, det, t):
+    if sp.get('hair') != 'braids': return _hair3_back_ev_prev(c, hm, sp, P, det, t)
+    _ev_braids(c, hm, sp, P, det, t, behind=True)
+
+
+_hair_region_ev_prev = _hair_region
+
+
+def _hair_region(c, hm, sp, P, det, sil, t):
+    r = _hair_region_ev_prev(c, hm, sp, P, det, sil, t)
+    if sp.get('hair') != 'braids': return r
+    hc = sp['hair_c']; hsh = mix(hc, '#000000', 0.4)
+    grow = _hairline('braids', 0)[1]
+    if det >= 1:
+        L_ = []
+        for k in range(1, 6):                       # combed back from the centre parting toward the braids
+            for sd in (-1, 1):
+                L_.append((sd * np.linspace(0.05 + 0.02 * k, 0.55 + 0.22 * k, 7), np.linspace(-119.0, -86.0 + 13 * k, 7)))
+        _strands(c, hm, L_, grow * 0.5, c.lw * 0.32, hsh, 160)
+        X, Y, V = _sph(hm, np.zeros(6), np.linspace(-119.0, -82.0, 6), grow * 0.6)
+        m = V > 0.05
+        if m.sum() > 2:                               # the parting: a thin line of scalp
+            c.line(_pts_path(X[m], Y[m], False, 0.8), c.lw * 0.8, mix(sp['skin'], hc, 0.35), 200)
+    _ev_braids(c, hm, sp, P, det, t, behind=False)
+    return r
+
+
+# ====================================================================================================== outfit: blouse + pinafore
+_DOC_ROWS['pinafore'] = (12, 0.87, 0, 2, 2, 0, 2, 4)
+_SLEEVES3['pinafore'] = 'long'
+_EV = {'P': None, 'body': None}
+
+
+def _ev_bodice(c, sp, B, P, det):
+    """The navy pinafore over the white blouse (drawn on the body frame, after the torso): sides from the armpits down,
+    the bib (a chalky patch pocket) with two straps over the shoulders and two buttons; the back panel with crossed
+    straps; then the high round collar."""
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    rows = _rows3(sp, B)
+    torso, L_, R_ = _torso_path(B, rows)
+    back = B.ct < -0.15
+    ya = B.y_ch - 2
+    yb = B.y_sh + 26
+    bw = b['ch'] * 0.5
+    Xa, Ya, _, _ = B.p3(0, ya, 0)
+    with c.clip(torso):
+        c.fill(rect(-900, Ya, 1800, 1400), cl['pina'])
+        c.grad(rect(-900, Ya, 1800, 1400), L_[3][0] - 10, 0, R_[3][0] + 10, 0,
+               [(0, cl['pina_hi'], 70), (0.4, cl['pina'], 0), (0.75, cl['pina_sh'], 80), (1, cl['pina_sh'], 200)])
+        if det >= 1: c.texture(torso, 'fabric', 0.06, 0.6)
+    straps = []
+    if not back:
+        bib, v = _surf_poly(B, rows, [(-bw, yb), (bw, yb), (bw * 1.06, ya + 6), (-bw * 1.06, ya + 6)], dz=2)
+        if v > -0.2:
+            q = smooth(bib, True, 0.15); c.fill(q, cl['pina']); c.fill(_crescent(q, 0, 5), cl['pina_sh'], 90); c.line(q, lw * 0.7)
+            pk, v2 = _surf_poly(B, rows, [(-bw * 0.42, yb + 26), (bw * 0.42, yb + 26), (bw * 0.4, yb + 62), (-bw * 0.4, yb + 62)], dz=3)
+            if v2 > 0.1 and det >= 1:
+                qk = smooth(pk, True, 0.25); c.line(qk, lw * 0.45, cl['pina_sh'], 230)
+                X, Y, vv, s_ = B.surf(bw * 0.12, yb + 30, 4, False, rows)
+                c.glow(X, Y, 14 * s_, 6 * s_, CHALK, 60 + 90 * clamp(P.e_dust))     # chalk dust on the pocket lip
+        for sd in (-1, 1):
+            st_, v = _surf_poly(B, rows, [(sd * bw * 0.58, yb + 3), (sd * (bw * 0.58 + 15), yb + 3),
+                                          (sd * (b['sh'] * 0.6 + 9), B.y_sh - 14), (sd * (b['sh'] * 0.6 - 7), B.y_sh - 15)], dz=3)
+            if v > -0.1: straps.append((sd, st_))
+    else:
+        for sd in (-1, 1):                              # crossed straps on the back
+            st_, v = _surf_poly(B, rows, [(sd * (b['sh'] * 0.6 - 7), B.y_sh - 15), (sd * (b['sh'] * 0.6 + 9), B.y_sh - 14),
+                                          (-sd * bw * 0.55, ya + 6), (-sd * (bw * 0.55 + 15), ya + 6)], back=True, dz=3)
+            if v > -0.1: straps.append((sd, st_))
+    for sd, st_ in straps:
+        q = smooth(st_, True, 0.1); c.fill(q, cl['pina']); c.fill(_crescent(q, -sd * 2, 0), cl['pina_sh'], 110); c.line(q, lw * 0.6)
+        if not back:
+            X, Y, vv, s_ = B.surf(sd * (bw * 0.58 + 7.5), yb + 10, 4, False, rows)
+            if vv > 0.1: c.shape(oval(X, Y, 4.2 * s_), cl['button'], lw * 0.4)
+    # the high round collar (a band hugging the neck)
+    nw = b['neck']
+    co, v = _surf_poly(B, rows, [(-nw - 8, B.y_sh - 42), (nw + 8, B.y_sh - 42), (nw + 12, B.y_sh - 22), (0, B.y_sh - 15),
+                                 (-nw - 12, B.y_sh - 22)], back=back, dz=5)
+    if v > -0.4:
+        q = smooth(co, True, 0.6); c.fill(q, cl['collar']); c.fill(_crescent(q, 0, -3), cl['collar_sh'], 130); c.line(q, lw * 0.6)
+
+
+_skirts3_ev_prev = _skirts3
+
+
+def _skirts3(c, sp, B, P, det, t, rows):
+    """The pinafore's skirt: ankle length; seated (the swing) it drapes over both thighs and hangs below the knees."""
+    if sp.get('outfit') != 'pinafore': return _skirts3_ev_prev(c, sp, B, P, det, t, rows)
+    cl = sp['cloth']; b = sp['body']
+    st = clamp(B.sit + 0.8 * B.kneel + getattr(B, 'floor', 0.0))
+    if st > 0.25:
+        pts = []
+        for side in (-1, 1):
+            X, Y, s_, _ = B.p3(side * b['wa'] * 1.04, B.y_wa + 8, 0)
+            pts.append((X, Y))
+            H, K, A, pitch = _leg_chain(sp, B, P, side)
+            lw_ = b['leg'][0] * 0.95
+            for dx, dy in ((side * lw_, 0.0), (side * lw_, -lw_ * 0.6), (side * lw_ * 1.15, 150.0), (-side * lw_ * 0.7, 150.0)):
+                Q = K + np.array([dx, dy, 0.0])
+                X, Y, _, _ = B.p3(Q[0], Q[1] - B.bob, Q[2], upper=False)
+                pts.append((X, Y))
+            X, Y, _, _ = B.p3(H[0] + side * lw_, H[1] - B.bob, H[2], upper=False)
+            pts.append((X, Y))
+        sk = smooth(_hull(pts), True, 0.5)
+        c.fill(sk, cl['pina']); _cloth_shade(c, sk, cl['pina_sh'], 150, 1.0, 20); c.line(sk, c.lw)
+        return
+    hem = -74.0
+    p = _skirt(c, sp, B, det, B.y_wa + 6, hem, b['wa'] * 1.04, b['hip'] * 1.36, cl['pina'], cl['pina_sh'], t=t, P=P)
+    if det >= 1 and P.e_dust > 0.05 and p is not None:      # chalk dust caught on the hem
+        X1, Y1, s1, _ = B.p3(0, hem, 0, upper=False)
+        hw = b['hip'] * 1.3 * s1
+        with c.clip(p):
+            for k in range(7):
+                u = (k + 0.5) / 7.0
+                c.glow(X1 - hw + 2 * hw * u + 6 * hash01(k, 91), Y1 - 8 - 10 * hash01(k, 92), 16 * s1, 7 * s1, CHALK,
+                       30 + 70 * clamp(P.e_dust) * hash01(k, 93))
+
+
+_limb_cols3_ev_prev = _limb_cols3
+
+
+def _limb_cols3(sp):
+    if sp.get('outfit') == 'pinafore':
+        cl = sp['cloth']
+        return cl['top'], cl['top_sh'], cl['trousers'], cl['trousers_sh'], cl['shoes']
+    return _limb_cols3_ev_prev(sp)
+
+
+# ====================================================================================================== neck: the stretch
+_neck3_ev_prev = _neck3
+
+
+def _neck3(c, sp, B, skin, skin_sh):
+    r = _neck3_ev_prev(c, sp, B, skin, skin_sh)
+    if not sp.get('evie'): return r
+    P = _EV['P']
+    _EV['body'] = (c, B)
+    if P is None or P.e_neck < 2.0: return r
+    # the stretched neck: a smooth rubbery tube from the collar to the head (no joints, no crack), a little thinner in the
+    # middle, swaying gently; drawn behind the torso and the head
+    hx, hy, hrot, hs = _head_xf(sp, B, P)
+    ra = math.radians(hrot)
+    top = (hx - math.sin(ra) * 96 * hs, hy + math.cos(ra) * 96 * hs)
+    nb = B.p3(0, B.y_sh - 30, 0)
+    base = (nb[0], nb[1])
+    dx, dy = top[0] - base[0], top[1] - base[1]
+    Ln = math.hypot(dx, dy) or 1.0
+    ux, uy = dx / Ln, dy / Ln; px, py = -uy, ux
+    nw = sp['body']['neck'] * nb[2]
+    wob = min(Ln, 900.0) * 0.05
+    t = P.t
+    ctrl = [base]
+    for k, f in enumerate((0.22, 0.45, 0.7, 0.9)):
+        o = wob * math.sin(t * 1.4 + k * 1.9) * math.sin(PI * f)
+        ctrl.append((base[0] + dx * f + px * o, base[1] + dy * f + py * o))
+    ctrl.append(top)
+    k_ = clamp(P.e_neck / 600.0)
+    ws = [nw * 2.0, nw * (2.0 - 0.35 * k_), nw * (2.0 - 0.5 * k_), nw * (2.0 - 0.4 * k_), nw * 1.9, nw * 1.85]
+    tube = _tube(ctrl, ws, 0.9)
+    c.fill(tube, skin)
+    a_ = _cr(ctrl, 24)
+    off = np.array([px, py]) * nw * 0.55
+    c.line(_pts_path(a_[:, 0] + off[0], a_[:, 1] + off[1], False, 0.8), nw * 0.5, skin_sh, 110)
+    c.line(_pts_path(a_[:, 0] - off[0] * 0.8, a_[:, 1] - off[1] * 0.8, False, 0.8), nw * 0.18, mix(skin, '#ffffff', 0.5), 120)
+    c.line(tube, c.lw)
+    return r
+
+
+# ====================================================================================================== mouth: the chalk smile
+def _ev_chalk_smile(c, hm, sp, P, det, t):
+    """The smile from rule 2 on: a smooth white chalk line drawn over her mouth (the real mouth is gone), wider each
+    night: e_chalk 0.25 just past the corners, 0.42 mid-cheek, 0.58 wider, 0.8 almost at her ears, 1.0 ear to ear, ends
+    curling up a little. Never a cut: no red, no teeth. Talking (m_open) parts the line in the middle like a drawn mouth."""
+    w = clamp(P.e_chalk)
+    my = sp['mouth_y']
+    phm = float(np.interp(w, [0, 0.25, 0.42, 0.58, 0.8, 1.0], [0.14, 0.28, 0.48, 0.7, 1.1, 1.5]))
+    rise = float(np.interp(w, [0, 0.25, 0.42, 0.58, 0.8, 1.0], [2, 6, 12, 19, 32, 46]))
+    sag = 6.0 + 5.0 * w
+    q = np.linspace(-1.0, 1.0, 41)
+    ys = my + sag * (1 - q * q) - rise * q ** 4
+    ph = q * phm
+    curl = np.array([1.05, 1.1])
+    ph = np.concatenate([-curl[::-1] * phm, ph, curl * phm])
+    yc_ = my - rise - np.array([5.0, 12.0]) * (0.6 + 0.6 * w)
+    ys = np.concatenate([yc_[::-1], ys, yc_])
+    X, Y, V = _sph(hm, ph, ys, 1.2)
+    m = V > -0.02
+    if m.sum() < 3: return
+    lw_ = 5.0 + 2.6 * w
+    o = clamp(P.m_open) * 0.75 + 0.25 * clamp(P.m_wide) * clamp(P.m_open)
+    cv = c.pen.cv
+    up = _pts_path(X[m], Y[m], False, 0.8)
+    if o > 0.03:
+        qq = np.concatenate([np.full(2, -1.1), q, np.full(2, 1.1)])
+        env = np.clip(1.0 - (qq / 0.55) ** 2, 0, None) ** 1.5
+        Y2 = Y + 22.0 * o * env * hm.cp
+        lo = _pts_path(X[m], Y2[m], False, 0.8)
+        mm = np.where(m & (env > 0.01))[0]
+        if len(mm) > 2:
+            gap = _pts_path(np.concatenate([X[mm], X[mm][::-1]]), np.concatenate([Y[mm], Y2[mm][::-1]]), True, 0.8)
+            c.fill(gap, '#2b2630', 235)
+        _chalk_stroke(cv, c.P(lo), lw_ * c.s * 0.8, 1.0, CHALK, 2)
+    _chalk_stroke(cv, c.P(up), lw_ * c.s, 1.0, CHALK, 1)
+
+
+_mouth_ev_prev = _mouth
+
+
+def _mouth(c, hm, sp, P, det, t, skin, sh):
+    if sp.get('evie') and getattr(P, 'e_chalk', 0.0) > 0.01:
+        return _ev_chalk_smile(c, hm, sp, P, det, t)
+    return _mouth_ev_prev(c, hm, sp, P, det, t, skin, sh)
+
+
+# ====================================================================================================== head prelude
+_dhl_ev_prev = draw_head_local
+
+
+def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
+    sp = sp or CAST[who]
+    if sp.get('evie') and _EV['body'] is not None:
+        bc, B = _EV['body']; _EV['body'] = None
+        _ev_bodice(bc, sp, B, P, det)                  # the pinafore and collar go on after the torso, before the head
+    return _dhl_ev_prev(c, who, P, yaw, pitch, det, t, light, sp)
+
+
+# ====================================================================================================== hands: chalk dust
+_draw_arm3_ev_prev = _draw_arm3
+
+
+def _draw_arm3(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
+    r = _draw_arm3_ev_prev(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light)
+    if not sp.get('evie') or det < 1 or P.e_lie > 0.5: return r
+    S, E, Wr = _arm_data(sp, B, P, side)
+    e2 = B.p3(*E); w2 = B.p3(*Wr)
+    dx, dy = w2[0] - e2[0], w2[1] - e2[1]
+    d = math.hypot(dx, dy) or 1.0
+    hl = 74.0 * sp['body']['hand'] * w2[2]
+    tx, ty = w2[0] + dx / d * hl, w2[1] + dy / d * hl
+    du = 0.35 + 0.65 * clamp(P.e_dust)
+    s_ = w2[2]
+    c.glow(tx, ty, 15 * s_, 11 * s_, CHALK, 95 * du)
+    dots = []
+    for k in range(6):
+        a_ = 2 * PI * hash01(k, 41 + side)
+        rr = (5 + 9 * hash01(k, 42)) * s_
+        dots.append(oval(tx + math.cos(a_) * rr, ty + math.sin(a_) * rr, 1.6 * s_, 1.6 * s_))
+    c.fill(_multi(dots), CHALK, 170 * du)
+    mot = []                                             # a little dust always drifting down from her fingers
+    for k in range(int(2 + 3 * du)):
+        ph = (t * (0.32 + 0.1 * hash01(k, 44)) + hash01(k, 45)) % 1.0
+        mot.append(oval(tx + (hash01(k, 46) - 0.5) * 18 * s_ + 6 * s_ * math.sin(t * 2 + k), ty + ph * 150 * s_, 1.8 * s_, 1.8 * s_))
+        if ph > 0.85: mot.pop()
+    if mot: c.fill(_multi(mot), CHALK, 120 * du)
+    return r
+
+
+# ====================================================================================================== props
+def _p_chalk_stub(c, det, t, P=None):
+    """Her worn chalk stub (4.5 cm, a little crooked in the fingers): white, one end worn round and grey with use."""
+    k = c.sub(0, 0, 22.0)
+    body = rrect(-0.6, -2.6, 1.2, 4.8, 0.55)
+    k.fill(body, CHALK)
+    k.fill(rrect(-0.6, 1.2, 1.2, 1.0, 0.5), CHALK_SH, 170)
+    if det >= 1: k.line(poly([(-0.25, -2.2), (-0.25, 1.0)], False), k.lw * 0.5, '#ffffff', 200)
+    k.line(body, k.lw)
+
+
+def _p_evie_phone(c, det, t, P=None, screen=False):
+    """Her phone, held upright: back view (pale case, the screen's glow round the edge) or screen=True (lit thread)."""
+    body = rrect(-3.6, -7.4, 7.2, 14.8, 1.2)
+    if screen:
+        c.fill(body, '#20232c'); c.fill(rrect(-3.0, -6.6, 6.0, 13.0, 0.6), '#dfe9ff')
+        for k_, (x0, w_) in enumerate(((-2.4, 3.4), (-0.6, 3.0), (-2.4, 4.0), (-0.2, 2.6))):
+            c.fill(rrect(x0, -5.6 + k_ * 2.8, w_, 1.7, 0.8), '#ffffff' if k_ % 2 == 0 else '#9cc0ff')
+    else:
+        c.glow(0, 0, 7.5, 10.5, '#d8e6ff', 120)
+        c.fill(body, '#e6e2ea'); c.fill(oval(-1.8, -5.6, 0.9, 0.9), '#3a3a44')
+    c.line(body, c.lw)
+
+
+def _p_evie_bracelet(c, det, t, P=None):
+    """The woven bracelet, green and gold, chalk dust on it (it hangs from her fingers)."""
+    ring = oval(0, 3.4, 3.2, 3.6)
+    c.line(ring, 1.5, LINE); c.line(ring, 1.1, '#3f8a4a')
+    if det >= 1:
+        d = []
+        for k in range(14):
+            a_ = 2 * PI * k / 14
+            x, y = 3.2 * math.cos(a_), 3.4 + 3.6 * math.sin(a_)
+            d.append(poly([(x - 0.35, y - 0.35), (x + 0.35, y + 0.35)], False))
+        c.line(_multi(d), 0.35, '#e0b84a', 255)
+        c.glow(1.5, 5.8, 2.2, 1.2, CHALK, 140)
+
+
+PROPS3.update({
+    'chalk_stub': (_p_chalk_stub, 'upright', (0.0, 0.0)),
+    'evie_phone': (_p_evie_phone, 'upright', (0.0, 0.0)),
+    'evie_phone_screen': (lambda c, d, t, P=None: _p_evie_phone(c, d, t, P, True), 'upright', (0.0, 0.0)),
+    'evie_bracelet': (_p_evie_bracelet, 'hang', (0.0, 0.0)),
+})
+
+
+def draw_chalk_stub(pen, x, y, px_per_cm, angle=0.0, detail=2, alpha=1.0):
+    """The chalk stub lying on a surface (x, y = its centre), angle in degrees."""
+    c = Ctx(pen, skia.Matrix(), _lw_for(px_per_cm * 22.0)).sub(x, y, angle - 22.0 + 90.0, px_per_cm)
+    _p_chalk_stub(c, detail, 0.0)
+
+
+# ====================================================================================================== chalk-flat colour
+def _ev_matrix(f):
+    """Colour matrix toward flat chalk: every colour goes to a pale chalk value of its own lightness (lines a soft grey,
+    the navy a light grey, the blouse and skin near white), very slightly cool."""
+    lw_ = (0.2126, 0.7152, 0.0722)
+    m = []
+    for i, ti in enumerate((0.985, 0.99, 1.0)):
+        row = [0.0] * 5
+        for j, lj in enumerate(lw_):
+            row[j] = (1.0 - f) * (1.0 if i == j else 0.0) + f * 0.40 * ti * lj
+        row[4] = f * 0.56 * ti
+        m += row
+    return m + [0, 0, 0, 1, 0]
+
+
+def _ev_layer(pen, f, a=1.0):
+    if f < 0.005 and a > 0.995: return False
+    paint = skia.Paint(Alphaf=clamp(a))
+    if f >= 0.005: paint.setColorFilter(skia.ColorFilters.Matrix(_ev_matrix(clamp(f))))
+    pen.cv.saveLayer(None, paint)
+    return True
+
+
+def _ev_flat(P):
+    return clamp(P.e_flatn * clamp(P.e_night) + P.e_flat + ease_in_out(clamp(P.e_drain / 0.4)))
+
+
+def _ev_prep(P, light):
+    """Pose and light adjustments every Evie draw makes: the neck stretch, the chalk stub kept in her right hand, the
+    phone glow under her chin."""
+    P = P.copy()
+    if P.e_neck > 0:
+        P.h_dy -= P.e_neck; P.h_dx += P.e_neck_dx
+    if P.e_stub > 0.5 and P.hr_prop is None and P.hr_shape in ('mitt', 'relaxed', 'grip', 'fist', None):
+        P.hr_prop = 'chalk_stub'; P.hr_shape = 'grip'
+    if P.e_glow > 0.01:
+        light = dict(light or {})
+        light['under'] = '#d4e2ff'; light['under_a'] = max(light.get('under_a', 0) if light.get('under') else 0, 215 * clamp(P.e_glow))
+    return P, light
+
+
+_draw_ev_prev = draw
+
+
+def draw(pen, who, *a, **k):
+    """draw() with Evie's looks: chalk-flat colour, lying flat as a chalk drawing (e_lie), the slide smear, the neck
+    stretch, the phone glow, and the drain (colour to chalk-white, then blown away as dust)."""
+    sp = CAST.get(who, {})
+    if not sp.get('evie'): return _draw_ev_prev(pen, who, *a, **k)
+    names = ('x', 'y_feet', 'height', 'pose', 'detail', 'light', 't', 'aim')
+    kw = dict(zip(names, a)); kw.update(k)
+    P0 = _as_pose(kw.get('pose'))
+    t = P0.t if kw.get('t') is None else kw['t']
+    P, light = _ev_prep(P0, kw.get('light'))
+    x, y = kw['x'], kw['y_feet']
+    h = kw['height'] * P.e_scale
+    fx, fy = x + P.dx, y + P.dy                           # her feet
+    lie = P.e_lie
+    if P.e_trail > 0.01:                                  # the slide's chalk smear on the ground
+        _ev_smear(pen, x + P.e_tx, y + P.e_ty, fx, fy, h, P.e_trail * clamp(1.0 - 0.6 * (1.0 - abs(lie))), t)
+    cv = pen.cv
+    tr = abs(lie) > 1e-3
+    if tr:
+        kf = 1.0 + (P.e_flatk - 1.0) * lie
+        cv.save(); cv.translate(fx, fy); cv.scale(1.0, max(kf, 0.02))
+        if P.e_lie_dir: cv.rotate(P.e_lie_dir * clamp(lie))
+        cv.translate(-fx, -fy)
+    try:
+        dr_a = _smoothstep(0.3, 0.75, lie)
+        if dr_a > 0.01:
+            draw_chalk_girl(pen, fx, fy, h, alpha=dr_a, smile=max(0.75, P.e_chalk), t=t, unravel=P.e_unravel)
+        fig_a = 1.0 - _smoothstep(0.55, 0.9, lie)
+        if fig_a <= 0.01: return None
+        f = _ev_flat(P)
+
+        def fig(pn):
+            lay = _ev_layer(pn, f, fig_a)
+            _EV['P'] = P
+            try:
+                return _draw_ev_prev(pn, who, x, y, h, P, kw.get('detail'), light, t, kw.get('aim'))
+            finally:
+                _EV['P'] = None; _EV['body'] = None
+                if lay: pn.cv.restore()
+        u = clamp((P.e_drain - 0.4) / 0.6)
+        if u > 0.0:
+            return _ev_dust_dissolve(pen, fig, fx, fy, h, u, t, wind=P.e_wind)
+        return fig(pen)
+    finally:
+        if tr: cv.restore()
+
+
+_draw_bust_ev_prev = draw_bust
+
+
+def draw_bust(pen, who, cx, cy, scale=1.0, pose=None, detail=None, light=None, t=None):
+    sp = CAST.get(who, {})
+    if not sp.get('evie'): return _draw_bust_ev_prev(pen, who, cx, cy, scale, pose, detail, light, t)
+    P, light = _ev_prep(_as_pose(pose), light)
+    lay = _ev_layer(pen, _ev_flat(P), 1.0)
+    _EV['P'] = P
+    try:
+        return _draw_bust_ev_prev(pen, who, cx, cy, scale, P, detail, light, t)
+    finally:
+        _EV['P'] = None; _EV['body'] = None
+        if lay: pen.cv.restore()
+
+
+def _ev_smear(pen, x0, y0, x1, y1, h, a, t):
+    """The faint chalk smear a flat Evie leaves as she slides (a few dusty streaks, widest where she lies now)."""
+    if math.hypot(x1 - x0, y1 - y0) < 2: return
+    cv = pen.cv
+    dx, dy = x1 - x0, y1 - y0; L = math.hypot(dx, dy); nx, ny = -dy / L, dx / L
+    for k in range(5):
+        o = (k - 2) * h * 0.035
+        q = smooth([(x0 + nx * o * 0.4, y0 + ny * o * 0.4), (x0 + dx * 0.55 + nx * o * 0.8, y0 + dy * 0.55 + ny * o * 0.8),
+                    (x1 + nx * o, y1 + ny * o)], False)
+        cv.drawPath(q, _chalk_paint(CHALK, 34 * a * (1.0 - abs(k - 2) * 0.2), h * (0.03 + 0.012 * hash01(k, 3)),
+                                    dash=(h * 0.08, h * 0.03 + h * 0.02 * hash01(k, 4)), blur=h * 0.01))
+
+
+# ====================================================================================================== drain: blown away as dust
+_DUST_NOISE = {}
+
+
+def _ev_noise(w, h, seed):
+    key = (w, h, seed)
+    if key not in _DUST_NOISE:
+        import cv2
+        rng = np.random.default_rng(seed)
+        a = cv2.resize(rng.random((14, 8)).astype(np.float32), (w, h), interpolation=cv2.INTER_CUBIC)
+        b = cv2.resize(rng.random((70, 40)).astype(np.float32), (w, h), interpolation=cv2.INTER_LINEAR)
+        if len(_DUST_NOISE) > 8: _DUST_NOISE.clear()
+        _DUST_NOISE[key] = np.clip(0.75 * a + 0.25 * b, 0, 1)
+    return _DUST_NOISE[key]
+
+
+def _ev_dust_dissolve(pen, fig, fx, fy, h, u, t, wind=1.0, seed=11):
+    """The drain's second half: the figure (already flat chalk-white) comes apart into dust from the downwind edge and
+    the top first, and the wind lifts the dust up and away. She never falls or crumbles: what is left stays upright.
+    Renders the figure off-screen at device resolution, masks it, adds the drifting dust, and composites it back."""
+    cv = pen.cv
+    M = cv.getTotalMatrix()
+    bb = M.mapRect(skia.Rect.MakeLTRB(fx - 0.6 * h, fy - 1.12 * h, fx + 0.6 * h, fy + 0.05 * h))
+    sz = cv.getBaseLayerSize()
+    W0, H0 = sz.width(), sz.height()
+    wd = 1.0 if wind >= 0 else -1.0
+    L = max(0.0, bb.left() - (0.15 if wd > 0 else 1.1) * bb.width()); R = min(W0, bb.right() + (1.1 if wd > 0 else 0.15) * bb.width())
+    T = max(0.0, bb.top() - 0.7 * bb.height()); Bm = min(H0, bb.bottom() + 2)
+    W, H = int(R - L) + 1, int(Bm - T) + 1
+    if W < 4 or H < 4: return None
+    surf = skia.Surface(W, H)
+    c2 = surf.getCanvas(); c2.translate(-L, -T); c2.concat(M)
+    fig(Pen(c2, pen.lw))
+    img = surf.makeImageSnapshot()
+    arr = img.toarray()
+    alpha0 = arr[:, :, 3].astype(np.float32) / 255.0
+    # figure-normalised coordinates
+    bw, bh = max(bb.width(), 1.0), max(bb.height(), 1.0)
+    xs = (np.arange(W, dtype=np.float32) + L - bb.left()) / bw
+    ys = (np.arange(H, dtype=np.float32) + T - bb.top()) / bh
+    xd = xs if wd > 0 else 1.0 - xs                       # 0 upwind .. 1 downwind
+    nz = _ev_noise(W, H, seed)
+    field = 0.5 * (1.0 - np.clip(xd, 0, 1))[None, :] + 0.22 * np.clip(ys, 0, 1)[:, None] + 0.34 * nz
+    th = u * 1.18 - 0.08
+    mask = np.clip((field - th) / 0.05, 0.0, 1.0)
+    out = (arr.astype(np.float32) * mask[:, :, None]).astype(np.uint8)
+    img2 = skia.Image.fromarray(np.ascontiguousarray(out), colorType=img.colorType(), alphaType=img.alphaType())
+    surf2 = skia.Surface(W, H); c3 = surf2.getCanvas()
+    c3.drawImage(img2, 0, 0)
+    # dust: fixed particles on the figure, each released when the front passes it, then carried up and downwind
+    rng = np.random.default_rng(seed + 5)
+    n = 1400
+    px = rng.random(n); py = rng.random(n) * 1.12 - 0.02
+    ix = np.clip(((px * bw + bb.left() - L)).astype(int), 0, W - 1); iy = np.clip(((py * bh + bb.top() - T)).astype(int), 0, H - 1)
+    on = alpha0[iy, ix] > 0.3
+    fv = field[iy, ix]
+    age = (th - fv) / 1.18
+    sel = on & (age > 0) & (age < 0.55)
+    if sel.any():
+        ag = age[sel]; k = np.arange(n)[sel]
+        dist = ag * 2.2 * bh
+        sx = ix[sel] + wd * dist * (0.85 + 0.3 * rng.random(n)[sel]) + np.sin(ag * 9.0 + k) * 0.04 * bh
+        sy = iy[sel] - dist * (0.35 + 0.25 * rng.random(n)[sel]) - ag * ag * 0.6 * bh + np.cos(ag * 7.0 + k * 1.3) * 0.03 * bh
+        a_ = np.clip(1.0 - ag / 0.55, 0, 1) * (0.55 + 0.45 * rng.random(n)[sel])
+        r_ = (0.0016 + 0.0028 * rng.random(n)[sel]) * bh * (1.0 - 0.5 * ag)
+        pt = skia.Paint(AntiAlias=True)
+        for x_, y_, aa, rr in zip(sx, sy, a_, r_):
+            pt.setColor(col(CHALK, int(230 * aa)))
+            c3.drawCircle(float(x_), float(y_), float(max(rr, 0.6)), pt)
+    cv.save(); cv.resetMatrix()
+    cv.drawImage(surf2.makeImageSnapshot(), L, T)
+    cv.restore()
+    return None
+
+
+# ====================================================================================================== the chalk girl drawing
+def _chalk_girl_paths(smile=1.0, unravel=0.0):
+    """Line paths of the chalk girl (a child's sidewalk drawing of Evie) in units: feet at y 0, 1000 tall, centred on x 0.
+    Two braids with little bows, a pinafore, stick arms with mitten hands (a chalk stub in one), stick legs, dot eyes,
+    freckles, and a smile that doesn't stop: it runs on past the face's outline and curls up."""
+    L_, F_ = [], []
+    L_.append(oval(0, -800, 118, 126))
+    for sd in (-1, 1):
+        br = [(sd * 100, -778), (sd * 136, -706), (sd * 152, -630), (sd * (158 + 30 * unravel), -566 + 30 * unravel)]
+        L_.append(smooth(br, False))
+        for k in range(4):
+            u = 0.15 + 0.2 * k
+            i = min(int(u * 3), 2); s = u * 3 - i
+            x_ = br[i][0] + (br[i + 1][0] - br[i][0]) * s; y_ = br[i][1] + (br[i + 1][1] - br[i][1]) * s
+            L_.append(poly([(x_ - 16, y_ - 6), (x_ + 16, y_ + 6)], False))
+        bx, by = br[-1]
+        for lp in (-1, 1):
+            L_.append(smooth([(bx, by), (bx + lp * 30, by - 18), (bx + lp * 30, by + 14)], True, 0.7))
+        L_.append(poly([(bx, by), (bx - 10, by + 40)], False)); L_.append(poly([(bx, by), (bx + 12, by + 36)], False))
+    L_.append(poly([(0, -674), (0, -640)], False))
+    L_.append(smooth([(-72, -642), (72, -642), (200, -170), (-200, -170)], True, 0.18))
+    L_.append(poly([(-44, -642), (-46, -540), (46, -540), (44, -642)], False))
+    for sd in (-1, 1):
+        L_.append(smooth([(sd * 70, -630), (sd * 130, -545), (sd * 172, -440)], False))
+        L_.append(oval(sd * 180, -420, 22, 22))
+        for f in (-1, 0, 1):
+            L_.append(poly([(sd * 180 + f * 11, -400), (sd * 182 + f * 14, -378)], False))
+        L_.append(poly([(sd * 58, -170), (sd * 60, -52)], False))
+        L_.append(oval(sd * 74, -38, 36, 17))
+        F_.append(oval(sd * 44, -815, 13, 15))
+        for k in range(4):
+            F_.append(oval(sd * (34 + 12 * k), -772 - 7 * (k % 2), 3.6, 3.6))
+    L_.append(rect(196, -470, 14, 34))                       # the chalk stub in her right hand (screen right)
+    L_.append(smooth([(-8, -768), (0, -758), (8, -768)], False))
+    w = 70.0 + 140.0 * clamp(smile)
+    rise = 18 + 40 * clamp(smile)
+    L_.append(smooth([(-w - 14, -772 - rise - 22), (-w, -760 - rise), (-w * 0.5, -726), (0, -716), (w * 0.5, -726), (w, -760 - rise),
+                      (w + 14, -772 - rise - 22)], False))
+    return L_, F_
+
+
+def draw_chalk_girl(pen, x, y_feet, height, alpha=1.0, smile=1.0, t=0.0, unravel=0.0, flat_k=1.0, angle=0.0, lw=None,
+                    colr=CHALK):
+    """The chalk girl: (x, y_feet) her feet, height her drawn size. flat_k < 1 lays the drawing on the ground (the ground's
+    foreshortening at that spot; the setup's drawing in the Keeping Square), angle (deg) turns it on the ground. Evie's
+    draw() uses it when she lies flat (e_lie) and when she stands up out of the ground."""
+    if alpha <= 0.004: return
+    cv = pen.cv
+    cv.save(); cv.translate(x, y_feet)
+    if flat_k < 0.999: cv.scale(1.0, flat_k)
+    if angle: cv.rotate(angle)
+    s = height / 1000.0
+    cv.scale(s, s)
+    w = (lw or max(2.2, height * 0.012)) / s
+    L_, F_ = _chalk_girl_paths(smile, unravel)
+    for k, p in enumerate(L_):
+        _chalk_stroke(cv, p, w, alpha, colr, k)
+    pt = skia.Paint(Color=col(colr, int(215 * alpha)), AntiAlias=True)
+    for p in F_: cv.drawPath(p, pt)
+    cv.restore()
+
+
+def draw_sneaker_print(pen, x, y, px_per_cm, angle=0.0, alpha=1.0, squash=0.45, side=1):
+    """One white chalk sneaker print on the ground (x, y = the print's centre, angle = the way the toe points, deg,
+    0 = up the screen = away from the camera; squash = the ground's foreshortening). The prints point where she went."""
+    cv = pen.cv
+    cv.save(); cv.translate(x, y); cv.scale(1.0, squash); cv.rotate(angle); cv.scale(px_per_cm, px_per_cm)
+    sole = smooth([(-3.2 * side, 10.5), (3.0 * side, 10.0), (3.8 * side, 2.0), (4.2 * side, -6.0), (2.4 * side, -10.8),
+                   (-1.8 * side, -11.0), (-4.0 * side, -6.0), (-3.4 * side, 2.0)], True, 0.8)
+    cv.drawPath(sole, _chalk_paint(CHALK, 150 * alpha, 0.55))
+    cv.drawPath(sole, skia.Paint(Color=col(CHALK, int(60 * alpha)), AntiAlias=True))
+    tread = []
+    for k in range(7):
+        yy = -9.0 + k * 2.6
+        tread.append(poly([(-2.6, yy), (0.0, yy + 1.1), (2.6, yy)], False))
+    p = skia.Path()
+    for q in tread: p.addPath(q)
+    cv.drawPath(p, _chalk_paint(CHALK, 170 * alpha, 0.5))
+    cv.drawPath(oval(0.2 * side, 7.4, 2.4, 1.9), _chalk_paint(CHALK, 150 * alpha, 0.45))
+    cv.restore()
+
+
+def draw_slot_smile(pen, slot, t=0.0, amount=1.0, hum=0.0, alpha=1.0):
+    """What shows in the letterbox slot (x, y, w, h = the opening, design px): only her chalk smile, ear to ear, its ends
+    curling up; humming makes the line shiver. Clipped to the opening (draw the slot's dark first)."""
+    x0, y0, w, h = slot
+    cv = pen.cv
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x0, y0, w, h), skia.ClipOp.kIntersect, True)
+    cx, cy = x0 + w / 2, y0 + h * 0.42
+    hw = w * (0.18 + 0.30 * clamp(amount))
+    pts = []
+    for k in range(25):
+        q = k / 24.0 * 2 - 1
+        yy = cy + h * 0.22 * (1 - q * q) - h * 0.28 * q ** 4 + hum * h * 0.03 * math.sin(t * 42.0 + q * 9.0)
+        pts.append((cx + q * hw, yy))
+    pts = [(cx - hw * 1.06, cy - h * 0.42)] + pts + [(cx + hw * 1.06, cy - h * 0.42)]
+    _chalk_stroke(cv, smooth(pts, False), max(1.5, h * 0.11), alpha, CHALK, 1)
+    cv.restore()
+
+
+def draw_swing(pen, pivot, length, angle=0.0, px_per_cm=10.0, sep=0.35, seat_w_cm=46.0, part='all'):
+    """A playground swing: two chains from the bar at pivot (x, y) to a rubber seat, swung by angle (deg, side view:
+    + = toward screen right). sep = how far apart the chains read (0 side view .. 1 front view). part 'back' / 'front'
+    draw the far / near chain only (seat with 'back'), so a rider sits between them."""
+    a = math.radians(angle)
+    sx, sy = pivot[0] + math.sin(a) * length, pivot[1] + math.cos(a) * length
+    hw = seat_w_cm * 0.5 * px_per_cm * sep + 6.0 * px_per_cm * (1 - sep)
+    lw = max(1.5, 0.9 * px_per_cm)
+    chains = {'back': [(-1, 0.96)], 'front': [(1, 1.0)], 'all': [(-1, 0.96), (1, 1.0)]}[part]
+    for sd, k in chains:
+        p0 = (pivot[0] + sd * hw, pivot[1]); p1 = (sx + sd * hw, sy)
+        n = max(6, int(length / (3.2 * px_per_cm)))
+        path = skia.Path()
+        for i in range(n):
+            u0, u1 = i / n, (i + 0.8) / n
+            path.moveTo(p0[0] + (p1[0] - p0[0]) * u0, p0[1] + (p1[1] - p0[1]) * u0)
+            path.lineTo(p0[0] + (p1[0] - p0[0]) * u1, p0[1] + (p1[1] - p0[1]) * u1)
+        pen.line(path, lw * 1.9, '#1d1e22'); pen.line(path, lw, mix('#9aa0a8', '#000000', 1 - k))
+    if part in ('all', 'back'):
+        seat = rrect(sx - hw - 3 * px_per_cm, sy - 2.2 * px_per_cm, 2 * hw + 6 * px_per_cm, 4.4 * px_per_cm, 1.6 * px_per_cm)
+        pen.fill(seat, '#3a3b42'); pen.line(seat, lw * 1.2, LINE)
+    return sx, sy

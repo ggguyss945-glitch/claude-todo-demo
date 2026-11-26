@@ -27,9 +27,10 @@ How it works
      median speech level (+-6 dB, nothing inside 1.5 dB: his whispers stay whispers, only softer than the rest by
      less); a character line goes the whole way to the narrator's median (+ VOICE_LU), so every voice sits at the
      narrator's level. The narrator's voice is otherwise untouched.
-  5. Voices and places: Owen and his son are re-voiced into child voices (tools/vo_voices.py); the staged lines get their
-     place (tools/vo_fx.py: whisper, car, double, tall, phone), each loudness-matched to the dry line + its offset; an fx
-     decay runs into the gap after its line (ending 0.1 s before the next). "NO!" sits +5 dB (LINE_LU): a full shout.
+  5. Voices and places: Adam, little Adam and Danny (from the narrator-voice takes), Evie and Lina (from Evie's takes) are
+     re-voiced (tools/vo_voices.py); the staged lines get their place (tools/vo_fx.py: message, letterbox, thin, tape),
+     each loudness-matched to the dry line + its offset; an fx decay runs into the gap after its line (ending 0.1 s
+     before the next). The lines with an fx and their times go to W/align/voice_fx.json (the picture shows the tape).
   6. Finish: (each take is 70 Hz high-passed on loading, before any level is measured), the gaps gated to digital
      silence, one gain puts the true peak at -1 dBTP.
 """
@@ -56,16 +57,25 @@ DANNY_SRC = {'danny_can_we_sit': 'kids'}
 VOICE_LU = {'evie': 0.0, 'lina': -0.5, 'mom': 0.0, 'rahman': 0.0, 'adam': -0.5, 'adam7': -1.0, 'danny': -1.0}   # dB vs the narrator's median speech level (before any fx offset)
 THR = -60.0                                        # island threshold (dBFS, 5 ms RMS)
 LEAD, TAIL = 0.30, 0.60
-NAT_MIN = 0.14                                     # shortest gap between two narrator sentences (s)
-CLAMP = {',': (0.10, 0.30), ';': (0.20, 0.35), ':': (0.20, 0.35), '...': (0.22, 0.45), '.': (0.15, 0.30),
-         '?': (0.15, 0.30), '!': (0.15, 0.30), '': (0.0, 0.25)}
+NAT_MIN = 0.12                                     # shortest gap between two narrator sentences (s)
+CLAMP = {',': (0.07, 0.17), ';': (0.14, 0.24), ':': (0.14, 0.24), '...': (0.16, 0.30), '.': (0.10, 0.19),
+         '?': (0.10, 0.19), '!': (0.10, 0.19), '': (0.0, 0.18)}
 LINE_LU = {}                                       # dB on top of the voice level, per tag
-HOLD = {'adam7': 1.0, 'lina': 1.0}                 # x the clamp's upper bound for character lines (default 1.5); the
+HOLD = {'adam7': 1.0, 'lina': 1.0}                 # x the clamp's upper bound for character lines (default 1.3); the
                                                    # songs keep their own phrasing (their rests are short anyway)
 # hand fixes (raw take seconds), checked by measurement: CUTS {tag: start cut}; ENDS {tag: end of the line} (Evie's
 # last sung line is cut off inside the second "here": the take sings it whole, the script stops on "he-")
-CUTS = {}
-ENDS = {}
+# CUTS: a float is one cut (end of the line before = start of this one, forced: 8 ms fades); a pair (end of the line
+# before, start of this one) is two cuts in silence. "I scrubbed it off": part 6 sings a stray, drawn-out "I." (34.62-
+# 35.28 s, a glitch of the take) between "Only." and "I scrubbed"; both cuts sit in its -86 dB silences
+CUTS = {'i_scrubbed_it': (34.40, 35.31)}
+# "I didn't open." is read "I didn't open it." (part 4): the line ends in the -72 dB dip before "it" (34.425 s)
+ENDS = {'i_didnt_open': 34.425}
+# a line built from hand-picked pieces of its take: [(a or None = the line's start cut, b, gain dB, fade out ms)]. Evie's
+# take sings "I'm here. I'm h" (the take stops on a breathy h, no vowel), so "he-" is the h + the first 105 ms of the
+# "ee" of her first "here" (47.925-48.175 s; F3 starts falling into the r at 48.19 s), after her own second "I'm" (lifted
+# 4 dB: the take sang it 10 dB under the first; the split at 48.95 s sits in -88 dB silence); the cut is a 10 ms fade
+SPLICE = {'evie_only_me_im': [(None, 48.95, 0.0, 3), (48.95, 49.215, 4.0, 6), (47.925, 48.175, 0.0, 10)]}
 # words the first transcript missed (take key -> [(word, t0, t1)]), placed by the take's energy: the narrator's "Adam."
 # after Lina's line is a lone word between two silences (-86 dB), 84.25-84.80 s of part 4
 ASR_ADD = {'narrator_part4': [('Adam', 84.25, 84.80)]}
@@ -274,7 +284,9 @@ def line_spans(L):
         cut[0] = (None, rs[0][1] if rs and rs[0][0] < 0.02 else 0.0, False)
         for k in range(1, len(ls)):
             A, B = ls[k - 1]['asr'][-1], ls[k]['asr'][0]
-            if ls[k]['tag'] in CUTS: c = CUTS[ls[k]['tag']]; cut[k] = (c, c, True); continue
+            if ls[k]['tag'] in CUTS:
+                c = CUTS[ls[k]['tag']]
+                cut[k] = (c, c, True) if isinstance(c, float) else (c[0], c[1], False); continue
             exp = 0.5 * (A['t1'] + B['t0'])
             rs = runs_below(e, A['t0'] + 0.03, max(B['t1'], A['t0'] + 0.1))
             if rs:
@@ -350,7 +362,7 @@ def pause_clamp(l, gap_start):
     before = [w for w in l['asr'] if w['t0'] < gap_start - 0.02]
     p = pun[before[-1]['li']] if before and before[-1]['li'] < len(pun) else ''
     lo, hi = CLAMP.get(p, CLAMP[''])
-    if l['who'] != 'narrator': hi *= HOLD.get(l['who'], 1.5)
+    if l['who'] != 'narrator': hi *= HOLD.get(l['who'], 1.3)
     return lo, hi, p
 
 
@@ -358,6 +370,17 @@ def line_audio(l):
     """The cleaned line (dry, take level) and its piece list."""
     src, a, b, fh, ft = l['span']
     x = take(src)['x']
+    if l['tag'] in SPLICE:                             # hand-built from its pieces (see SPLICE)
+        out, pieces = [], []
+        for k, (p0, p1, g, fo) in enumerate(SPLICE[l['tag']]):
+            p0 = a if p0 is None else p0
+            y = x[int(round(p0 * SR)):int(round(p1 * SR))] * 10 ** (g / 20)
+            fi, fo = int(0.003 * SR), int(fo / 1000.0 * SR)
+            y[:fi] *= np.sin(np.linspace(0, np.pi / 2, fi)) ** 2
+            y[-fo:] *= np.cos(np.linspace(0, np.pi / 2, fo)) ** 2
+            out.append(y); pieces.append(dict(src=src, a=round(p0, 3), b=round(p1, 3), gain_db=g))
+        l['dropped'] = []
+        return np.concatenate(out), pieces
     keep, drop = line_islands(l)
     l['dropped'] = drop
     groups = []
@@ -495,6 +518,11 @@ def cmd_build():
     json.dump(dict(note='Ping / Clank beats of the script (sounds, not in the voice track): t = where the sound starts (s, '
                         'narration_en.wav time); line = the timeline line it follows', beats=beats),
               open(os.path.join(W, 'align', 'beats.json'), 'w'), indent=1)
+    json.dump(dict(note='voice fx baked into narration_en.wav (tools/vo_fx.py): t0/t1 = the line, tail_end = where its fx '
+                        'decay ends; tape = little Adam\'s song off the old VHS camcorder tape (the picture shows the tape)',
+                   lines=[dict(i=e['i'], tag=e['tag'], who=e['who'], fx=e['fx'], t0=e['out'][0], t1=e['out'][1],
+                               tail_end=round(e['out'][1] + e['fx_tail'], 3), en=e['en']) for e in el if e['fx']]),
+              open(os.path.join(W, 'align', 'voice_fx.json'), 'w'), indent=1)
     m, s = divmod(len(y) / SR, 60)
     log('narration_en.wav %d:%05.2f (%d lines), final gain %+.2f dB -> %s' % (m, s, len(el), 20 * np.log10(gain), OUT))
 

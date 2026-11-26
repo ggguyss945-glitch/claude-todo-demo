@@ -1,26 +1,30 @@
-"""Voice places for "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET" (Night Policy), baked into the
-voice track by tools/vo_edit.py (lines.py 'fx'; the mix must not add them again). Tasteful and intelligible: every
-processed line is loudness-matched to the dry line (+ OFFSET) and must still pass the recogniser on its own
-(tools/vo_asrcheck.py --every). Nothing is time-stretched: "slower" is only ever an effect (a late, lower double).
-    whisper  the Blank's chat messages, the card, "I see you." and the sting (read whispered in her take): close and
-             intimate (+2.5 dB proximity under 180 Hz, +1.5 dB air at 4.5 kHz), a faint cold digital sheen: a
-             sample-held copy of the top (> 3.5 kHz, aliasing like a cheap screen speaker, -24 dB) and a 1.7 ms comb (-17 dB)
-    car      her car line, as dry as the real Mom (the viewer must not hear a difference): a hint of the cabin (0.12 s,
-             -26 dB) only
-    double   2 a.m. and dinner: a subtle, too-smooth double: two WORLD copies (+9 cents at 14 ms, -12 dB; -7 cents at
-             23 ms, -16 dB), the top smoothed (-1.5 dB from 7 kHz)
-    tall     the cold open, midnight, the climax and her song: the tall form: a lower, detuned double (WORLD: -3 semitones,
-             formants x0.90 = a longer throat, 20 ms late, -9 dB), a second copy +14 cents (9 ms, -14 dB), a touch of
-             size (a 0.9 s room, 25 ms pre-delay, -17 dB) and body (+2 dB under 160 Hz)
-    phone    Mom's "Baby? I'm at the table. Where are you?" on Owen's phone speaker: 320 Hz-3.6 kHz, a small speaker's
-             1.9 kHz lift, light soft saturation, every word clear
+"""Voice places for "If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME" (Night Policy; the
+Buttons film's tool), baked into the voice track by tools/vo_edit.py (lines.py 'fx'; the mix must not add them again).
+Tasteful and intelligible: every processed line is loudness-matched to the dry line (+ OFFSET) and must still pass the
+recogniser on its own (tools/vo_asrcheck.py --every). The narrator is never processed.
+    message    Evie's messages ("Are you awake?", "Why aren't you answering?", "There. Now it's only me.", the two dinner
+               lines) and Danny's old "Please stop. You're scaring me.": close (+2.5 dB under 180 Hz, +1.5 dB air at
+               4.5 kHz) with a faint cold digital sheen: a sample-held copy of the top (> 3.5 kHz, aliasing like a cheap
+               phone speaker, -24 dB) and a 1.7 ms comb (-17 dB)
+    letterbox  Evie through the letterbox (her lines 12-14): close (+2 dB under 200 Hz), flat (a gentle 2:1 leveller,
+               no room), a little muffled by the slot (-5 dB shelf from 2.8 kHz) with the metal flap's small ring
+               (+2 dB at 1.25 kHz, a 0.45 ms reflection at -20 dB) and a tiny box tail (0.06 s, -28 dB)
+    thin       her last sung line "Only me. I'm here, I'm he-" (already slowed into the cut by vo_voices.py): stretched
+               thin by effect: the body thins more and more along the line (a 650 Hz-5 kHz band blended in from 20 % to
+               85 %), a faint high detuned double (+12 cents, 11 ms, -16 dB); the voice stops dead on "he-" (a 10 ms fade,
+               no click) and only a short airy tail of the thin layer rings on (0.3 s, faded)
+    tape       little Adam's song at seven, heard off Mom's old VHS camcorder tape: warm and band-limited (160 Hz-7 kHz,
+               +2 dB at 300 Hz, -2.5 dB from 4 kHz, a soft tape drive), a touch of wow (0.55 Hz, 0.25 %) and flutter
+               (7.5 Hz, 0.06 %) and a faint hiss under the voice only (-40 dB); every word still clear
 """
 import numpy as np
 from scipy import signal
 
 SR = 48000
-OFFSET = {'whisper': -1.0, 'car': 0.0, 'double': 0.0, 'tall': 0.5, 'phone': -1.0}
-TAIL = {'whisper': 0.0, 'car': 0.08, 'double': 0.03, 'tall': 0.70, 'phone': 0.0}   # decay past the line (s)
+OFFSET = {'message': -1.0, 'letterbox': -0.5, 'thin': -1.0, 'tape': -1.0,
+          'whisper': -1.0, 'car': 0.0, 'double': 0.0, 'tall': 0.5, 'phone': -1.0}
+TAIL = {'message': 0.0, 'letterbox': 0.06, 'thin': 0.32, 'tape': 0.0,
+        'whisper': 0.0, 'car': 0.08, 'double': 0.03, 'tall': 0.70, 'phone': 0.0}   # decay past the line (s)
 
 
 def _sos(kind, f, order=2, q=None):
@@ -131,7 +135,73 @@ def phone(y):
     return signal.sosfilt(_sos('bandpass', [300, 3800], 2), z)
 
 
-FX = {'whisper': whisper, 'car': car, 'double': double, 'tall': tall, 'phone': phone}
+def message(y):
+    z = whisper(y)
+    return z[:len(y) + int(TAIL['message'] * SR)]
+
+
+def level_flat(z, ratio=2.0, win=0.03, rng_db=6.0):
+    """A gentle leveller: each 30 ms moves (1 - 1/ratio) of its way to the speech level, within +-rng_db."""
+    from scipy.ndimage import uniform_filter1d
+    e = 10 * np.log10(uniform_filter1d(z * z, int(win * SR)) + 1e-12)
+    ref = speech_db(z)
+    g = np.clip((ref - e) * (1 - 1 / ratio), -rng_db, rng_db)
+    g = np.where(e < ref - 30, 0.0, g)                                # leave the quiet bits (gaps, tails) alone
+    g = uniform_filter1d(g, int(0.02 * SR))
+    return z * 10 ** (g / 20)
+
+
+def letterbox(y):
+    z = shelf(_pad(y, 'letterbox'), 200, 2.0, high=False)
+    z = shelf(z, 2800, -5.0, high=True)
+    z = peak(z, 1250, 2.0, 2.5)
+    d = int(0.00045 * SR); c = np.zeros_like(z); c[d:] = z[:-d]
+    z = mix_wet(z, c, -20)
+    z = level_flat(z)
+    return mix_wet(z, signal.fftconvolve(z, room(0.08, 0.06, 3000, 31))[:len(z)], -28)
+
+
+def thin(y):
+    n0 = len(y)
+    z = _pad(y, 'thin')
+    band = signal.sosfilt(_sos('bandpass', [650, 5000], 2), z)
+    band *= np.sqrt(np.mean(z ** 2) / (np.mean(band ** 2) + 1e-20))
+    r = np.clip(np.arange(len(z)) / max(1, n0), 0, 1)
+    r = 0.20 + 0.65 * r ** 1.4
+    w = z * (1 - r) + band * r
+    w = mix_wet(w, _late(world(w, semis=0.12), 0.011), -16)
+    head = w.copy(); head[n0:] = 0.0                                  # the voice stops dead at the cut ...
+    tl = signal.fftconvolve(head * (np.arange(len(head)) > n0 - int(0.25 * SR)), room(0.45, 0.30, 6500, 41))[:len(w)]
+    tl = signal.sosfilt(_sos('highpass', 900, 2), tl)                 # ... and a short airy tail of the thin layer
+    tl[:n0] *= np.linspace(0, 1, n0) ** 4                             # rings on after it (under the line it is faint)
+    out = mix_wet(head, tl, -14)
+    f = int(0.10 * SR); out[-f:] *= np.linspace(1, 0, f) ** 2
+    return out
+
+
+def tape(y):
+    z = _pad(y, 'tape')
+    n = len(z); t = np.arange(n) / SR
+    rng = np.random.default_rng(5)
+    dr = signal.sosfiltfilt(_sos('lowpass', 0.8), rng.standard_normal(n)); dr /= (np.abs(dr).max() + 1e-12)
+    # wow 0.25 % at 0.55 Hz (delay depth D = dev / (2 pi f)), flutter 0.06 % at 7.5 Hz, a slow drift
+    dly = 0.0025 / (2 * np.pi * 0.55) * np.sin(2 * np.pi * 0.55 * t) + 0.0006 / (2 * np.pi * 7.5) * np.sin(2 * np.pi * 7.5 * t + 1.1) + 0.0004 * dr
+    dly -= dly.min()
+    z = np.interp(np.arange(n) - dly * SR, np.arange(n), z)
+    z = signal.sosfilt(_sos('highpass', 160, 2), z)
+    z = signal.sosfilt(_sos('lowpass', 7000, 4), z)
+    z = peak(z, 300, 2.0, 0.8)
+    z = shelf(z, 4000, -2.5, high=True)
+    g = np.max(np.abs(z)) + 1e-12
+    z = np.tanh(1.4 * z / g) / np.tanh(1.4) * g                       # a soft tape drive
+    hs = signal.sosfilt(_sos('bandpass', [1500, 8000], 2), rng.standard_normal(n))
+    env = np.ones(n); f = int(0.04 * SR); env[:f] = np.linspace(0, 1, f); env[-f:] = np.linspace(1, 0, f)
+    hs *= env * np.sqrt(np.mean(z ** 2)) / (np.sqrt(np.mean(hs ** 2)) + 1e-12) * 10 ** (-40 / 20)
+    return z + hs
+
+
+FX = {'message': message, 'letterbox': letterbox, 'thin': thin, 'tape': tape,
+      'whisper': whisper, 'car': car, 'double': double, 'tall': tall, 'phone': phone}
 
 
 def apply(y, fx):

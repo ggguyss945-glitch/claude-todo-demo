@@ -38,76 +38,76 @@ FX = dict([(k, 'message') for k in MESSAGE] + [(k, 'letterbox') for k in LETTERB
 # gap after the line (s), set by hand for its moment (overrides gap_after's rules): the scare beats sit just after
 # their key word; the holds are the few dread beats the picture needs. Tight and energetic, like the Buttons edit.
 PACE = {
-    "Especially if she doesn't blink.": 0.55,
-    "If your phone is off... and it still lights up: \"I can see your light's still on\"... don't look out the window.": 0.45,
-    "Wake a grown-up.": 0.50,
+    "Especially if she doesn't blink.": 0.37,
+    "If your phone is off... and it still lights up: \"I can see your light's still on\"... don't look out the window.": 0.37,
+    "Wake a grown-up.": 0.33,
     "I know who it is.": 0.85,                          # the hook lands: title sting
-    "At the top, one name, scribbled out in blue pen.": 0.45,
-    "By Saturday midnight, she was on our doormat, my sister was reading a name under the landing light... and I was halfway down the stairs to let her in.": 0.65,
-    "I ate alone.": 0.45,
-    "Nobody else knows it.": 0.40,
-    "The green-and-gold bracelet I wove him in third grade... gone.": 0.45,
-    "She looked a beat too long.": 0.45,
-    "The Keeping Square.": 0.45,
-    "That person will never leave you.": 0.40,
-    "Nobody was cruel enough to try it.": 0.55,
-    "A smile that didn't stop.": 0.55,
-    "Somebody waiting for me, for once.": 0.40,
-    "We'd met on Monday.": 0.45,
-    "Sleep.": 0.45,
-    "Forty-seven.": 0.40,
-    "I can see your light's still on.": 0.50,
-    "ONLY ME.": 0.45,
-    "She didn't blink.": 0.45,
-    "Evie lay down flat, like a chalk drawing... and slid away.": 0.50,
-    "Must have rained.": 0.40,
-    "Good.": 0.40,
-    "Pointing in.": 0.55,
-    "If someone did that for you... would you feel Special, or Trapped?": 0.60,
-    "Chalk dust on it.": 0.40,
-    "It was Danny's bracelet.": 0.55,
-    "Now I owed her.": 0.45,
-    "Just past the corners.": 0.45,
-    "Then in my room.": 0.40,
-    "Nobody.": 0.35,
-    "Just one white chalk fingerprint... on the inside of my window.": 0.50,
-    "Outside, ONLY ME had reached the foot of our step.": 0.45,
-    "There. Now it's only me.": 0.55,
-    "There.": 0.40,
-    "She never ran.": 0.45,
-    "In my seven-year-old voice.": 0.60,
+    "At the top, one name, scribbled out in blue pen.": 0.33,
+    "By Saturday midnight, she was on our doormat, my sister was reading a name under the landing light... and I was halfway down the stairs to let her in.": 0.45,
+    "I ate alone.": 0.33,
+    "Nobody else knows it.": 0.29,
+    "The green-and-gold bracelet I wove him in third grade... gone.": 0.33,
+    "She looked a beat too long.": 0.33,
+    "The Keeping Square.": 0.33,
+    "That person will never leave you.": 0.29,
+    "Nobody was cruel enough to try it.": 0.37,
+    "A smile that didn't stop.": 0.37,
+    "Somebody waiting for me, for once.": 0.29,
+    "We'd met on Monday.": 0.33,
+    "Sleep.": 0.33,
+    "Forty-seven.": 0.29,
+    "I can see your light's still on.": 0.33,
+    "ONLY ME.": 0.33,
+    "She didn't blink.": 0.33,
+    "Evie lay down flat, like a chalk drawing... and slid away.": 0.33,
+    "Must have rained.": 0.29,
+    "Good.": 0.29,
+    "Pointing in.": 0.37,
+    "If someone did that for you... would you feel Special, or Trapped?": 0.41,
+    "Chalk dust on it.": 0.29,
+    "It was Danny's bracelet.": 0.37,
+    "Now I owed her.": 0.33,
+    "Just past the corners.": 0.33,
+    "Then in my room.": 0.29,
+    "Nobody.": 0.28,
+    "Just one white chalk fingerprint... on the inside of my window.": 0.33,
+    "Outside, ONLY ME had reached the foot of our step.": 0.33,
+    "There. Now it's only me.": 0.37,
+    "There.": 0.29,
+    "She never ran.": 0.33,
+    "In my seven-year-old voice.": 0.41,
     "I was.": 0.65,                                     # the first reveal
-    "The chalk slid out, flat across the playground... and stood up.": 0.45,
-    "I ran.": 0.50,
-    "Waiting for a name.": 0.55,
-    "You're my only friend.": 0.55,
-    "Right against our green front door.": 0.45,
-    "There's a girl at our door. She's smiling up at your window.": 0.45,
-    "Her chalk smile almost touched her ears.": 0.60,
-    "Midnight.": 0.40,
-    "O. N. L. Y.": 0.45,
-    "Write your name. Under ONLY ME.": 0.55,
-    "Halfway.": 0.45,
-    "It says your name.": 0.45,
+    "The chalk slid out, flat across the playground... and stood up.": 0.33,
+    "I ran.": 0.33,
+    "Waiting for a name.": 0.37,
+    "You're my only friend.": 0.37,
+    "Right against our green front door.": 0.33,
+    "There's a girl at our door. She's smiling up at your window.": 0.33,
+    "Her chalk smile almost touched her ears.": 0.41,
+    "Midnight.": 0.29,
+    "O. N. L. Y.": 0.33,
+    "Write your name. Under ONLY ME.": 0.37,
+    "Halfway.": 0.33,
+    "It says your name.": 0.33,
     "ADAM.": 0.65,
     "From me.": 0.75,                                   # whose rules they were
-    "The letters crept across the tiles... and stopped at her chair.": 0.50,
-    "And she'd kept asking, until I let her in.": 0.55,
-    "Sent by me.": 0.45,
-    "Please stop. You're scaring me.": 0.55,
-    "That blue front door was Danny's.": 0.50,
+    "The letters crept across the tiles... and stopped at her chair.": 0.33,
+    "And she'd kept asking, until I let her in.": 0.37,
+    "Sent by me.": 0.33,
+    "Please stop. You're scaring me.": 0.37,
+    "That blue front door was Danny's.": 0.33,
     "It was me.": 0.90,                                 # the truth lands
-    "He woke his mom.": 0.45,
+    "He woke his mom.": 0.33,
     "Only me. I'm here, I'm he-": 0.70,                 # silence after the cut
-    "Her colour drained to chalk-white, and the wind carried her off like dust.": 0.70,
-    "Me and you, and others too, friends for me and friends for you. Go wherever, near or far. I'll still care, wherever you are.": 0.55,
-    "That had to be okay.": 0.55,
-    "The caretaker painted over the Keeping Square.": 0.55,
-    "He's one of my best.": 0.60,
-    "ONLY.": 0.45,
+    "Her colour drained to chalk-white, and the wind carried her off like dust.": 0.49,
+    "Me and you, and others too, friends for me and friends for you. Go wherever, near or far. I'll still care, wherever you are.": 0.37,
+    "That had to be okay.": 0.37,
+    "The caretaker painted over the Keeping Square.": 0.37,
+    "He's one of my best.": 0.41,
+    "ONLY.": 0.33,
     "I only call once.": 0.95,                          # the story ends
-    "You can turn a light on now.": 0.45,
-    "Special, or Trapped?": 0.50,
+    "You can turn a light on now.": 0.33,
+    "Special, or Trapped?": 0.33,
 }
 # the sounds: offset of each from the line's end (s): the first after LEAD, the next in its paragraph STEP later, a new
 # paragraph of sounds GAP later; then AFTER of room before the next line (each paragraph of sounds is a 0.5-0.9 s beat)
@@ -199,14 +199,14 @@ def gap_after(L, i):
     if i == len(L) - 1: return 0.0
     n = L[i + 1]
     if l['en'] in PACE: g = PACE[l['en']]
-    elif n['en'].startswith('Rule number'): g = 0.70
-    elif l['en'].startswith('Rule number'): g = 0.30
+    elif n['en'].startswith('Rule number'): g = 0.55
+    elif l['en'].startswith('Rule number'): g = 0.22
     elif l['who'] != n['who']:                         # narrator action -> character line, and back
-        g = 0.22 if l['who'] == 'narrator' else 0.28
-    elif l['who'] != 'narrator': g = 0.30
-    elif n['para'] != l['para']: g = 0.32
-    elif len(toks(l['en'])) <= 3 or len(toks(n['en'])) <= 3: g = 0.18   # staccato fragments
-    else: g = 0.20
+        g = 0.16 if l['who'] == 'narrator' else 0.20
+    elif l['who'] != 'narrator': g = 0.22
+    elif n['para'] != l['para']: g = 0.20
+    elif len(toks(l['en'])) <= 3 or len(toks(n['en'])) <= 3: g = 0.12   # staccato fragments
+    else: g = 0.14
     if l['beats']:                                     # room for the pings / clank, then a breath before the next line
         g = max(g, l['beat_t'][-1] + BEAT_AFTER + (0.05 if n['who'] != 'narrator' else 0))
     return g
