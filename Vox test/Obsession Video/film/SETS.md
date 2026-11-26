@@ -1,6 +1,56 @@
-# SETS.md: the sets of "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET"
+# SETS.md: the sets of "If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME"
 
-## Buttons film (this film): `sets_buttons.py`
+## Obsession film (this film): `sets_obsession.py`
+Exec'd inside `sets.py` after `sets_buttons.py` (hook at the end of sets.py). Every name is `om_* / OM_* / _om*`; use
+`import sets as ST`. The module docstring has the plans (metres: x east, y north, Y up). `ST.OM_API` lists every view,
+`ST.OM_INSERTS` every insert. Built like the Dummy film: ONE floor plan for Adam's house (his room in the front wing,
+whose window looks DOWN on the path and the green door; the hall, stairs, landing and kitchen in the main block), so every
+view of the house is the same house. Sheet, index (anchors of every still), bench, the two widest stills: `_work/sets/`.
+```
+python3 tools/sets_sheet_obsession.py                    # 58 variants -> _work/sets/sets_sheet.png + index.json
+python3 tools/sets_sheet_obsession.py --only front_,ins_ # some -> sets_partial.png;  --keep a,b also writes om_<name>.jpg
+python3 tools/sets_sheet_obsession.py --no_stills --bench --bench_only front_down_street,tape_warp   # 2560x1440 -> bench_2560.json
+```
+Variants (the best example of every state): `tools/sets_sheet_obsession_list.py`. Fonts: `Obsession Video/fonts` (copied
+from the Bunnyman film: Montserrat + VT323 / Caveat / Patrick Hand; it was missing).
+
+| builder (views) | states (number or f(t) where it says level) |
+|---|---|
+| `om_front(view, house)`: down, street, wide, facade, step | house 'adam' (GREEN door) / 'danny' (BLUE door, `mom=True, win={'up': 1}`: her silhouette, phone to her ear); tod 'night' / 'dawn' (wet clean path) / 'day'; **track** None / 'street' / 'half' / 'foot' / 'step' (+ the empty line) / 'door' / 'mat' (the bible's table, `OM_TRACK`) with `track_u` (written 0..1, f(t)), `track_wet` (the dawn wash), `track_rub`, `text`; porch (`dict(on=t)` = "clicked on"); win {adam, up, front, stairwin, living, side}; print (the sneaker print on the step, pointing in); bucket; frame (window foreground) |
+| `om_room(view)`: wide, window, door, bed, desk | lamp, ceil, phone (+phone_at), torch (+torch_at), strip (the 2 a.m. light under the door) + shadow 0..1 (Mom's feet), street, landing; door deg / f(t); drawer 0..1; bed; any om_front state (track=..) shows through the window |
+| `om_hall(view)`: landing, halfway, up, door, kitchen, floor | hall, landing (the bare bulb: `dict(on=t)`), kitchen ('already on'), porch, street, phone, flash; fdoor deg / f(t); flap 0..1 / f(t) (the letterbox lifting); stub True / (x, y); chalk [dict(text, x, y, h, u, rub, wet, reader)]; `ST.om_floor_quad(sp, *sp.info['floor_only'])` / `floor_me` -> the quad + size_cm for the cast's `LetterboxFingers` / `chalk_word` |
+| `om_kitchen(view)`: dinner, wide, tiles, mom | kitchen, hall, phone; dinner (plates); bucket (default True); chalk (M... E... to her chair) |
+| `om_school(view)`: corridor, locker, rahman, lunch, lunch_table, office | locker_open (the bracelet on the shelf); rdoor (80 = 'My door's open') |
+| `om_playground(view, tod, square)`: wide, square, hop, gate, flood, swings, tape | tod 'day' / 'sunset' (THE one red glow) / 'warm' (flashback) / 'summer' / 'night'; square 'plain' / 'girl' (the cast's chalk girl) / 'danny' (chalk_u) / 'adam' (rub, adam_u) / 'painted' (paint 0..1 / f(t)); flood (`dict(on=t)`); prints 0..1 / f(t); swings (ang_l, ang_r) or False + `ST.om_swing(pen, v, 'l', angle)`, `ST.om_swing_seat(v, 'l', angle)` |
+| `om_tape(figures, warp, rewind)` | Mom's camcorder tape FULL FRAME (the swings one summer): `figures(pen, t)` draws little Adam and Danny in tape space (anchors swing_l / swing_r / _pivot; `sp.info['view']` for om_swing); post['vhs'] via sp.fx (no tube, warm, wobble, rolling tracking band, chroma bleed, snow); **warp** 0..1 / f(t) = the rule 4 return (drift slows, sick tint, chewed crease, heavy tracking); **rewind** f(t) 0..1 = the rule 7 replay (torn backward bands); `ST.om_tape_stamp(cv, t, date='JUL. 14 1996', counter0, mode 'play'/'rew'/'pause', warp)` in the HUD; `om_tape_content(...)` = the same picture as a content fn (W, H, t) |
+| `om_insert(name, prop_kw, motion)` | phone (screen thread: who, msgs [(mine, text)], count 12/30/47 or f(t), typing / dark: lit, banner / map: blue, white = place or f(t), zoom 'town' / 'house' (house, inside, room) / mute: 0..3 or f(t) / actions: tap, done (Save / Block / Report) / type: draft, draft_k); card (show 0..7, words (n, k), hl n, backlit 0..1: ADAM through the scribble, bg); car_window (two layers: Evie between them at anchor 'evie'; light red / amber / green); locker (dust); shoebox (the real bracelet on top; dust=1: the drawer, chalk dust); stub (roll) |
+
+**Chalk (everyone's primitive):** `ST.om_chalk_ground(pen, v, text, x, y, Y, h, u, rub, wet, reader=(x, y))` writes in
+Adam's curly hand (the same strokes as the cast's `_LETTERS`) on any level surface of a plan, stroke by stroke (u 0..1),
+rubbed out (rub), washed (wet), lit by the set's light (never below readable); `om_chalk_flat(pen, text, x, y, h, u, rub,
+wet, angle, squash)` on screen; `om_chalk_events(text, t0, dur)` = one 'chalk_scrape' per stroke for sound;
+`om_line_ground` = the empty line. `om_bracelet(pen, x, y, r, dust=0..1)` the green-and-gold band and its chalk copy.
+
+Key anchors: front `on_street` / `on_half` / `on_foot` / `on_step` / `on_door` / `on_mat` (standing ON ONLY ME), `pave`,
+`gate`, `step`, `doorstep`, `window_adam`, `window_up`, `print`, `bucket`; room `bed`, `pillow`, `bed_edge`, `window`,
+`window_glass`, `desk`, `drawer`, `door_in`, `door_gap`, `phone_bed`; hall `door_in`, `mom_door`, `adam_door`, `letterbox`,
+`door_base`, `only_floor`, `bottom_stair`, `step1..12` (`halfway`), `landing`, `lina_landing`, `card_landing`, `passage`,
+`kitchen_door`; kitchen `mom_chair`, `adam_chair`, `lina_chair` (seats), `window_out` (Evie outside the dark window),
+`doorway`, `by_chair`, `stand_mom`, `bucket`, `table_top`; school `locker`, `locker_in`, `shoulder`, `rahman_door`,
+`crossing`, lunch `adam_seat`, `opp_seat`, `beside_l/r`, `opp_l/r`, `stand_by`, `far_table`, office `her_chair`, `visitor`,
+`tissues`; playground `swing_l/r` (+ `_pivot`), `square`, `square_front`, `square_stand`, `hop_start`, `gate`, `gate_adam`,
+`caretaker`, `flood`, `bench`, `roller`.
+Look rules kept: red only in the square (OM_RED = KEEPING_RED), the sunset sky and the traffic light the script names;
+door shots look down from his (or Danny's) upstairs window; night = blue-black with the subject lit (streetlight pool,
+porch light, lit windows, phone, bulb). Bench 2560 (warm frame): 0.13-0.18 s; the tape with warp 0.34 s.
+Open: the street's far houses are simple copies of our semi; the playground has no night state checked; the wing's
+front window (living room) has no interior.
+
+---
+
+# (previous film, kept for reference) The Buttons film's sets
+
+## Buttons film: `sets_buttons.py`
 Exec'd inside `sets.py` after `sets_walls.py` (hook at the end of sets.py). Every name is `bt_* / BT_* / _bt* / sc_* / nw_*`; use
 `import sets as ST`. The module docstring has the plan (metres: x east, y north, Y up; our building's street front y 0, the
 street to the south; the apartment floor `ST.BT_UP` 3.4, ceiling 2.5). `ST.BT_API` lists every view, `ST.BT_INSERTS` every

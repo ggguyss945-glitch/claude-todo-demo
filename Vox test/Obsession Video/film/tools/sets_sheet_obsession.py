@@ -45,7 +45,7 @@ def G(fn, grade=None, **opt):
 
 
 def II(name, **kw):
-    return G((lambda n_, kw_: lambda: ST.om_insert(n_, **kw_))(name, kw))
+    return G((lambda n_, kw_: lambda: ST.om_insert(n_, kw_))(name, kw))
 
 
 exec(open(os.path.join(HERE, 'sets_sheet_obsession_list.py')).read()) if os.path.exists(os.path.join(HERE, 'sets_sheet_obsession_list.py')) else None

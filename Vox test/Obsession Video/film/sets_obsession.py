@@ -57,10 +57,13 @@ OM_LAMP = (2.05, -6.25)                   # the streetlight by the gate (arm ove
 OM_GATE = (0.45, 1.45)                    # the gate gap in the garden wall (y -6.0)
 OM_PATH = (0.5, 1.4)                      # the path (x0, x1) from the step to the gate
 OM_PLIGHT = (1.62, 2.05, -0.06)           # the porch light (x, Y, y) on the wall right of the door
-# the chalk tracker (bible table): where ONLY ME is each night (x, y, Y, letter height m, empty line under)
-OM_TRACK = {'street': (1.15, -7.05, OM_PAVE, 0.5, False), 'half': (0.95, -3.4, OM_G, 0.36, False),
-            'foot': (0.95, -1.42, OM_G, 0.26, False), 'step': (0.95, -0.82, OM_STEP, 0.2, True),
-            'door': (0.85, -0.2, 0.0, 0.17, False), 'mat': (0.8, -0.23, 0.02, 0.12, False)}
+# the chalk tracker (bible table): where ONLY ME is each night (x, y, Y, letter height m, empty line under). On the path
+# the words run ALONG it (read upright from the window to the west: OM_TRACK_READ), on the step and doorstep across them
+# (read from the south-west, where his window is).
+OM_TRACK_READ = {'half': (-4.0, 0.0), 'foot': (-4.0, 0.0), 'step': (0.0, -4.0), 'door': (0.0, -4.0), 'mat': (0.0, -4.0)}
+OM_TRACK = {'street': (1.15, -7.05, OM_PAVE, 0.5, False), 'half': (0.95, -3.4, OM_G, 0.34, False),
+            'foot': (0.95, -1.75, OM_G, 0.3, False), 'step': (0.95, -0.72, OM_STEP, 0.2, True),
+            'door': (0.92, -0.22, 0.0, 0.2, False), 'mat': (0.8, -0.23, 0.02, 0.14, False)}
 OM_RED = '#b0584f'                        # KEEPING_RED: the square, her ribbons, the one sunset. Nothing else is red.
 OM_CHALK = '#f2f0e9'
 OM_SODIUM = '#ffb468'
@@ -91,10 +94,12 @@ _GR.setdefault('om_tape', dict(exposure=0.1, contrast=0.92, pivot=0.3, gamma=1.0
                                bloom=0.9, bloom_thr=220, vignette=0.55, grain=0.0, soft=0.5, shoulder=0.55))
 _GR.setdefault('om_ins', dict(contrast=1.04, pivot=0.25, gamma=1.04, sat=1.02, wb=(1.0, 1.0, 1.0), floor='#0a0a0c',
                               bloom=0.5, bloom_thr=236, vignette=0.42, grain=0.4, shoulder=0.5))
+_GR.setdefault('om_card', dict(contrast=1.04, pivot=0.25, gamma=1.02, sat=1.04, wb=(1.0, 1.0, 0.98), floor='#0a0806',
+                               bloom=0.0, bloom_thr=250, vignette=0.4, grain=0.35, shoulder=0.55))
 _GR.setdefault('om_ins_night', dict(contrast=1.06, pivot=0.25, gamma=1.04, sat=0.98, wb=(0.96, 1.0, 1.06), floor='#05070e',
                                     bloom=0.7, bloom_thr=230, vignette=0.5, grain=0.55, shoulder=0.5))
 _GR.setdefault('om_screen', dict(contrast=1.0, pivot=0.25, gamma=1.0, sat=1.0, wb=(1.0, 1.0, 1.0), floor='#000000',
-                                 bloom=0.35, bloom_thr=240, vignette=0.9, grain=0.2, shoulder=0.7))
+                                 bloom=0.0, bloom_thr=250, vignette=0.9, grain=0.2, shoulder=0.7))
 
 OM_CAMS = []
 
@@ -982,6 +987,8 @@ def _om_front_live(v, o, sp_amb, steady, var):
     L.append(gl)
     spec = _om_track_spec(o)
     reader = o.get('reader')
+    if reader is None and isinstance(o.get('track'), str) and o['track'] in OM_TRACK_READ:
+        dx_, dy_ = OM_TRACK_READ[o['track']]; reader = (OM_TRACK[o['track']][0] + dx_, OM_TRACK[o['track']][1] + dy_)
     if spec is not None:
         x, y, Y, h, ln = spec
         tu, tw, trb = o.get('track_u', 1.0), o.get('track_wet', 0.0), o.get('track_rub', 0.0)
@@ -1167,7 +1174,7 @@ _ocam('om_room_door', 900, 560, OM_UP + 0.95, -2.75, 0.15, 90, _env(), 'from the
 _ocam('om_room_bed', 820, 520, OM_UP + 1.75, -1.5, -0.9, -55, _env(), 'over the bed (his phone lighting up in the dark)', 'room', pitch=34.0)
 _ocam('om_room_desk', 1000, 520, OM_UP + 1.35, -2.3, -0.95, 182, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.1)), 'the desk and its drawer', 'room', pitch=28.0)
 _ocam('om_hall_landing', 780, 560, OM_UP + 1.4, 1.42, 4.7, 186, _env(x=(900, 1020), y=(480, 600), zoom=(1.0, 1.1)), 'from the landing down the stairs to the front door', 'hall', pitch=34.0)
-_ocam('om_hall_halfway', 860, 540, 6 * OM_RISE + 1.45, 1.4, 2.35, 196, _env(x=(900, 1020), y=(480, 600), zoom=(1.0, 1.1)), 'halfway down the stairs: the hall floor and the letterbox', 'hall', pitch=30.0)
+_ocam('om_hall_halfway', 860, 540, 6 * OM_RISE + 1.45, 1.4, 2.35, 204, _env(x=(900, 1020), y=(480, 600), zoom=(1.0, 1.1)), 'halfway down the stairs: the hall floor and the letterbox', 'hall', pitch=36.0)
 _ocam('om_hall_up', 820, 560, 4 * OM_RISE + 1.3, 1.45, 1.6, 0, _env(), 'from the stairs up to the landing (Lina under the bare bulb)', 'hall', pitch=-24.0)
 _ocam('om_hall_door', 920, 540, 1.35, 0.6, 3.3, 180, _env(), 'from the passage to the front door (the R7 doormat past their backs)', 'hall')
 _ocam('om_hall_kitchen', 820, 540, 1.45, 0.62, 0.35, 2, _env(), 'from the front door down the passage to the kitchen', 'hall', pitch=10.0)
@@ -1220,19 +1227,19 @@ def _om_hop_draw(pen, v, o):
             def art(p_, W, H, n=n, c=c):
                 p_.fill(rect(0, 0, W, H), c); p_.texture(rect(0, 0, W, H), 'grunge', 0.25, 'overlay', 0.8)
                 p_.line(rect(2, 2, W - 4, H - 4), 4.0, '#ffffff', 230)
-                btext(p_, str(n), W / 2, H * 0.68, 'sans_b', 26, '#ffffff', 235, 'center')
+                p_.cv.save(); p_.cv.translate(W / 2, H / 2); p_.cv.rotate(180); btext(p_, str(n), 0, 9, 'sans_b', 26, '#ffffff', 235, 'center'); p_.cv.restore()
             draw_face(pen, v, F, art, c, ao=False, line=False)
             n += 1
         y -= 0.6
     pk = clamp(o.get('paint', 1.0)) if o.get('square') == 'painted' else 0.0
     F = floor_face(OM_SQ[0], OM_SQ[1], OM_SQ[2], OM_SQ[3], 0.004)
     def sq(p_, W, H):
-        p_.fill(rect(0, 0, W, H), OM_RED); p_.texture(rect(0, 0, W, H), 'grunge', 0.85, 'overlay', 1.4); p_.texture(rect(0, 0, W, H), 'grunge', 0.5, 'multiply', 0.7, 30)
+        p_.fill(rect(0, 0, W, H), OM_RED); p_.texture(rect(0, 0, W, H), 'grunge', 0.7, 'overlay', 1.4); p_.texture(rect(0, 0, W, H), 'grunge', 0.25, 'multiply', 0.7, 30)
         p_.line(rect(3, 3, W - 6, H - 6), 3.0, '#f0e8e0', 110)
         for k in range(5): p_.line(poly([(10 + k * 17, 12 + (k % 3) * 20), (40 + k * 11, 30 + (k % 2) * 30)], False), 1.2, '#f2f0e9', 30)   # old chalk ghosts
         if pk > 0:
             p_.fill(rect(0, H * (1 - pk), W, H * pk), '#f2c43a'); p_.line(rect(2, 2, W - 4, H - 4), 4.0, '#ffffff', 230 * pk)
-            if pk > 0.99: btext(p_, '10', W / 2, H * 0.62, 'sans_b', 30, '#ffffff', 235, 'center')
+            if pk > 0.99: p_.cv.save(); p_.cv.translate(W / 2, H / 2); p_.cv.rotate(180); btext(p_, '10', 0, 10, 'sans_b', 30, '#ffffff', 235, 'center'); p_.cv.restore()
     draw_face(pen, v, F, sq, OM_RED, ao=False, line=False)
 
 
@@ -1341,12 +1348,12 @@ class OmPlay(Room):
         F = floor_face(-80.0, 80.0, -90.0, -27.0, 0.0)                    # the field beyond the fence
         g = {'sunset': '#5a4a3a', 'night': '#121c16', 'summer': '#6a9a48', 'warm': '#7a9a50'}.get(tod, '#6a8a48')
         draw_face(pen, v, F, lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'grunge', 0.6, 'overlay', 5.0), g, ao=False, line=False)
-        for i, (x, y, h) in enumerate([(-12.0, -33.0, 7.5), (-4.0, -35.0, 8.5), (6.5, -32.0, 7.0), (13.0, -36.0, 8.0), (-15.0, -40.0, 9.0), (1.0, -42.0, 8.0)]):
+        for i, (x, y, h) in enumerate([(-12.0, -38.0, 6.0), (-5.0, -44.0, 6.5), (6.5, -40.0, 5.5), (13.0, -46.0, 6.5), (-17.0, -48.0, 6.0), (1.0, -50.0, 6.0)]):
             _om_tree(pen, v, x, y, 0.0, h, 'sunset' if tod == 'sunset' else ('night' if tod == 'night' else 'day'), i + 20)
         tar = {'sunset': '#5a4c50', 'night': '#202228', 'summer': '#7a7a80', 'warm': '#8a8480'}.get(tod, '#6c6e74')
         T = floor_face(-16.0, 16.0, -27.0, 0.0, 0.0)
         def tart(p_, W, H):
-            p_.texture(rect(0, 0, W, H), 'asphalt', 0.7, 'overlay', 1.6); p_.texture(rect(0, 0, W, H), 'grunge', 0.4, 'overlay', 4.0)
+            p_.texture(rect(0, 0, W, H), 'asphalt', 0.5, 'overlay', 1.6); p_.texture(rect(0, 0, W, H), 'grunge', 0.22, 'overlay', 4.0)
             for (u0, w0, u1, w1) in ((1100, 400, 1500, 900), (2300, 900, 2700, 1500)):       # old painted court lines
                 p_.line(rect(u0, w0, u1 - u0, w1 - w0), 5.0, '#e8e4d8', 120)
         draw_face(pen, v, T, tart, tar, ao=False, line=False)
@@ -1400,12 +1407,12 @@ def _om_play_live(v, o, amb, steady, var):
     rd = (0.0, -21.0)
     cx, cy = 0.0, (OM_SQ[2] + OM_SQ[3]) / 2
     if sq in ('danny', 'adam'):
-        u_ = o.get('chalk_u', 1.0); rb = o.get('rub', 0.85 if sq == 'adam' else 0.0); au = o.get('adam_u', 1.0)
+        u_ = o.get('chalk_u', 1.0); rb = o.get('rub', 0.6 if sq == 'adam' else 0.0); au = o.get('adam_u', 1.0)
         def chalk(pen, v_, t):
             u = _val_t(u_, t)
-            om_chalk_ground(pen, v_, 'DANNY', cx, cy + 0.17, 0.006, 0.15, u if sq == 'danny' else 1.0, _val_t(rb, t), 0.0, reader=rd, width=0.12, seed=3)
-            if sq == 'adam': om_chalk_ground(pen, v_, 'ADAM', cx + 0.02, cy + 0.15, 0.007, 0.16, _val_t(au, t), 0.0, 0.0, reader=rd, width=0.12, seed=5)
-            om_chalk_ground(pen, v_, 'ONLY ME', cx, cy - 0.2, 0.006, 0.12, u if sq == 'danny' else 1.0, 0.0, 0.0, reader=rd, width=0.12, seed=1)
+            om_chalk_ground(pen, v_, 'DANNY', cx, cy - 0.2, 0.006, 0.15, u if sq == 'danny' else 1.0, _val_t(rb, t), 0.0, reader=rd, width=0.12, seed=3)
+            if sq == 'adam': om_chalk_ground(pen, v_, 'ADAM', cx + 0.05, cy - 0.12, 0.007, 0.17, _val_t(au, t), 0.0, 0.0, reader=rd, width=0.13, seed=5)
+            om_chalk_ground(pen, v_, 'ONLY ME', cx, cy + 0.2, 0.006, 0.12, u if sq == 'danny' else 1.0, 0.0, 0.0, reader=rd, width=0.12, seed=1)
         L.append(live_layer('square_chalk', v, (cx, 0.0, cy), chalk, amb, steady, var, order=v.d(cx, cy) + 0.6))
     elif sq == 'girl':
         def girl(pen, v_, t):
@@ -1454,7 +1461,7 @@ def om_playground(view='wide', tod='day', square='plain', **kw):
     return sp
 
 
-_ocam('om_play_wide', 820, 520, 1.65, -1.2, -7.5, 182, _env(f=(1.0, 2.6)), 'from the school wall: hopscotch to the red square, swings right, gate left', 'playground', pitch=5.0)
+_ocam('om_play_wide', 900, 520, 2.4, -1.2, -17.8, 170, _env(f=(1.0, 2.6)), 'from the school wall: hopscotch to the red square, swings right, gate left', 'playground', pitch=16.0)
 _ocam('om_play_square', 1000, 540, 2.3, 0.0, -23.55, 180, _env(x=(900, 1020), y=(480, 600), zoom=(1.0, 1.1)), 'high over the Keeping Square', 'playground', pitch=52.0)
 _ocam('om_play_hop', 900, 520, 1.05, 0.25, -19.2, 182, _env(), 'low along the hopscotch toward the square', 'playground', pitch=12.0)
 _ocam('om_play_gate', 900, 520, 1.5, 2.6, -21.2, 166, _env(), 'the gate in the back fence (Evie across it)', 'playground', pitch=2.0)
@@ -1516,7 +1523,7 @@ def om_tape_fx(warp=0.0, rewind=None):
     def fx(t):
         wk = clamp(_val_t(warp, t)); rw = clamp(_val_t(rewind, t)) if rewind is not None else 0.0
         d = dict(t=t, k=1.0, curve=0.0, glass=0.0, scan=0.35, tube=False, bezel=0.0, glow=0.8, head=1.0 + 1.5 * rw,
-                 track=0.32 + 0.9 * wk + 1.2 * rw, wobble=1.0 + 2.5 * wk + 3.0 * rw, noise=0.9 + 1.3 * wk + 1.5 * rw, chroma=1.1 + 1.2 * wk)
+                 track=0.32 + 0.9 * wk + 1.2 * rw, wobble=1.0 + 2.5 * wk + 3.0 * rw, noise=0.6 + 1.5 * wk + 1.6 * rw, chroma=1.1 + 1.2 * wk)
         out = {'vhs': d}
         if wk > 0.3 or rw > 0.3: out['glitch'] = 0.25 * max(wk, rw)
         return out
@@ -1533,7 +1540,6 @@ def om_tape_stamp(cv, t, date='JUL. 14 1996', counter0=12 * 60 + 47, mode='play'
     sec = max(0, int(sec))
     ctr = '%d:%02d:%02d' % (sec // 3600, (sec // 60) % 60, sec % 60)
     lab = {'play': 'PLAY ▶', 'rew': '◀◀ REW', 'pause': '❙❙ PAUSE'}[mode]
-    show = mode != 'play' or t < 3.0 and int(t * 2) % 2 == 0 or t >= 3.0 and False
     for (s_, x, y, al, on) in ((lab, 120, 128, 'left', mode != 'play' or (t < 3.2 and int(t * 2.2) % 2 == 0)), (ctr, 1800, 128, 'right', True),
                                (date, 120, 985, 'left', True)):
         if not on: continue
@@ -1554,3 +1560,538 @@ def om_tape(figures=None, warp=0.0, rewind=None, **o):
     sp = BSet('om_tape', [lay], anchors, {}, lens=None, grade='om_tape', focus=1.0, dof=0.0, cover=(-300, -300, 2220, 1380),
               fx=om_tape_fx(warp, rewind), info={'note': "Mom's camcorder tape (full frame)", 'view': v, 'cam_env': dict(x=(940, 980), y=(520, 560), zoom=(1.0, 1.04), f=(1.0, 1.0))}, view=v)
     return sp
+
+
+# ====================================================================================================== THE SCHOOL (own plan)
+# The corridor x 0 .. 3.0, y 0 .. 16 (lockers along the east wall, Mrs. Rahman's door on the west wall y 8.0 .. 8.95,
+# open); her office behind it (x -3.6 .. 0, y 6.6 .. 10.4); the lunch hall through the corridor's end (x -6 .. 9, y 16 .. 28).
+OM_SC_H = 3.0
+OM_LOCK = (2.55, 14.0, 0.42)                 # the locker row: first locker's y, last, pitch; Adam's is OM_LOCK_ADAM
+OM_LOCK_ADAM = 6.2
+OM_RDOOR = (8.0, 8.95)
+OM_LUNCH_T = [(3.6, 22.0), (3.6, 25.0), (-2.6, 22.0), (-2.6, 25.0)]
+
+
+def _om_fluoro(o, cells, Y, k=1.0, seed=980):
+    return [Lamp(x, Y - 0.05, y, 5.5, '#f4f6f2', 1.0 * k, (1.0, 0.7, 0.3), fall=1.3) for (x, y) in cells]
+
+
+def _om_locker_parts(o):
+    P = []
+    y = OM_LOCK[0]; i = 0
+    while y < OM_LOCK[1]:
+        B = Box(2.78, y + OM_LOCK[2] / 2, OM_LOCK[2] - 0.01, 0.44, 0.0, 1.85, 90)
+        ad = abs(y + OM_LOCK[2] / 2 - OM_LOCK_ADAM) < 0.2
+        c = ('#3a6a9a', '#4a7aaa')[i % 2]
+        def art(p_, W, H, ad=ad):
+            for k in range(4): p_.fill(rect(W * 0.3, 14 + k * 7, W * 0.4, 3), '#000000', 90)
+            p_.fill(rect(W - 12, H * 0.45, 5, 18), '#c8ccd0'); p_.line(rect(3, 3, W - 6, H - 6), 0.8, '#000000', 90)
+            if ad: btext(p_, '27', W / 2, 52, 'sans_b', 9, '#e8ecf0', 220, 'center')
+        P.append(Part(B, {'all': c, 'right': dict(fill=c, art=art), 'top': '#2a4a6a'}))
+        y += OM_LOCK[2]; i += 1
+    return P
+
+
+def _om_corr_cfg(o):
+    def lights(o):
+        cells = [(1.5, y) for y in (2.0, 5.5, 9.0, 12.5, 15.5)]
+        return '#8a8a88', _om_fluoro(o, cells, OM_SC_H), []
+    def west(p_, W, H):                                                    # x 0 from y 0: notice board, her name plate
+        p_.fill(rect(250, H - 200, 220, 110), '#b89468'); p_.line(rect(250, H - 200, 220, 110), 1.0)
+        for k, c in enumerate(('#f2efe6', '#e8f0c8', '#c8e0f0', '#f0d8c8', '#f2efe6')): p_.fill(rect(262 + k * 41, H - 190 + (k % 2) * 30, 34, 44), c)
+        p_.fill(rect(OM_RDOOR[1] * 100 + 12, H - 180, 70, 22), '#f2f2ee'); p_.line(rect(OM_RDOOR[1] * 100 + 12, H - 180, 70, 22), 0.6)
+        btext(p_, 'Mrs. Rahman', OM_RDOOR[1] * 100 + 47, H - 170, 'sans_b', 7, '#2a3a5a', 240, 'center')
+        btext(p_, 'Counsellor', OM_RDOOR[1] * 100 + 47, H - 162, 'sans', 6, '#2a3a5a', 220, 'center')
+    runs = [_run((3.0, 0.0), (0.0, 0.0)),
+            _run((0.0, 0.0), (0.0, 16.0), holes=[(0.0, OM_RDOOR[0], 0.0, OM_RDOOR[1], 0.0, 2.1)], art=west),
+            _run((0.0, 16.0), (3.0, 16.0), holes=[(0.4, 16.0, 2.6, 16.0, 0.0, 2.4)]),
+            _run((3.0, 16.0), (3.0, 0.0))]
+    def pieces(o):
+        P = [Piece('lockers', (2.78, 0.9, 8.0), lambda pen, v: draw_parts(pen, v, _om_locker_parts(o)), block=_r4p((2.55, 3.0, OM_LOCK[0], OM_LOCK[1])))]
+        if o.get('locker_open'):
+            y0 = OM_LOCK_ADAM - OM_LOCK[2] / 2
+            def lk(pen, v):
+                inside = Box(2.78, OM_LOCK_ADAM, OM_LOCK[2] - 0.05, 0.4, 0.05, 1.8, 90)
+                draw_box(pen, v, inside, {'right': '#1a2230'}, lw=0.6)
+                D = Door((2.555, y0), OM_LOCK[2] - 0.01, 1.8, (0.0, 1.0), 1, 0.03, art_a=None, art_b=None, thick=0.02, col='#4a7aaa')
+                D.draw(pen, v, 100.0)
+                px, py = v.p(2.62, 1.05, OM_LOCK_ADAM)
+                s = v.s(2.62, OM_LOCK_ADAM)
+                for k in range(9):                                         # the green-and-gold bracelet on the shelf
+                    a = k * math.pi * 2 / 9
+                    pen.fill(oval(px + math.cos(a) * 0.035 * s, py + math.sin(a) * 0.012 * s, 0.009 * s), ('#3a8a4a', '#e8c040')[k % 2])
+                pen.fill(oval(px, py + 0.01 * s, 0.05 * s, 0.012 * s), OM_CHALK, 70)
+            P.append(Piece('locker_open', (2.6, 1.0, OM_LOCK_ADAM), lk))
+        RD = Door((0.0, OM_RDOOR[0]), OM_RDOOR[1] - OM_RDOOR[0], 2.1, (0.0, 1.0), -1, 0.0, art_a=door_art('four', 'left', bolt=False), art_b=door_art('four', 'right', bolt=False), col='#c8b090')
+        P.append(_door_piece('rahman_door', RD, _olv(o, 'rdoor', 80.0), 1.0))
+        return P
+    def spots(v, o):
+        S = {}
+        S['locker'] = _mk_spot(v, 'locker', 2.2, OM_LOCK_ADAM, 0.0, 'stand', "at Adam's locker (facing +x)", face=(1, 0))
+        S['locker_in'] = _mk_spot(v, 'locker_in', 2.62, OM_LOCK_ADAM, 1.05, 'point', "inside his locker (the bracelet on the shelf)")
+        S['shoulder'] = _mk_spot(v, 'shoulder', 2.05, OM_LOCK_ADAM - 0.45, 0.0, 'stand', 'one inch from his shoulder (Evie; facing him)', face=(0.4, 1))
+        S['rahman_door'] = _mk_spot(v, 'rahman_door', 0.35, 8.47, 0.0, 'stand', 'Mrs. Rahman in her open doorway (facing +x, the corridor)', face=(1, 0))
+        S['crossing'] = _mk_spot(v, 'crossing', 1.6, 7.6, 0.0, 'stand', 'Danny crossing the corridor with the card', face=(0.6, -1))
+        S['corr_mid'] = _mk_spot(v, 'corr_mid', 1.5, 5.0, 0.0, 'stand', 'the middle of the corridor (facing +y)', face=(0, 1))
+        S['corr_far'] = _mk_spot(v, 'corr_far', 1.5, 12.0, 0.0, 'stand', 'far down the corridor (Evie already there)', face=(0, -1))
+        return S
+    return dict(name='corridor', R=(0.0, 3.0, 0.0, 16.0), Y0=0.0, H=OM_SC_H, floor=dict(base='#b8b4a8', kind='lino', ink='#8a867a', seed=61, scale=1.0),
+                runs=runs, walls=dict(paper='#e2e0d2', ink=None, kind=None, wains=1.2, wcol='#9ab0c0', seed=63), ceil=dict(c='#eceeea'),
+                lights=lights, pieces=pieces, spots=spots)
+
+
+def _om_office_cfg(o):
+    def lights(o):
+        pan = _xpanes(-3.6, 7.6, 9.4, 0.95, 2.1)
+        return '#8a8680', [Lamp(-1.8, OM_SC_H - 0.1, 8.5, 5.0, '#f6f4ec', 1.0, (1.0, 0.7, 0.3), fall=1.3),
+                           Lamp(kind='win', c='#fff0d8', k=1.1, soft=10.0, panes=pan, d=_norm3((1.0, -0.5, 0.1)))], []
+    def back(p_, W, H):                                                    # y 10.4: a calm poster, certificates
+        p_.fill(rect(100, H - 210, 70, 90), '#c8dce8'); p_.fill(oval(135, H - 170, 22), '#e8d890'); p_.line(rect(100, H - 210, 70, 90), 0.8)
+        btext(p_, 'Talk to someone', 135, H - 130, 'sans_b', 6, '#2a3a5a', 230, 'center')
+        for k in range(2): p_.fill(rect(220 + k * 40, H - 200, 30, 22), '#f2efe6'); p_.line(rect(220 + k * 40, H - 200, 30, 22), 0.6)
+    runs = [_run((0.0, 6.6), (-3.6, 6.6)), _run((-3.6, 6.6), (-3.6, 10.4), wins=[(-3.6, 7.6, -3.6, 9.4, 0.95, 2.1, (2, 1))]),
+            _run((-3.6, 10.4), (0.0, 10.4), art=back), _run((0.0, 10.4), (0.0, 6.6), holes=[(0.0, OM_RDOOR[1], 0.0, OM_RDOOR[0], 0.0, 2.1)])]
+    def pieces(o):
+        P = []
+        dk = Box(-2.2, 9.7, 1.3, 0.65, 0.0, 0.75, 180)
+        def desk(pen, v):
+            draw_parts(pen, v, table_parts(dk, '#a8865e', apron=0.12))
+            tb = Box(-1.75, 9.55, 0.24, 0.12, 0.75, 0.86, 0)                  # the tissue box (pale blue, a tissue up)
+            draw_box(pen, v, tb, {'all': '#a8c8e0', 'top': '#c8dcec'}, lw=0.8)
+            tx, ty = v.p(-1.75, 0.9, 9.55); s = v.s(-1.75, 9.55)
+            pen.fill(smooth([(tx - 0.04 * s, ty + 0.03 * s), (tx - 0.02 * s, ty - 0.04 * s), (tx + 0.03 * s, ty - 0.03 * s), (tx + 0.04 * s, ty + 0.03 * s)], True, 0.7), '#ffffff'); 
+            pt = Box(-2.7, 9.8, 0.16, 0.16, 0.75, 0.9, 0); draw_box(pen, v, pt, {'all': '#c87a4a'}, lw=0.7)
+            for k in range(6):                                              # a small desk plant
+                a = -1.3 + k * 0.5
+                pen.line(smooth([v.p(-2.7, 0.9, 9.8), v.p(-2.7 + 0.12 * math.sin(a), 1.05, 9.8 - 0.05), v.p(-2.7 + 0.2 * math.sin(a), 1.12 + 0.05 * (k % 2), 9.8)], False), max(1.5, 0.025 * v.s(-2.7, 9.8)), '#3a7a4a')
+        P.append(Piece('desk', (-2.2, 0.5, 9.7), desk, block=dk.footprint()))
+        P.append(_om_seat_piece('her_chair', -2.2, 10.1, 180, 0.0, '#2a3a5a', 0.48, 0.95))
+        P.append(_om_seat_piece('visitor', -2.1, 8.8, 0, 0.0, '#6a8a9a', 0.45, 0.85))
+        P.append(Piece('plant', (-3.25, 0.5, 7.0), lambda pen, v: dr_plant(pen, v, -3.25, 7.0, 0.0, 1.1, '#3a7a4a'), block=_circ(-3.25, 7.0, 0.25)))
+        return P
+    def spots(v, o):
+        S = {}
+        S['her_chair'] = _mk_spot(v, 'her_chair', -2.2, 10.1, 0.0, 'seat', 'Mrs. Rahman at her desk (facing -y)', face=(0, -1), seat_Y=0.48)
+        S['visitor'] = _mk_spot(v, 'visitor', -2.1, 8.8, 0.0, 'seat', 'Adam in the visitor chair (facing +y)', face=(0, 1), seat_Y=0.45)
+        S['tissues'] = _mk_spot(v, 'tissues', -1.75, 9.55, 0.86, 'surface', 'the tissue box')
+        S['door_in'] = _mk_spot(v, 'door_in', -0.45, 8.47, 0.0, 'stand', 'just inside her door (facing -x)', face=(-1, 0))
+        return S
+    return dict(name='office', R=(-3.6, 0.0, 6.6, 10.4), Y0=0.0, H=OM_SC_H, floor=dict(base='#7a8a8a', kind='boards', ink='#4a5a5a', seed=65),
+                walls=dict(paper='#e6e2d4', ink=None, kind=None, wains=0.0, seed=67), ceil=dict(c='#eceeea'), runs=runs, lights=lights, pieces=pieces, spots=spots)
+
+
+def _om_lunch_cfg(o):
+    def lights(o):
+        cells = [(x, y) for x in (-3.0, 1.5, 6.0) for y in (19.0, 23.0, 26.5)]
+        return '#8a8884', _om_fluoro(o, cells, 3.4, 0.85), []
+    def back(p_, W, H):
+        for k in range(5): _wl_window_art(p_, 120 + k * 290, 300 + k * 290, H - 280, H - 110, False, False, False, 3)
+    runs = [_run((9.0, 16.0), (-6.0, 16.0), holes=[(2.6, 16.0, 0.4, 16.0, 0.0, 2.4)]), _run((-6.0, 16.0), (-6.0, 28.0)),
+            _run((-6.0, 28.0), (9.0, 28.0), art=back), _run((9.0, 28.0), (9.0, 16.0))]
+    def pieces(o):
+        P = []
+        for i, (cx, cy) in enumerate(OM_LUNCH_T):
+            B = Box(cx, cy, 2.4, 0.8, 0.0, 0.72, 0)
+            P.append(Piece('table%d' % i, (cx, 0.4, cy), (lambda B: lambda pen, v: draw_parts(pen, v, table_parts(B, '#d8d0c0', '#8a8e94', apron=0.04)))(B), block=B.footprint()))
+            for (dx, side) in ((-0.7, -1), (0.0, -1), (0.7, -1), (-0.7, 1), (0.0, 1), (0.7, 1)):
+                if i == 0 and side == 1 and dx == 0.0: continue               # Evie's empty seat opposite Adam is staged by the film
+                P.append(_om_seat_piece('chair%d_%d_%d' % (i, int(dx * 10), side), cx + dx, cy - side * 0.62, 180 if side == -1 else 0, 0.0, '#5a8ac0', 0.44, 0.8))
+        return P
+    def spots(v, o):
+        cx, cy = OM_LUNCH_T[0]
+        S = {}
+        S['adam_seat'] = _mk_spot(v, 'adam_seat', cx, cy - 0.62, 0.0, 'seat', "Adam alone at his table (facing +y)", face=(0, 1), seat_Y=0.44)
+        S['opp_seat'] = _mk_spot(v, 'opp_seat', cx, cy + 0.62, 0.0, 'seat', 'opposite him (Evie; later Danny) facing -y', face=(0, -1), seat_Y=0.44)
+        S['beside_l'] = _mk_spot(v, 'beside_l', cx - 0.7, cy - 0.62, 0.0, 'seat', 'beside Adam, left', face=(0, 1), seat_Y=0.44)
+        S['beside_r'] = _mk_spot(v, 'beside_r', cx + 0.7, cy - 0.62, 0.0, 'seat', 'beside Adam, right', face=(0, 1), seat_Y=0.44)
+        S['opp_l'] = _mk_spot(v, 'opp_l', cx - 0.7, cy + 0.62, 0.0, 'seat', 'opposite, left (Kofi)', face=(0, -1), seat_Y=0.44)
+        S['opp_r'] = _mk_spot(v, 'opp_r', cx + 0.7, cy + 0.62, 0.0, 'seat', 'opposite, right (Sam)', face=(0, -1), seat_Y=0.44)
+        S['table_top'] = _mk_spot(v, 'table_top', cx, cy, 0.72, 'surface', 'the table top (her phone slides across; the shoebox)')
+        S['stand_by'] = _mk_spot(v, 'stand_by', cx + 1.5, cy + 0.2, 0.0, 'stand', 'Danny stopping at the table (facing -x)', face=(-1, 0))
+        S['far_table'] = _mk_spot(v, 'far_table', -2.6, 22.62, 0.0, 'seat', 'Danny with Kofi and Sam at another table', face=(0, -1), seat_Y=0.44)
+        return S
+    return dict(name='lunch', R=(-6.0, 9.0, 16.0, 28.0), Y0=0.0, H=3.4, floor=dict(base='#c0b8a4', kind='lino', ink='#8a8270', seed=69, scale=1.4),
+                walls=dict(paper='#e8e2cc', ink=None, kind=None, wains=1.1, wcol='#c8b088', seed=71), ceil=dict(c='#eceeea'), runs=runs, lights=lights, pieces=pieces, spots=spots)
+
+
+def om_school(view='corridor', **kw):
+    """The school. view: corridor (lockers right, Mrs. Rahman's open door left, the lunch hall at the end) | locker
+    (Adam's locker: locker_open True shows the bracelet on the shelf) | rahman (her open doorway across the corridor) |
+    lunch (the lunch hall: Adam's table) | lunch_table (closer, seated height) | office (Mrs. Rahman's office: the plant,
+    the tissue box, her desk). rdoor (deg, default 80 = 'My door's open')."""
+    o = _oo(kw, dict(tod='day'))
+    v = cam('om_sc_' + view)
+    cfgs = {'corridor': _om_corr_cfg, 'office': _om_office_cfg, 'lunch': _om_lunch_cfg}
+    room = 'office' if view == 'office' else ('lunch' if view.startswith('lunch') else 'corridor')
+    main = BuBox(cfgs[room](o))
+    far = [BuBox(cfgs[r](dict(o, _far=True)), far=True) for r in cfgs if r != room]
+    sp = build_view('om_sc_' + view, v, main, o, far=far, outside=lambda pen, v_: om_sky(pen, v_, 'day'), grade='om_school', dyn=[])
+    sp.info['note'] = 'School: corridor locker / locker_in / shoulder / rahman_door / crossing / corr_mid / corr_far; lunch adam_seat / opp_seat / beside_* / opp_* / table_top / stand_by / far_table; office her_chair / visitor / tissues / door_in.'
+    return sp
+
+
+_ocam('om_sc_corridor', 820, 540, 1.55, 1.6, 0.6, 2, _env(), 'down the corridor: lockers right, her open door left', 'corridor')
+_ocam('om_sc_locker', 1000, 540, 1.5, 1.35, 4.5, 48, _env(), "Adam's locker", 'corridor')
+_ocam('om_sc_rahman', 900, 540, 1.5, 2.45, 6.1, -50, _env(), "across the corridor to Mrs. Rahman's open door", 'corridor')
+_ocam('om_sc_lunch', 780, 540, 1.6, 0.6, 17.6, 32, _env(), 'the lunch hall: Adam alone at his table', 'lunch')
+_ocam('om_sc_lunch_table', 1000, 540, 1.25, 3.6, 20.4, 2, _env(), 'at the table, seated height', 'lunch')
+_ocam('om_sc_office', 860, 540, 1.5, -0.6, 7.0, -40, _env(), "Mrs. Rahman's office: the desk, the plant, the tissue box", 'office')
+
+
+# ====================================================================================================== INSERTS (flat 1920 x 1080)
+OM_RULES = [(1, "You don't have to answer after goodnight. Phone off. Sleep."),
+            (2, 'A gift is not a bill. If a present makes you feel you owe someone, give it back.'),
+            (3, 'Your password is yours. Your location is for your parents only.'),
+            (4, 'If someone keeps turning up where you are, tell a grown-up. Never go alone to sort it out.'),
+            (5, 'A real friend is happy you have other people. Never let anyone pull you away from your family.'),
+            (6, "If someone says their feelings are your fault, they're not. You're allowed to leave."),
+            (7, "Don't keep it secret. Tell a grown-up. Save the messages. If they don't listen, tell another. Keep telling.")]
+OM_EVIE_MSGS = ['hiii', 'Adam?', 'Are you awake?', 'hello?', 'Why aren\'t you answering?', 'Adam', '??', 'Are you awake?', 'answer me',
+                "Why aren't you answering?"]
+
+
+def om_bracelet(pen, x, y, r, tilt=0.42, dust=0.0, rot=0.0, alpha=1.0):
+    """Danny's bracelet: a woven green-and-gold friendship band (chevrons, two knotted tails) lying flat (tilt = the
+    ellipse squash). dust 0..1: Evie's copy, chalk dust on it; 1 = only a ring of chalk dust left."""
+    cv = pen.cv; cv.save(); cv.translate(x, y); cv.rotate(rot)
+    if dust < 0.99:
+        a = alpha * (1.0 - dust)
+        n = 26
+        for k in range(n):
+            t0 = k * 2 * math.pi / n
+            px, py = math.cos(t0) * r, math.sin(t0) * r * tilt
+            c = ('#2f8a48', '#e2b83a')[k % 2]
+            ch = poly([(px - r * 0.06, py - r * 0.07), (px + r * 0.06, py - r * 0.02), (px - r * 0.06, py + r * 0.05)], True)
+            pen.fill(oval(px, py, r * 0.085, r * 0.07), c, 255 * a)
+            pen.line(ch, max(1.0, r * 0.012), _darken(c, 0.3), 200 * a)
+        for sd in (-1, 1):
+            pen.line(smooth([(r * 0.95, sd * r * 0.05), (r * 1.2, sd * r * 0.12), (r * 1.38, sd * r * 0.25)], False), max(1.5, r * 0.03), '#2f8a48', 255 * a)
+            pen.fill(oval(r * 1.39, sd * r * 0.26, r * 0.04), '#e2b83a', 255 * a)
+    if dust > 0.01:
+        rng = np.random.default_rng(7)
+        for k in range(int(220 * dust)):
+            t0 = rng.uniform(0, 2 * math.pi); rr = r * rng.normal(1.0, 0.07)
+            pen.fill(oval(math.cos(t0) * rr, math.sin(t0) * rr * tilt, r * rng.uniform(0.01, 0.03)), OM_CHALK, 180 * dust * alpha)
+        pen.fill(oval(0, 0, r * 1.15, r * 1.15 * tilt), OM_CHALK, 22 * dust * alpha, blur=r * 0.1)
+    cv.restore()
+
+
+# ---------------------------------------------------------------------------------------------- the phone
+def _om_bubble(pen, x, y, w, txt, mine=False, size=34, a=255):
+    lines = _wrap(txt, 'sans', size, w - 48)
+    h = 26 + len(lines) * size * 1.22
+    bw = min(w, max(btext_width(l_, 'sans', size) for l_ in lines) + 48)
+    bx = x + (w - bw if mine else 0)
+    r = rrect(bx, y, bw, h, 26)
+    pen.fill(r, '#3a7ae8' if mine else '#dfe2e9', a)
+    for i, l_ in enumerate(lines):
+        btext(pen, l_, bx + 24, y + 13 + size * 0.95 + i * size * 1.22, 'sans', size, '#ffffff' if mine else '#1a1c22', a, 'left')
+    return h
+
+
+def _om_avatar(pen, cx, cy, r, who='evie'):
+    pen.fill(oval(cx, cy, r), {'evie': '#f4f2ec', 'danny': '#6a8ad0', 'mom': '#c8a070', 'lina': '#e0b0c8'}.get(who, '#a0a8b8'))
+    if who == 'evie':                                                     # her profile picture: braids and a chalk smile
+        pen.fill(oval(cx, cy + r * 0.05, r * 0.5, r * 0.55), '#e8c8a8'); pen.fill(oval(cx, cy - r * 0.32, r * 0.52, r * 0.3), '#3a2a22')
+        for sd in (-1, 1): pen.line(smooth([(cx + sd * r * 0.45, cy - r * 0.1), (cx + sd * r * 0.55, cy + r * 0.45)], False), r * 0.14, '#3a2a22')
+        pen.line(smooth([(cx - r * 0.22, cy + r * 0.2), (cx, cy + r * 0.3), (cx + r * 0.22, cy + r * 0.2)], False), r * 0.06, '#ffffff')
+    else:
+        btext(pen, who[0].upper(), cx, cy + r * 0.35, 'sans_b', r, '#ffffff', 255, 'center')
+
+
+def _om_phone_frame(pen, cx=960, cy=540, w=500, h=990, tilt=-2.0, bg='bed'):
+    """The background and the phone body; returns the screen rect (x, y, w, h) in the phone's local frame (the canvas
+    is left rotated by tilt around (cx, cy); restore it after the screen)."""
+    bgc = {'bed': ('#121a30', '#1e2a48'), 'table': ('#8a7a62', '#a89878'), 'kitchen': ('#6a5a44', '#8a7458'), 'dark': ('#05060a', '#0c0e16')}.get(bg, ('#121a30', '#1e2a48'))
+    pen.linear(rect(-460, -320, 2840, 1720), 0, -320, 0, 1400, [(0, bgc[1]), (1, bgc[0])])
+    pen.texture(rect(-460, -320, 2840, 1720), 'fabric' if bg == 'bed' else 'wood', 0.4, 'overlay', 1.4)
+    cv = pen.cv; cv.save(); cv.translate(cx, cy); cv.rotate(tilt)
+    body = rrect(-w / 2, -h / 2, w, h, 70)
+    pen.fill(moved(body, 18, 24), '#000000', 120, blur=24)
+    pen.fill(body, '#16171c'); pen.line(body, 3.0, '#3a3c44')
+    return (-w / 2 + 22, -h / 2 + 22, w - 44, h - 44)
+
+
+def _om_phone(pen, t, screen='thread', who='evie', msgs=None, count=None, lit=1.0, mine=False, typing=0.0, draft='', draft_k=1.0, blue=None, white=None,
+              zoom='town', mute=None, tap=None, done=(), bg='bed', time_='11:58', banner=None, **kw):
+    """The phone (see om_insert('phone')): screen thread | dark | map | mute | actions | type."""
+    sx, sy, sw, sh = _om_phone_frame(pen, bg=bg)
+    scr = rrect(sx, sy, sw, sh, 50)
+    cv = pen.cv
+    if screen == 'dark':                                                   # the dark screen lighting up anyway
+        pen.fill(scr, '#020306')
+        pen.linear(scr, sx, sy, sx + sw, sy + sh, [(0, '#ffffff', 0), (0.45, '#8a9ab8', 24), (0.55, '#ffffff', 0)])
+        if lit > 0.01:
+            pen.fill(scr, '#0a1430', 255 * lit)
+            btext(pen, time_, 0, sy + 250, 'sans', 128, '#ffffff', 255 * lit, 'center')
+            b = rrect(sx + 26, sy + 360, sw - 52, 170, 30)
+            pen.fill(b, '#f2f4f8', 235 * lit); _om_avatar(pen, sx + 80, sy + 418, 34, 'evie')
+            btext(pen, 'Evie', sx + 130, sy + 412, 'sans_b', 32, '#1a1c22', 255 * lit, 'left')
+            btext(pen, 'now', sx + sw - 50, sy + 412, 'sans', 26, '#6a6e78', 255 * lit, 'right')
+            btext(pen, banner or "I can see your light's still on", sx + 50, sy + 480, 'sans', 30, '#1a1c22', 255 * lit, 'left')
+            pen.glow(0, 0, 700, '#9ab8ff', 60 * lit)
+        cv.restore(); return
+    pen.fill(scr, '#f7f7f9')
+    if screen in ('thread', 'actions', 'type'):
+        nm = {'evie': 'Evie', 'danny': 'Danny'}.get(who, who)
+        pen.fill(rect(sx, sy, sw, 150), '#f0f1f5'); pen.line(poly([(sx, sy + 150), (sx + sw, sy + 150)], False), 1.5, '#d0d2d8')
+        _om_avatar(pen, sx + 90, sy + 88, 40, who); btext(pen, nm, sx + 150, sy + 100, 'sans_b', 38, '#1a1c22', 255, 'left')
+        if count is not None:                                              # the counter: 12, 30, 47 (never red)
+            c = int(count(t) if callable(count) else count)
+            cb = rrect(sx + sw - 190, sy + 58, 160, 58, 29); pen.fill(cb, '#1a1c22'); btext(pen, '%d new' % c, sx + sw - 110, sy + 98, 'sans_b', 30, '#ffffff', 255, 'center')
+        ms = msgs if msgs is not None else [(mine, m_) for m_ in OM_EVIE_MSGS]
+        ms = [(m_ if isinstance(m_, tuple) else (mine, m_)) for m_ in ms]
+        cv.save(); cv.clipPath(scr, doAntiAlias=True)
+        y = sy + sh - (230 if screen == 'type' else 140)
+        for (mn, txt) in reversed(ms):
+            lines = _wrap(txt, 'sans', 34, sw * 0.72 - 48)
+            y -= 26 + len(lines) * 34 * 1.22 + 14
+            if y < sy + 150: break
+            _om_bubble(pen, sx + 24, y, sw - 48 if mn else sw * 0.72, txt, mn)
+        if typing > 0.01:
+            b = rrect(sx + 24, sy + sh - 120, 120, 64, 32); pen.fill(b, '#eceef2')
+            for k in range(3): pen.fill(oval(sx + 60 + k * 26, sy + sh - 88, 8), '#8a8e98', 120 + 120 * (0.5 + 0.5 * math.sin(t * 8 - k)))
+        if screen == 'type':
+            box = rrect(sx + 20, sy + sh - 120, sw - 40, 84, 42); pen.fill(box, '#eef0f4'); pen.line(box, 1.5, '#c8ccd4')
+            k = draft_k(t) if callable(draft_k) else draft_k
+            s_ = draft[:int(round(len(draft) * clamp(k)))]
+            w_ = btext(pen, s_, sx + 50, sy + sh - 66, 'sans', 32, '#1a1c22', 255, 'left')
+            if int(t * 2) % 2 == 0: pen.fill(rect(sx + 54 + w_, sy + sh - 96, 3, 40), '#3a7ae8')
+        if screen == 'actions':
+            pen.fill(scr, '#000000', 90)
+            sheet_ = rrect(sx + 20, sy + sh - 470, sw - 40, 440, 34); pen.fill(sheet_, '#f6f6f8')
+            for i, (key, lab, col_) in enumerate((('save', 'Save messages', '#2a6ad8'), ('block', 'Block Evie', '#1a1c22'), ('report', 'Report', '#1a1c22'))):
+                yy = sy + sh - 450 + i * 140
+                if tap == key: pen.fill(rrect(sx + 30, yy, sw - 60, 124, 26), '#dde4f2')
+                btext(pen, lab, sx + 70, yy + 76, 'sans_b', 36, col_, 255, 'left')
+                if key in done:
+                    pen.line(poly([(sx + sw - 110, yy + 62), (sx + sw - 92, yy + 80), (sx + sw - 60, yy + 44)], False), 7, '#2a8a4a')
+                if i < 2: pen.line(poly([(sx + 40, yy + 132), (sx + sw - 40, yy + 132)], False), 1.2, '#d0d2d8')
+        cv.restore()
+    elif screen == 'map':                                                  # her white dot gets everywhere first
+        cv.save(); cv.clipPath(scr, doAntiAlias=True)
+        pen.fill(scr, '#e8ece4')
+        places = OM_MAP_PLACES if zoom == 'town' else OM_MAP_HOUSE
+        if zoom == 'town':
+            for k in range(-3, 4):
+                pen.line(poly([(sx - 40, sy + 520 + k * 190 + k * 20), (sx + sw + 40, sy + 520 + k * 190 - k * 30)], False), 26, '#ffffff')
+                pen.line(poly([(k * 150 + 20, sy - 40), (k * 150 - 30, sy + sh + 40)], False), 22, '#ffffff')
+            pen.fill(rect(-210, sy + 230, 180, 120), '#c8dcc0'); btext(pen, 'School', -120, sy + 300, 'sans_b', 26, '#4a6a4a', 255, 'center')
+            for nm, (px, py) in places.items():
+                if nm in ('school',): continue
+                btext(pen, OM_MAP_LABEL.get(nm, nm), px, py + 60, 'sans', 24, '#5a5e68', 255, 'center')
+        else:                                                              # zoomed to our house: the floor plan, his room
+            pen.fill(scr, '#f4f2ec')
+            pen.fill(rect(-200, -320, 400, 560), '#ffffff'); pen.line(rect(-200, -320, 400, 560), 6, '#8a8e98')
+            pen.line(poly([(-200, -40), (200, -40)], False), 4, '#8a8e98'); pen.line(poly([(30, -320), (30, -40)], False), 4, '#8a8e98')
+            btext(pen, 'Our house', 0, -360, 'sans_b', 30, '#4a4e58', 255, 'center')
+            btext(pen, 'my room', -90, -180, 'sans', 24, '#7a7e88', 255, 'center')
+        for (spec, c, ring) in ((blue, '#3a7ae8', '#ffffff'), (white, '#ffffff', '#8a8e98')):
+            if spec is None: continue
+            pos = spec(t) if callable(spec) else spec
+            px, py = places.get(pos, (0, 0)) if isinstance(pos, str) else pos
+            pen.fill(oval(px, py, 44), c, 60); pen.fill(oval(px, py, 22), ring); pen.fill(oval(px, py, 17), c)
+            if c == '#ffffff': pen.line(oval(px, py, 22), 2.0, '#6a6e78')
+        cv.restore()
+    elif screen == 'mute':                                                 # Mom, Lina, Danny: muted (not by him)
+        btext(pen, 'Chats', sx + 40, sy + 120, 'sans_b', 52, '#1a1c22', 255, 'left')
+        for i, (who_, nm, last) in enumerate((('mom', 'Mom', 'Dinner at 6'), ('lina', 'Lina', 'look at my drawing!!'), ('danny', 'Danny', '...'), ('evie', 'Evie', 'There. Now it\'s only me.'))):
+            yy = sy + 190 + i * 160
+            _om_avatar(pen, sx + 90, yy + 70, 50, who_)
+            btext(pen, nm, sx + 170, yy + 62, 'sans_b', 36, '#1a1c22', 255, 'left'); btext(pen, last, sx + 170, yy + 108, 'sans', 28, '#7a7e88', 255, 'left')
+            mk = 0.0 if i == 3 else clamp((mute(t) if callable(mute) else (mute if mute is not None else 3)) - i)
+            if mk > 0.01:                                                  # the mute icon: a speaker with a slash
+                mx, my = sx + sw - 70, yy + 70
+                pen.fill(poly([(mx - 20, my - 10), (mx - 8, my - 10), (mx + 6, my - 24), (mx + 6, my + 24), (mx - 8, my + 10), (mx - 20, my + 10)]), '#7a7e88', 255 * mk)
+                pen.line(poly([(mx - 24, my + 26), (mx + 22, my - 26)], False), 5, '#3a3c44', 255 * mk)
+            pen.line(poly([(sx + 170, yy + 150), (sx + sw - 30, yy + 150)], False), 1.2, '#e0e2e8')
+    cv.restore()
+
+
+OM_MAP_PLACES = {'school': (-120, -230), 'bus_stop': (-40, -20), 'shop': (150, 160), 'danny': (-150, 330), 'house': (120, -330), 'street': (0, 520)}
+OM_MAP_LABEL = {'bus_stop': 'Bus stop', 'shop': 'Shop', 'danny': "Danny's street", 'house': 'Home', 'street': ''}
+OM_MAP_HOUSE = {'house': (0, 360), 'inside': (110, 120), 'room': (-90, -170), 'garden': (0, 470)}
+
+
+# ---------------------------------------------------------------------------------------------- the card
+def _om_card(pen, t, show=7, words=None, hl=None, backlit=0.0, crossed=True, bg='desk', **kw):
+    """Danny's card: seven rules in his mom's purple handwriting, one name at the top scribbled out in blue pen.
+    show 0..7 rules; words (n, k): rule n written word by word (k 0..1); hl n: rule n glows; backlit 0..1: held up
+    under the landing bulb, light through the card shows ADAM under the scribble."""
+    bgc = {'desk': ('#6a5a44', '#8a7458'), 'landing': ('#1a1410', '#3a2c1e'), 'school': ('#8a8a86', '#a8a8a2')}.get(bg, ('#6a5a44', '#8a7458'))
+    pen.linear(rect(-460, -320, 2840, 1720), 0, -320, 0, 1400, [(0, bgc[1]), (1, bgc[0])])
+    pen.texture(rect(-460, -320, 2840, 1720), 'wood', 0.35, 'overlay', 1.2)
+    if backlit > 0.01: pen.glow(960, 300, 900, '#ffd8a0', 120 * backlit)
+    cv = pen.cv; cv.save(); cv.translate(960, 545); cv.rotate(-1.2)
+    cw, ch = 1560, 1000
+    card = rrect(-cw / 2, -ch / 2, cw, ch, 10)
+    pen.fill(moved(card, 14, 20), '#000000', 110, blur=20)
+    pen.fill(card, mix('#ece2cc', '#ffe2b0', 0.6 * backlit)); pen.texture(card, 'fabric', 0.15, 'overlay', 0.6)
+    for k in range(9): pen.line(poly([(-cw / 2 + 30, -ch / 2 + 160 + k * 98), (cw / 2 - 30, -ch / 2 + 160 + k * 98)], False), 1.6, '#9ab4d8', 120)
+    # the name, scribbled out (ADAM shows through when the light is behind it)
+    nx, ny = -cw / 2 + 120, -ch / 2 + 100
+    if backlit > 0.01:
+        btext(pen, 'ADAM', nx + 4, ny + 4, 'caveat_b', 76, '#3a2a5a', 230 * backlit, 'left')
+    btext(pen, 'ADAM', nx, ny, 'caveat_b', 76, OM_PURPLE, 255 * (1 - 0.15 * backlit), 'left')
+    if crossed:
+        rng = np.random.default_rng(4)
+        pts = []
+        for k in range(26):
+            pts.append((nx - 10 + k * 9.5 + rng.uniform(-4, 4), ny - 52 + (k % 2) * 62 + rng.uniform(-6, 6)))
+        a_ = 255 * (1 - 0.72 * backlit)
+        pen.line(poly(pts, False), 9, OM_BLUE_PEN, a_); pen.line(poly([(p_[0] + 4, p_[1] + 6) for p_ in pts], False), 7, OM_BLUE_PEN, a_ * 0.9)
+    btext(pen, 'For when someone holds on too tight.', cw / 2 - 90, ny, 'caveat', 40, OM_PURPLE, 200, 'right')
+    y = -ch / 2 + 205
+    for (n, txt) in OM_RULES:
+        if n > show: break
+        ws = txt.split(' ')
+        if words is not None and words[0] == n:
+            k = words[1](t) if callable(words[1]) else words[1]
+            ws = ws[:int(math.ceil(len(ws) * clamp(k) - 1e-6))]
+        lines = _wrap('%d. %s' % (n, ' '.join(ws)), 'caveat', 44, cw - 260)
+        if hl == n:
+            pen.fill(rrect(-cw / 2 + 80, y - 52, cw - 160, 98 * len(lines) + 10, 20), '#fff2a8', 120)
+        for i, l_ in enumerate(lines):
+            btext(pen, l_, -cw / 2 + 110 + (40 if i else 0), y + i * 49, 'caveat', 44, OM_PURPLE, 255, 'left')
+        y += 49 * max(1, len(lines)) + 12 + 25
+    cv.restore()
+
+
+# ---------------------------------------------------------------------------------------------- the other inserts
+def _om_car_out(pen, t, light='red', tod='day', **kw):
+    """Through Mom's car window (the back seat, his side) at a red light: the pavement right outside, a shopfront, the
+    traffic light on its pole at the kerb (red | amber | green). Evie stands on the pavement right by the window
+    (anchor 'evie' of om_insert('car_window'))."""
+    day = tod == 'day'
+    pen.linear(rect(-460, -320, 2840, 1100), 0, -320, 0, 700, [(0, '#8ab4dc' if day else '#1a2440'), (1, '#d8e4e8' if day else '#3a4460')])
+    pen.fill(rect(-460, 140, 2840, 640), '#cfc4ae' if day else '#4a4640')                 # the shopfronts
+    for k in range(5):
+        x0 = -300 + k * 560
+        pen.fill(rect(x0, 260, 420, 380), '#3a4a5a' if day else '#2a2a30'); pen.fill(rect(x0 + 10, 270, 400, 360), '#9ab4c8' if day else '#e8c890', 140)
+        pen.fill(rect(x0 - 10, 200, 440, 50), ('#4a6a8a', '#6a8a5a', '#8a7a5a', '#5a5a7a', '#7a6a8a')[k]); pen.line(rect(x0, 260, 420, 380), 2.0)
+    pen.fill(rect(-460, 640, 2840, 520), '#a8a69e' if day else '#4c4e54'); pen.texture(rect(-460, 640, 2840, 520), 'asphalt', 0.5, 'overlay', 1.2)
+    for k in range(8): pen.fill(rect(-460, 700 + k * 70, 2840, 2), '#000000', 50)
+    px = 1560
+    pen.fill(rect(px - 14, 0, 28, 1040), '#3a3c42'); pen.line(rect(px - 14, 0, 28, 1040), 2.0)
+    hd = rrect(px - 60, 60, 120, 320, 20); pen.fill(hd, '#1a1c20'); pen.line(hd, 2.0)
+    for i, (nm, c) in enumerate((('red', '#ff4a3a'), ('amber', '#ffb030'), ('green', '#3ad87a'))):
+        on = light == nm
+        pen.fill(oval(px, 120 + i * 100, 38), c if on else _darken(c, 0.75))
+        if on: pen.glow(px, 120 + i * 100, 120, c, 140)
+
+
+def _om_car_frame(pen, t, **kw):
+    """The car's door around the window: the frame, the door panel and armrest below, the seat edge, a faint reflection."""
+    win = rrect(140, 60, 1640, 760, 90)
+    pen.fill(minus(rect(-460, -320, 2840, 1720), win), '#2a2c32')
+    pen.fill(rect(-460, 840, 2840, 600), '#3a3c44'); pen.fill(rrect(200, 900, 1300, 90, 30), '#4a4c54'); pen.line(rrect(200, 900, 1300, 90, 30), 2.0)
+    pen.fill(rect(1600, 880, 60, 30), '#8a8c92'); pen.line(win, 10, '#16171c')
+    pen.linear(win, 140, 60, 1780, 820, [(0, '#ffffff', 0), (0.3, '#ffffff', 26), (0.36, '#ffffff', 0), (0.7, '#ffffff', 14), (0.76, '#ffffff', 0)])
+
+
+def _om_locker_ins(pen, t, dust=0.4, **kw):
+    """Inside his locked locker: the shelf, his books, a hook, and on the shelf the woven green-and-gold bracelet with
+    chalk dust on it."""
+    pen.fill(rect(-460, -320, 2840, 1720), '#2a3e58')
+    pen.linear(rect(260, -100, 1400, 1300), 260, 0, 1660, 0, [(0, '#1a2434'), (0.5, '#2c3c52'), (1, '#1a2434')])
+    pen.fill(rect(260, 610, 1400, 40), '#4a6a8a'); pen.line(rect(260, 610, 1400, 40), 2.0)
+    for k, c in enumerate(('#c8a050', '#5a7aa8', '#8a5a6a')):
+        b = rect(320 + k * 90, 300 + k * 20, 80, 310 - k * 20); pen.fill(b, c); pen.line(b, 2.0)
+    pen.fill(oval(1500, 180, 22), '#9aa0a8'); pen.line(smooth([(1500, 180), (1480, 260), (1440, 330)], False), 10, '#9aa0a8')
+    for k in range(40): pen.fill(oval(1000 + 260 * math.sin(k * 1.7), 625 + 6 * math.cos(k * 2.3), 2 + (k % 3)), OM_CHALK, 160)
+    om_bracelet(pen, 1000, 590, 150, 0.38, dust=clamp(dust) * 0.3)
+    pen.fill(rect(260, -100, 1400, 1300), '#ffffff', 10)
+
+
+def _om_shoebox(pen, t, dust=0.0, **kw):
+    """The shoebox Danny slides over: every gift Adam gave him (drawings, a toy car, notes, a marble, a friendship
+    keyring) and on top the REAL bracelet, green and gold. dust=1: Adam's drawer instead, the chalk copy gone to dust."""
+    pen.fill(rect(-460, -320, 2840, 1720), '#c8bca4'); pen.texture(rect(-460, -320, 2840, 1720), 'wood', 0.4, 'overlay', 1.2)
+    if dust > 0.5:                                                          # the desk drawer: pencils, a ruler, the dust ring
+        d = rrect(260, 120, 1400, 840, 12); pen.fill(d, '#8a6a48'); pen.fill(rrect(300, 160, 1320, 760, 8), '#5a4430')
+        for k, c in enumerate(('#e8c040', '#3a6ac8', '#4aa05a')): pen.line(poly([(380, 260 + k * 60), (860, 230 + k * 64)], False), 18, c)
+        pen.fill(rect(1100, 250, 420, 50), '#e8dcb8'); pen.line(rect(1100, 250, 420, 50), 2.0)
+        om_bracelet(pen, 960, 620, 170, 0.42, dust=1.0)
+        return
+    pen.fill(moved(rrect(330, 160, 1260, 800, 14), 18, 24), '#000000', 110, blur=24)
+    box = rrect(330, 160, 1260, 800, 14); pen.fill(box, '#e8e2d4'); pen.line(box, 3.0)
+    pen.fill(rrect(370, 200, 1180, 720, 8), '#d8cdb6')
+    for k, (x, y, w, h, c, rot) in enumerate(((420, 260, 420, 300, '#fbf8f0', -6), (900, 240, 380, 280, '#f0f4fb', 5), (600, 520, 360, 260, '#fbf6e8', 3))):
+        cv = pen.cv; cv.save(); cv.translate(x + w / 2, y + h / 2); cv.rotate(rot)
+        pen.fill(rect(-w / 2, -h / 2, w, h), c); pen.line(rect(-w / 2, -h / 2, w, h), 1.5)
+        pen.line(smooth([(-w * 0.35, h * 0.2), (-w * 0.1, -h * 0.25), (w * 0.15, h * 0.1), (w * 0.35, -h * 0.2)], False), 6, ('#3a6ac8', '#4aa05a', '#e8a030')[k])
+        pen.fill(oval(-w * 0.2, -h * 0.1, 18), '#c89a7a'); pen.fill(oval(w * 0.2, -h * 0.08, 18), '#c89a7a')
+        cv.restore()
+    car = rrect(1180, 620, 220, 90, 26); pen.fill(car, '#3a7ac8'); pen.line(car, 2.0)
+    for wx in (1225, 1355): pen.fill(oval(wx, 712, 26), '#1a1c22')
+    pen.fill(oval(1100, 820, 28), '#5ac8d8', 220); pen.fill(oval(1092, 812, 8), '#ffffff', 160)
+    om_bracelet(pen, 860, 520, 210, 0.42, dust=0.0, rot=-8)
+
+
+def _om_stub_ins(pen, t, roll=1.0, **kw):
+    """The chalk stub on the bottom stair (dark hall at midnight, a little light from the landing): roll 0..1 rolls it
+    from the door side to rest against the riser."""
+    pen.linear(rect(-460, -320, 2840, 1720), 0, -320, 0, 1400, [(0, '#1a140e'), (1, '#0a0806')])
+    tr = poly([(-460, 520), (2380, 470), (2380, 1400), (-460, 1400)]); pen.fill(tr, '#5a3e26'); pen.texture(tr, 'wood', 0.5, 'overlay', 1.2)
+    pen.fill(poly([(-460, 380), (2380, 330), (2380, 470), (-460, 520)]), '#d8d0c0', 230)
+    pen.fill(rect(560, 480, 800, 920), '#3e5468', 220)
+    x = 1500 - 560 * clamp(roll); ang = -720 * clamp(roll)
+    cv = pen.cv; cv.save(); cv.translate(x, 800); cv.rotate(ang * 0.0 + 12)
+    pen.fill(oval(6, 30, 120, 22), '#000000', 120, blur=10)
+    st = rrect(-110, -26, 220, 52, 22); pen.fill(st, OM_CHALK); pen.line(st, 2.0, '#8a8a86')
+    pen.fill(oval(-104, 0, 14, 24), '#d8d6d0'); pen.texture(st, 'grunge', 0.4, 'overlay', 0.4)
+    cv.restore()
+    for k in range(12): pen.fill(oval(x + 90 + k * 22, 820 + (k % 3) * 6, 3), OM_CHALK, 140)
+    pen.glow(960, 200, 900, '#ffcf8a', 30)
+
+
+OM_INSERTS = {
+    'phone': (_om_phone, 'om_screen', "the phone: screen 'thread' (who evie|danny, msgs [(mine, text)], count 12/30/47 or f(t), typing, mine), 'dark' (lit 0..1: the switched-off screen lights up: banner), 'map' (zoom town|house, blue / white = place name | (x, y) | f(t): school bus_stop shop danny house street; house: house inside room garden), 'mute' (mute 0..3 or f(t): Mom, Lina, Danny muted), 'actions' (Save / Block / Report: tap, done), 'type' (draft, draft_k); bg bed|table|kitchen|dark"),
+    'card': (_om_card, 'om_card', "Danny's card: show 0..7, words (n, k or f(t)) word by word, hl n, backlit 0..1 (ADAM through the scribble), bg desk|landing|school"),
+    'car_out': (_om_car_out, 'om_ins', 'outside Mom\'s car window: light red|amber|green, tod (use om_insert("car_window"))'),
+    'locker': (_om_locker_ins, 'om_ins', 'inside his locked locker: the bracelet on the shelf, chalk dust (dust 0..1)'),
+    'shoebox': (_om_shoebox, 'om_ins', 'the shoebox of gifts, the real bracelet on top; dust=1: his drawer, the chalk copy turned to dust'),
+    'stub': (_om_stub_ins, 'om_ins_night', 'the chalk stub rolling to the bottom stair (roll 0..1 or f(t))'),
+}
+
+
+def om_insert(name, prop_kw=None, motion=None, t0=0.0, grade=None):
+    """A close-up insert from OM_INSERTS (flat 1920 x 1080 design space with margin for a drift): prop_kw dict (values
+    may be f(t)) or f(t) -> dict; motion f(t) -> (dx, dy, dscale, drot). 'car_window' is two layers: the street
+    (car_out) and the door frame in front; Evie stands between them (anchor 'evie', order 1.0)."""
+    if name == 'car_window':
+        kw = dict(prop_kw or {})
+        out = Layer(2.0, lambda pen, t: _om_car_out(pen, t, **{k_: _val_t(v_, t) for k_, v_ in kw.items()}), 'car_out', blur=0,
+                    cache=False if any(callable(v_) for v_ in kw.values()) else 'omins:car_out:%s' % _okey(kw), bounds=(-460, -320, 2380, 1400))
+        frm = Layer(0.5, _om_car_frame, 'car_frame', cache='omins:car_frame', bounds=(-460, -320, 2380, 1400), blur=0)
+        a = {'evie': Anchor(1000, 1180, 1.0, 1500.0, 'Evie on the pavement right by his window (her head and shoulders fill it)')}
+        return BSet('om_ins_car_window', [out, frm], a, {}, lens=None, grade=grade or 'om_ins', focus=1.0, dof=0.0, cover=(-460, -320, 2380, 1400),
+                    info={'note': "Mom's car at a red light: draw Evie between the layers (order 1.0)"})
+    fn, gr, note = OM_INSERTS[name]
+    static = not callable(prop_kw) and motion is None and not any(callable(v_) for v_ in (prop_kw or {}).values()) and name not in ('phone',)
+
+    def draw(pen, t):
+        kw = prop_kw(t) if callable(prop_kw) else dict(prop_kw or {})
+        kw = {k_: (v_(t) if callable(v_) and k_ not in ('count', 'draft_k', 'blue', 'white', 'mute', 'words') else v_) for k_, v_ in kw.items()}
+        cv = pen.cv
+        if motion is not None:
+            dx, dy, ds, dr = motion(t)
+            cv.save(); cv.translate(960 + dx, 540 + dy); cv.rotate(dr); cv.scale(1 + ds, 1 + ds); cv.translate(-960, -540)
+        fn(pen, t - t0, **kw)
+        if motion is not None: cv.restore()
+    key = 'omins:%s:%s' % (name, _okey(prop_kw or {}) if isinstance(prop_kw, dict) else 'f')
+    lay = Layer(1.0, draw, 'insert', cache=key if static else False, bounds=(-460, -320, 2380, 1400), blur=0)
+    return BSet('om_ins_' + name, [lay], {}, {}, lens=None, grade=grade or gr, focus=1.0, dof=0.0, cover=(-460, -320, 2380, 1400), info={'note': note})
+
+
+# ====================================================================================================== the registry
+OM_SETS = {'om_room': om_room, 'om_hall': om_hall, 'om_kitchen': om_kitchen, 'om_front': om_front, 'om_playground': om_playground,
+           'om_school': om_school, 'om_tape': om_tape, 'om_insert': om_insert}
+OM_API = {nm: sorted({k[len(pre):] for k in OM_CAMS if k.startswith(pre)}) for nm, pre in (
+    ('om_room', 'om_room_'), ('om_hall', 'om_hall_'), ('om_kitchen', 'om_kit_'), ('om_front', 'om_front_'), ('om_playground', 'om_play_'), ('om_school', 'om_sc_'))}
+OM_API['om_insert'] = sorted(OM_INSERTS) + ['car_window']
+OM_API['om_tape'] = ['full frame (warp, rewind); om_tape_content, om_tape_fx, om_tape_stamp']
+__all__ += ['om_room', 'om_hall', 'om_kitchen', 'om_front', 'om_playground', 'om_school', 'om_tape', 'om_tape_content', 'om_tape_fx', 'om_tape_stamp',
+            'om_insert', 'om_chalk_ground', 'om_chalk_flat', 'om_chalk_layout', 'om_chalk_events', 'om_line_ground', 'om_floor_quad', 'om_swing', 'om_swing_seat',
+            'om_bracelet', 'om_bucket', 'om_print', 'om_lamp_glow', 'om_sky', 'OM_API', 'OM_INSERTS', 'OM_RULES', 'OM_TRACK', 'OM_CAMS', 'OM_UP', 'OM_RED',
+            'OM_CHALK', 'OM_LETTERS', 'OM_SWINGS', 'OM_MAP_PLACES', 'OM_MAP_HOUSE']
