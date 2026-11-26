@@ -1,7 +1,7 @@
 #!/bin/bash
-# Rebuild the final mix after picture changes ("If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET"),
+# Rebuild the final mix after picture changes ("If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME"),
 # from any directory:
-#   bash "Vox test/Buttons Video/film/audio/final_mix.sh"          cues -> mix -> measure -> preview_mix.mp4
+#   bash "Vox test/Obsession Video/film/audio/final_mix.sh"          cues -> mix -> measure -> preview_mix.mp4
 # Prepared once (sound prep, already done; re-run only when the owner's packs change):
 #   (no new Epidemic set for this film: the linked sets of _work/samples, audio/catalog_epidemic_ice.json)
 #   python3 audio/review_sfx.py --md                _work/mix/sfx_review.md (verdicts on the new files)
@@ -37,9 +37,9 @@ set -euo pipefail
 FILM="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$FILM"
 W=_work; FINAL=$W/mix/final
-# disk (about 0.4 GB free on /): the whole mix is rendered in RAM (/dev/shm/buttons, tmpfs) and only the 24-bit FLAC,
+# disk (about 0.4 GB free on /): the whole mix is rendered in RAM (/dev/shm/obsession_mix, tmpfs) and only the 24-bit FLAC,
 # the reports and the cue sheets as mixed come back to _work/mix/final; the RAM copy is deleted at the end
-RAM=${MIX_RAM:-/dev/shm/buttons_mix}; OUT=$RAM/final      # its own tmpfs folder (teammates clear /dev/shm/buttons)
+RAM=${MIX_RAM:-/dev/shm/obsession_mix}; OUT=$RAM/final   # its own tmpfs folder
 mkdir -p "$FINAL" "$OUT/stems"
 echo 1000 > /proc/self/oom_score_adj 2>/dev/null || true
 case " $* " in *" --no-cues "*) ;; *) python3 film.py --cues ;; esac
@@ -49,8 +49,8 @@ MIXARGS="../$W/align/timeline.json ../$W/align/vo_en.wav - ../$W/cues $OUT --lan
 ( cd audio && python3 mix.py $MIXARGS --score-only ) 2>&1 | tee "$OUT/score.log"
 ( cd audio && python3 mix.py $MIXARGS ) 2>&1 | tee "$OUT/mix.log"
 rm -rf "$MIX_SCORE_CACHE"
-# the end card (818.78-822.98, the last word ends at 818.38): the music tail dies away by the last frame, never cut
-python3 audio/end_fade.py "$OUT" 818.9 0.15
+# the end card (757.9-768.6, the last word ends at 764.0): the music tail dies away by the last frame, never cut
+python3 audio/end_fade.py "$OUT" 764.5 0.15
 ln -f "$OUT/mix_en.wav" "$OUT/mix.wav"
 python3 audio/measure_mix.py "$OUT" | tee "$OUT/measure.txt"
 python3 audio/mk_events.py "$OUT/cues_used/sfx_cues.json" "$OUT/events.json" && python3 audio/measure_mix.py --events "$OUT/events.json" --voice "$OUT/stems/voice_en.wav" > "$OUT/events.txt" || true

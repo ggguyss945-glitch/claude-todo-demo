@@ -150,7 +150,8 @@ EVENTS = [
     ('end:lit up anyway. I can see your light\'s still on +0.05', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),
     ('end:ONLY ME. +0.05', 'sub_drop', 0.5, None),
     ('Rule number two -0.1', 'rule', 0.6, None, {'nosnap': True}),
-    ('end:Suddenly Evie was one inch from my shoulder +0.05', 'hit', 0.75, None, {'boost': 2.0, 'nosnap': True}),
+    # final mix: "Not touching." follows 0.12 s after "shoulder": no room for a +6 LU scare, a plain hit at the voice
+    ('end:Suddenly Evie was one inch from my shoulder +0.05', 'hit', 0.7, None, {'nosnap': True}),
     ('Rule number three -0.1', 'rule', 0.6, None, {'nosnap': True}),
     ('Then in my room -0.1', 'silence', 0.7, 1.2),
     ('end:on the inside of my window +0.05', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),
@@ -161,10 +162,13 @@ EVENTS = [
     ('end:and stood up +0.05', 'hit', 0.9, None, {'boost': 3.0, 'nosnap': True}),
     ('Floodlight. The caretaker -0.1', 'pulse_off', 0.4, None),
     ('Rule number five -0.1', 'rule', 0.6, None, {'nosnap': True}),
-    ('end:toward my window +0.05', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
+    # final mix: the scare lands on the smile reaching her ears (0.41 s before "Rule number six"; "toward my window"
+    # had 0.14 s before the next word, so the boosted hit could not rise over the voice)
+    ('end:Her chalk smile almost touched her ears +0.05', 'hit', 0.9, None, {'boost': 3.0, 'nosnap': True}),
     ('Rule number six -0.1', 'rule', 0.6, None, {'nosnap': True}),
     ('From the landing, I heard our letterbox lift -0.2', 'silence', 0.6, 2.0),
-    ('end:Chalk-white fingers slid through +0.05', 'hit', 0.85, None, {'boost': 3.0, 'nosnap': True}),
+    # final mix: "Far too long." follows 0.12 s later: a plain hit at the voice (no room for a +6 LU scare)
+    ('end:Chalk-white fingers slid through +0.05', 'hit', 0.8, None, {'nosnap': True}),
     ('Behind me, the landing light clicked on -0.1', 'sub_drop', 0.5, None),
     ('From me. -0.3', 'silence', 1.0, 1.7),                      # REVEAL 2 on silence
     ('Rule number seven -0.1', 'rule', 0.6, None, {'nosnap': True}),
@@ -175,7 +179,7 @@ EVENTS = [
     ("No. I'm not your only -0.25", 'sub_drop', 0.55, None),
     ('Her colour drained to chalk-white', 'swell', 0.5, 6.0),
     ('Next morning, one chalk word on my path', 'sub_drop', 0.4, None),
-    ('Okay. Breathe -0.2', 'end', 0.3, None),
+    ('Sleep well -0.2', 'end', 0.3, None),            # final mix: was at "Okay. Breathe" (it faded the checklist's bed out)
 ]
 
 # ---------------------------------------------------------------------------------------------------- identity

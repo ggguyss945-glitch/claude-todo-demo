@@ -416,8 +416,9 @@ FIXED_KEY = {}
 TRAILER_SHIFT = -5.0              # the tape song a fourth lower than on the tape (0.75x): slowed, detuned
 TRAILER_PULSE = 'pulse_pressure_max_anson'
 TRAILER_PULSE_OFF = 20.0
-TRAILER_SONG_DB = (12.0, 14.0, 16.0)   # per wave: the cover's short-term max over REF_LUFS (test 1: +2/+4/+6 sat
-TRAILER_PULSE_DB = (4.0, 10.0, 15.0)   # 18-24 LU under the voice; the mix's clarity rule keeps it 6 LU under words)
+TRAILER_SONG_DB = (16.0, 18.5, 21.0)   # per wave: the cover's short-term max over REF_LUFS (test 1: +2/+4/+6 sat
+TRAILER_PULSE_DB = (8.0, 14.0, 19.0)   # 18-24 LU under the voice; final mix: +4..+5 dB more, so the bed reads as a real
+                                       # trailer 6-10 LU under the words; the mix's clarity rule keeps it 6 LU under)
 
 
 # ----------------------------------------------------------------------------------------------------------- utils

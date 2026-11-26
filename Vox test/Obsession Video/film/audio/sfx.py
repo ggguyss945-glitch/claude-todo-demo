@@ -5635,9 +5635,12 @@ def r_suburb_night(rng, sp, dur=30.0, dog=0.35, inside=False, **_):
     d = float(dur)
     y = lp(hp(_bx('suburb_night', ('crickets',), d, rng, 2.0), 120, 2), 9000, 2)
     if dog > 0:
-        P = _bp('dog', 'dog_far', (), 'onset', gap=0.25, max_len=1.2, keep=-18)
+        try:                                   # final mix (Obsession): the Bus film's dog pool is not linked here
+            P = _bp('dog', 'dog_far', (), 'onset', gap=0.25, max_len=1.2, keep=-18); P.get(np.random.default_rng(0))
+        except KeyError:
+            P = None
         t = rng.uniform(3, 9)
-        while t < d - 2:
+        while P is not None and t < d - 2:
             if rng.uniform() < dog:
                 for j in range(int(rng.integers(1, 3))):
                     g = lp(P.get(rng, rj=0.04), 3500, 2) * 0.35

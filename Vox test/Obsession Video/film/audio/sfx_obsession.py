@@ -454,6 +454,18 @@ OBSESSION_ALIASES = {
     'footsteps_run': ('footsteps_hall', {'rate': 3.2, 'weight': 0.7}), 'footsteps_wood': ('footsteps_wood_inside', {}),
     'footsteps_stair': ('footsteps_stairs', {}), 'footsteps_pavement': ('footsteps_porch', {}),
 }
+# final mix: the rest of film.py's names (no keyword guesses: card_slide had fallen to a jar lid, the phone set
+# face-down to a notification, five beds were skipped)
+OBSESSION_ALIASES.update({
+    'school_lunch_hall': ('cafeteria', {}), 'house_morning': ('room_tone_house', {}),
+    'house_evening': ('room_tone_house', {}), 'playground_day': ('school_pickup', {}),
+    'playground_evening': ('ambience_suburb', {}), 'suburb_dawn': ('ambience_dawn', {}),
+    'card_drop': ('paper', {}), 'card_slide': ('paper_slide', {}), 'phone_screen_light': ('phone_tap', {}),
+    'phone_face_down': ('tablet_down', {}), 'car_interior_idle': ('car_cabin', {}),
+    'car_indicator': ('indicator', {}), 'bucket_slosh': ('bucket_water', {}), 'footsteps_gravel': ('footsteps_porch', {}),
+    'floodlight_on': ('floodlight', {'action': 'on'}), 'porch_light_click': ('porch_light', {}),
+    'letterbox_flap': ('letterbox', {}), 'drawer_open': ('drawer', {'action': 'open'}),
+})
 ALIASES.update(OBSESSION_ALIASES)
 KEYWORDS = [('chalk', 'chalk_scrape'), ('stub', 'chalk_stub_drop'), ('dust', 'chalk_dust_whoosh'),
             ('letterbox', 'letterbox'), ('slot', 'letterbox'), ('swing', 'swing_creak'), ('locker', 'locker'),

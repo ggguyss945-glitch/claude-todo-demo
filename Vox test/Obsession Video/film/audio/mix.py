@@ -1353,6 +1353,87 @@ def picture_hits(mcues, sfx_cues):
     return sorted(out)
 
 
+def picture_identity(mcues, ev, lines=()):
+    """THIS film (Obsession): the picture's own tape and trailer timing wins over the plan's word anchors.
+    - the trailer ('trailer_pulse' in film.py's sheet): its waves, its HARD STOP and its ONE silence; the sweet tape
+      song plays alone from the camcorder at the start (film.py 'tape_song' at 0), the slowed cover takes over at the
+      first tape tear; the big low hits land on the picture's key cuts (level >= 0.6), the lighter tape tears and
+      ONLY-ME steps stay as smaller hits at the picture's own levels;
+    - every 'tape_song' the picture shows ('sweet' / 'rewind', outside the trailer) that no plan 'show' event covers
+      becomes a 'show' on the camcorder speaker (space 'tape'); a plan 'show' it overlaps starts with the picture."""
+    pev = [e for e in mcues.get('events') or [] if isinstance(e, dict) and 't' in e]
+    tp = next((e for e in pev if e.get('type') == 'trailer_pulse'), None)
+    tr = next((e for e in ev if e['type'] == 'trailer'), None)
+    stop = None
+    if tp and tr:
+        stop = float(tp['t']) + float(tp.get('len') or 24.0)
+        th = [e for e in pev if e.get('type') == 'hit' and e.get('trailer') and float(e['t']) <= stop + 0.05]
+        # a score hit ON a word buried it (first mix: 5-10 LU over the voice for 0.3 s on "don't", "midnight",
+        # "blue", "up"): only the cuts in the narration's gaps get the score's big low hit; on a word the picture's
+        # own impact SFX (under the voice) carries the cut
+        wsp = []
+        for l in lines:
+            ws = l.get('words') or []
+            for k, w in enumerate(ws):
+                wsp.append((float(w[1]) - 0.1, float(ws[k + 1][1]) if k + 1 < len(ws) else float(l['end'])))
+        on_word = lambda h: any(a <= h < b for a, b in wsp)
+        tape0 = next((e for e in pev if e.get('type') == 'tape_song' and float(e['t']) < 1.0), None)
+        cut1 = next((float(e['t']) for e in th if float(e.get('level', 0)) >= 0.45), None)
+        t0 = (cut1 - 0.6) if (tape0 and cut1) else float(tr['t'])
+        pw = [float(x) for x in tp.get('waves') or []]
+        if len(pw) == 3:
+            tr['waves'] = [max(pw[0], t0 + 0.6), pw[1], pw[2]]
+        tr['t'] = t0; tr['stop'] = stop
+        th = [e for e in th if not on_word(float(e['t']))]
+        tr['hits'] = [float(e['t']) for e in th if float(e.get('level', 0)) >= 0.6]
+        sil = next((e for e in pev if e.get('type') == 'silence' and e.get('trailer')), None)
+        if sil:
+            tr['silence'] = [float(sil['t']) + 0.15, float(sil['t']) + float(sil.get('len') or 1.2)]
+        for e in th:
+            if float(e.get('level', 0)) < 0.6:
+                ev.append({'t': float(e['t']), 'type': 'hit', 'level': float(e['level']), 'trailer': True})
+        if tape0:
+            ev.append({'t': 0.0, 'type': 'show', 'level': 0.62, 'len': t0 + 0.75, 'space': 'tape', 'stop': 'drag',
+                       'fade': 0.3})
+    shows = [e for e in ev if e['type'] == 'show']
+    for p in pev:
+        if p.get('type') != 'tape_song' or (stop is not None and float(p['t']) < stop):
+            continue
+        a, b = float(p['t']), float(p['t']) + float(p.get('len') or 2.0)
+        cov = [s for s in shows if s['t'] - 1.0 < b and a < s['t'] + float(s.get('len') or 10.0) + 1.5]
+        if cov:
+            s = cov[0]
+            if a < s['t']:
+                s['len'] = float(s.get('len') or 10.0) + (s['t'] - a)
+                if 'warp_at' in s: s['warp_at'] = float(s['warp_at']) + (s['t'] - a)
+                s['t'] = a
+            end = max(s['t'] + float(s.get('len') or 10.0), b + 0.3)
+            s['len'] = end - s['t']
+            continue
+        ev.append({'t': a - 0.1, 'type': 'show', 'level': 0.5, 'len': b - a + 0.4, 'space': 'tape', 'stop': 'fade',
+                   'fade': 0.35})
+    # EVIE NEAR: every span the picture marks 'evie_theme' (she is on screen or just off it) that no identity cue of
+    # the plan already holds gets the rotted tune ('winks'), cut around the plan's tape / jingle / theme cues (0.6 s
+    # clear of each, so two keys never play at once); a span that ends on the picture's 'drag_stop' drags to a halt
+    busy = sorted((float(e['t']) - 0.6, float(e['t']) + float(e.get('len') or (float(e.get('stop', e['t'])) - float(e['t'])) or 8.0) + 0.6)
+                  for e in ev if e['type'] in ('show', 'winks', 'jingle', 'hold', 'trailer'))
+    drags = [float(p['t']) for p in pev if p.get('type') == 'drag_stop']
+    for p in pev:
+        if p.get('type') != 'evie_theme':
+            continue
+        pieces = [(float(p['t']), float(p['t']) + float(p.get('len') or 0.0))]
+        for x, y in busy:
+            pieces = [q for a, b in pieces for q in ((a, min(b, x)), (max(a, y), b)) if q[1] - q[0] > 0.05]
+        for a, b in pieces:
+            b = min([b] + [d for d in drags if a + 3.0 < d < b])      # a reveal inside the span halts the tune there
+            if b - a < 3.0:
+                continue
+            drag = any(abs(d - b) < 0.8 for d in drags)
+            ev.append({'t': a, 'type': 'winks', 'level': float(np.interp(a, [100, 300, 500], [0.3, 0.42, 0.5])),
+                       'len': b - a, 'stop': 'drag' if drag else 'fade', 'depth': float(np.interp(a, [0, 350, 600], [0.6, 1.2, 1.3])),
+                       'picture': True})
+
+
 def full_plan(mcues, tl, sfx_cues, tol=0.35):
     """--plan full (the final mix): the score follows audio/music_plan.py entirely (track map, intensity curve, tension
     events anchored to the narration's words, the film's identity layer); film.py's own music events are replaced (the
@@ -1375,6 +1456,7 @@ def full_plan(mcues, tl, sfx_cues, tol=0.35):
             e.pop('nosnap', None)
         ev.append(e)
     ev += MP.identity_events(lines)
+    picture_identity(mcues, ev, lines)
     out = {'duration': dur, 'intensity': MP.intensity(lines, dur), 'track_map': MP.track_map(lines),
            'events': sorted(ev, key=lambda e: float(e.get('t', 0))), 'plan': 'full'}
     return out, snapped

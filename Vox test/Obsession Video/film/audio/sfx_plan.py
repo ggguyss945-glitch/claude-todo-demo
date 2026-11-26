@@ -361,6 +361,11 @@ def off_words(out, lines, log):
 # THIS film (Obsession): the Buttons film's EDIT / ADD / OFF_WORDS rows name the Buttons script; they stay for
 # reference but are OFF until this film's first full mix fills its own (BUTTONS_ROWS = True brings them back)
 BUTTONS_ROWS = False
+# THIS film's own re-levels (final mix, measure_mix.py --events on the full mix): (name, t0 s, t1 s, add_db, why)
+OBSESSION_EDIT = [
+    ('phone_tap', 297.0, 297.4, -6.0, 'Evie types his password: one tap jumped +3.8 LU over the voice'),
+    ('chalk_scrape', 353.5, 354.0, -5.0, '"and stood up": the rise sat +0.3 LU over the words (cast sound under them)'),
+]
 
 
 def apply(cues, lines):
@@ -368,7 +373,13 @@ def apply(cues, lines):
     out = [copy.deepcopy(c) for c in cues if isinstance(c, dict)]
     log = []
     if not BUTTONS_ROWS:
-        return out, ['sfx plan: the Buttons rows are off for this film (sfx_plan.BUTTONS_ROWS)']
+        log = ['sfx plan: the Buttons rows are off for this film (sfx_plan.BUTTONS_ROWS)']
+        for name, ta, tb, add, why in OBSESSION_EDIT:
+            hit = [c for c in out if c.get('name') == name and ta <= float(c.get('t', -1)) <= tb]
+            for c in hit:
+                c['gain_db'] = round(float(c.get('gain_db', 0.0) or 0.0) + add, 2)
+            log.append(f'EDIT {name} {ta}-{tb} {add:+.1f} dB: {len(hit)} cue(s) ({why})')
+        return out, log
     out = picture_pass(out, lines, log)
     # EDIT
     for name, a, b, sub, ch, why in EDIT:
