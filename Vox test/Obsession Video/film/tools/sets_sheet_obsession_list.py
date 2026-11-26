@@ -24,5 +24,18 @@ OBSESSION = [
     ('kit_dinner', G(lambda: ST.om_kitchen('dinner', kitchen=1.0, dinner=True)), 0.5, 'Saturday dinner: the dark window behind Mom'),
     ('kit_wide', G(lambda: ST.om_kitchen('wide', kitchen=1.0)), 0.5, 'R7: the kitchen light already on, the bucket by the door'),
     ('kit_tiles', G(lambda: ST.om_kitchen('tiles', kitchen=1.0, chalk=[dict(text='ME', x=1.4, y=6.2, h=0.3)])), 0.5, 'the letters stop at her chair'),
+    ('play_wide_day', G(lambda: ST.om_playground('wide', 'day', 'plain')), 0.5, 'Behind our school: the hopscotch, the faded red top square'),
+    ('play_square_girl', G(lambda: ST.om_playground('square', 'day', 'girl')), 0.5, 'Monday: a little chalk girl in the square'),
+    ('play_square_danny', G(lambda: ST.om_playground('square', 'warm', 'danny')), 0.5, 'last Sunday (flashback): DANNY / ONLY ME in his hand'),
+    ('play_square_adam', G(lambda: ST.om_playground('square', 'sunset', 'adam')), 0.5, 'R4 sunset: DANNY rubbed out, ADAM, ONLY ME'),
+    ('play_hop_prints', G(lambda: ST.om_playground('hop', 'sunset', 'adam', prints=1.0)), 0.5, 'R4: her white prints led to the square'),
+    ('play_wide_sunset', G(lambda: ST.om_playground('wide', 'sunset', 'adam', prints=1.0)), 0.5, 'R4: the one red sunset'),
+    ('play_gate_flood', G(lambda: ST.om_playground('gate', 'sunset', 'adam', flood=1.0)), 0.5, 'Clank. Floodlight: the gate'),
+    ('play_flood', G(lambda: ST.om_playground('flood', 'sunset', 'adam', flood=1.0)), 0.5, 'the caretaker under his floodlight'),
+    ('play_swings', G(lambda: ST.om_playground('swings', 'day')), 0.5, 'break: the swings'),
+    ('play_painted', G(lambda: ST.om_playground('square', 'day', 'painted', paint=1.0)), 0.5, 'the end: the square painted over'),
+    ('tape_play', G(lambda: ST.om_tape()), 1.0, "Mom's camcorder: the swings one summer (stamp in the HUD)"),
+    ('tape_warp', G(lambda: ST.om_tape(warp=1.0)), 1.0, 'R4: the tape slowed, chewed, rolling'),
+    ('tape_rewind', G(lambda: ST.om_tape(rewind=lambda t: 1.0)), 1.0, 'R7: the rewind look'),
 ]
 STAGE_OBS = []
