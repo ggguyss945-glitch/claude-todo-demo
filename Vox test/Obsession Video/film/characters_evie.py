@@ -530,8 +530,18 @@ def _ev_chalk_smile(c, hm, sp, P, det, t):
         if len(mm) > 2:
             gap = _pts_path(np.concatenate([X[mm], X[mm][::-1]]), np.concatenate([Y[mm], Y2[mm][::-1]]), True, 0.8)
             c.fill(gap, '#2b2630', 235)
+        cv.drawPath(c.P(_pts_path(X[m], Y2[m] + 2.0, False, 0.8)), _chalk_paint('#2c3040', 150, lw_ * c.s * 1.5, blur=lw_ * c.s * 0.25))
         _chalk_stroke(cv, c.P(lo), lw_ * c.s * 0.8, 1.0, CHALK, 2)
+    # the dark under-stroke (a shadow line just below the chalk, with small shadow curls at the ends) so the white line
+    # reads on her pale night skin
+    cv.drawPath(c.P(_pts_path(X[m], Y[m] + 2.0, False, 0.8)), _chalk_paint('#2c3040', 150, lw_ * c.s * 1.8, blur=lw_ * c.s * 0.3))
+    for e_ in ((0, 1, 2), (-1, -2, -3)):
+        ii = [i for i in e_ if m[i]]
+        if len(ii) >= 2:
+            cv.drawPath(c.P(_pts_path(X[ii] - 1.5 * np.sign(X[ii[0]] - X[len(X) // 2]), Y[ii] + 3.5, False, 0.8)),
+                        _chalk_paint('#2c3040', 120, lw_ * c.s * 1.2, blur=lw_ * c.s * 0.3))
     _chalk_stroke(cv, c.P(up), lw_ * c.s, 1.0, CHALK, 1)
+    cv.drawPath(c.P(up), _chalk_paint(CHALK, 235, lw_ * c.s * 0.55))
 
 
 _mouth_ev_prev = _mouth
@@ -639,24 +649,26 @@ def draw_chalk_stub(pen, x, y, px_per_cm, angle=0.0, detail=2, alpha=1.0):
 
 
 # ====================================================================================================== chalk-flat colour
-def _ev_matrix(f):
-    """Colour matrix toward flat chalk: every colour goes to a pale chalk value of its own lightness (lines a soft grey,
-    the navy a light grey, the blouse and skin near white), very slightly cool."""
+def _ev_matrix(f, w=0.0):
+    """Colour matrix toward flat chalk at night: every colour goes to a flat grey-blue of its own lightness (skin a mid
+    grey-blue, about 0.70 at most, so her white chalk smile and dark lines still read on it). w (the drain) takes it on
+    to the pale chalk-white of the drain."""
     lw_ = (0.2126, 0.7152, 0.0722)
+    k_, b_ = 0.80 - 0.40 * w, 0.06 + 0.50 * w
     m = []
-    for i, ti in enumerate((0.985, 0.99, 1.0)):
+    for i, ti in enumerate((0.90 + 0.085 * w, 0.96 + 0.03 * w, 1.06 - 0.06 * w)):
         row = [0.0] * 5
         for j, lj in enumerate(lw_):
-            row[j] = (1.0 - f) * (1.0 if i == j else 0.0) + f * 0.40 * ti * lj
-        row[4] = f * 0.56 * ti
+            row[j] = (1.0 - f) * (1.0 if i == j else 0.0) + f * k_ * ti * lj
+        row[4] = f * b_ * ti
         m += row
     return m + [0, 0, 0, 1, 0]
 
 
-def _ev_layer(pen, f, a=1.0, bounds=None):
+def _ev_layer(pen, f, a=1.0, bounds=None, w=0.0):
     if f < 0.005 and a > 0.995: return False
     paint = skia.Paint(Alphaf=clamp(a))
-    if f >= 0.005: paint.setColorFilter(skia.ColorFilters.Matrix(_ev_matrix(clamp(f))))
+    if f >= 0.005: paint.setColorFilter(skia.ColorFilters.Matrix(_ev_matrix(clamp(f), clamp(w))))
     pen.cv.saveLayer(bounds, paint)
     return True
 
@@ -675,7 +687,7 @@ def _ev_prep(P, light):
         P.hr_prop = 'chalk_stub'; P.hr_shape = 'grip'
     if P.e_glow > 0.01:
         light = dict(light or {})
-        light['under'] = '#d4e2ff'; light['under_a'] = max(light.get('under_a', 0) if light.get('under') else 0, 215 * clamp(P.e_glow))
+        light['under'] = '#d4e2ff'; light['under_a'] = max(light.get('under_a', 0) if light.get('under') else 0, 120 * clamp(P.e_glow))
     return P, light
 
 
@@ -717,7 +729,7 @@ def draw(pen, who, *a, **k):
         bnd = skia.Rect.MakeLTRB(fx - 0.95 * h - abs(P.e_neck_dx) * h / 1000.0, fy - 1.3 * h - 1.2 * nk, fx + 0.95 * h + abs(P.e_neck_dx) * h / 1000.0, fy + 0.12 * h)
 
         def fig(pn):
-            lay = _ev_layer(pn, f, fig_a, bnd)
+            lay = _ev_layer(pn, f, fig_a, bnd, ease_in_out(clamp(P.e_drain / 0.4)))
             _EV['P'] = P
             try:
                 return _draw_ev_prev(pn, who, x, y, h, P, kw.get('detail'), light, t, kw.get('aim'))
@@ -739,7 +751,7 @@ def draw_bust(pen, who, cx, cy, scale=1.0, pose=None, detail=None, light=None, t
     sp = CAST.get(who, {})
     if not sp.get('evie'): return _draw_bust_ev_prev(pen, who, cx, cy, scale, pose, detail, light, t)
     P, light = _ev_prep(_as_pose(pose), light)
-    lay = _ev_layer(pen, _ev_flat(P), 1.0)
+    lay = _ev_layer(pen, _ev_flat(P), 1.0, w=ease_in_out(clamp(P.e_drain / 0.4)))
     _EV['P'] = P
     try:
         return _draw_bust_ev_prev(pen, who, cx, cy, scale, P, detail, light, t)
