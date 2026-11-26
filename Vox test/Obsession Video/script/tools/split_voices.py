@@ -1,11 +1,12 @@
 """Split narration_en.txt into clean per-voice line files for ElevenLabs (script/voices/).
 
 Every quoted line goes to its speaker's file; the narrator keeps everything else, in order, in parts of at most
-PART_MAX characters cut at paragraph ends (so the Eleven v4 copies with tags stay under 2,400).
-Sounds are not read: the "Tik." and "Ping." beats are dropped from the narrator (we place them as sounds).
-On-screen capitals are written out for speech (FRI. -> Friday, the board messages in normal case).
-Owen (11) and his son (10) have no designed voice (ElevenLabs will not design child voices): their lines are one
-adult take, read with the narrator's voice, and we re-voice them ourselves (as in the Walls film).
+PART_MAX characters cut at paragraph ends (preferring a cut just before "Rule number" or the outro).
+Sounds are not read: the "Ping." and "Clank." beats are dropped from the narrator (we place them as sounds).
+On-screen capitals are written out for speech (ONLY ME -> only me, or Only me at a sentence start; DANNY -> Danny).
+Adam (12, and 7 in the song) has no designed voice (ElevenLabs will not design child voices): his lines are one
+adult take, read with the narrator's voice and pitched up by us. Evie keeps all her registers in one file
+(story order); index.json says which line is sweet, too sweet or wrong.
 Run: python3 tools/split_voices.py   (from script/)  -> voices/*.txt and voices/index.json
 """
 import json, os, re
@@ -16,70 +17,78 @@ SRC = os.path.join(SCRIPT, 'narration_en.txt')
 OUT = os.path.join(SCRIPT, 'voices')
 PART_MAX = 1750
 
-# quoted line (its start) -> speaker. 'N' = the narrator reads it inside his own sentence.
+# quoted line (its start) -> speaker, in script order. 'N' = the narrator reads it inside his own sentence.
 WHO = [
-    ("Your mom doesn't even see you\"...", 'N'),          # cold open, read by the narrator
-    ("Button up, sweetheart. We're going home.", 'blank'),
-    ("Thank you for calling. I'm listening.", 'mom'),
-    ("One minute.", 'mom'),
-    ("I'm listening.\" I got", 'N'),                     # "Strangers got "I'm listening."": the narrator
-    ("One for warm and two for snug", 'mom'),             # the song, sung warm (flashback)
-    ("I wish I had a different mom.", 'owen'),
-    ("Your mom doesn't even see you. I can be her.", 'blank'),
-    ("What color are her eyes?", 'blank'),
-    ("I don't know.", 'owen'),                            # first time; the son's is below (by order)
-    ("That's okay. I'll see you for both of us.", 'blank'),
-    ("You're so grown-up.", 'blank'),
-    ("I see you.", 'blank'),
-    ("Because she never even looked.", 'blank'),          # the card
-    ("It says delivered. On the mat.", 'mom'),
-    ("Get in, sweetheart. I got off early.", 'blank'),
-    ("Baby? I'm at the table.", 'mom'),
-    ("You did right. You checked.", 'dunn'),
-    ("Silver car. Dented bumper. Now.", 'dunn'),
-    ("Tell her about me", 'blank'),
-    ("Come to the kitchen, baby.", 'blank'),
-    ("Sit. Say something.", 'blank'),
-    ("Or I tell her what you wished.", 'blank'),
-    ("It's not a secret. It's a surprise.", 'blank'),
-    ("Your mom finds out when we're gone\" is", 'N'),
-    ("Watch. She doesn't even see you.", 'blank'),
-    ("No... I can't see him anywhere.", 'mom'),
-    ("Only I see you.", 'blank'),
-    ("Only you.", 'owen'),
-    ("He's eleven. Green coat.", 'mom'),
-    ("Mom. I'm here. I feel invisible.", 'owen'),
-    ("Happy birthday. She can't hear you.", 'blank'),
-    ("One for warm... two for snug", 'blank'),            # the song, detuned, at the climax
-    ("Top one's yours, sweetheart.", 'blank'),
-    ("NO!", 'owen'),
-    ("Tell me where you are.", 'blank'),
-    ("Ma'am. The board.", 'mensah'),
-    ("Tell me. I'm listening.", 'mom'),
-    ("There you are.", 'mom'),
-    ("Green.", 'owen'),
-    ("My package. That was a surprise.", 'mom'),
-    ("No more one finger.", 'mom'),
-    ("None of this is your fault.", 'mom'),
-    ("Mama sees you. Say goodnight.", 'mom'),             # sung, the real words, voice cracking
-    ("I could be your dad.", 'blank'),
-    ("I don't know.", 'son'),
-    ("Look at me. How are you, really?", 'N'),            # the narrator, in the scene
-    ("Brown. Your eyes are brown.", 'son'),
-    ("your family doesn't care", 'N'),
-    ("How are you, really?\" Kids", 'N'),
+    ("I can see your light's still on\"...", 'N'),       # cold open, read by the narrator
+    ("Me and you, and you and me", 'adam7'),              # the song, age 7, sung (flashback)
+    ("Anything you want to tell me?", 'mom'),             # Monday, the hoodie
+    ("Art.", 'adam'),
+    ("Hi! I'm Evie. Like forever.", 'evie'),
+    ("You're my favourite person in the whole world.", 'evie'),
+    ("My mom wrote these.", 'danny'),
+    ("Are you awake?", 'evie'),
+    ("Why aren't you answering?", 'evie'),
+    ("I can see your light's still on.", 'evie'),
+    ("I know. I'll talk to him.", 'mom'),
+    ("I made it myself. For you. Only me?", 'evie'),
+    ("Best friends share passwords.", 'evie'),
+    ("Just checking in, Adam.", 'rahman'),
+    ("There. Now it's only me.", 'evie'),
+    ("You told her our song?", 'adam'),
+    ("What song?", 'danny'),
+    ("You asked for someone who'd never leave.", 'evie'),
+    ("Your mom's always on the phone about you.", 'evie'),
+    ("Your sister's a baby.", 'evie'),
+    ("Anything you want to tell me?", 'mom'),             # Saturday dinner, fork down
+    ("You're my only friend.", 'adam'),
+    ("There's a girl at our door.", 'lina'),
+    ("After everything I gave you.", 'evie'),
+    ("If you leave, it's your fault.", 'evie'),
+    ("Write your name. Under ONLY ME.", 'evie'),
+    ("It says your name.", 'lina'),
+    ("Thank you for telling me.", 'mom'),                 # to Adam, in the kitchen
+    ("Please stop. You're scaring me.", 'danny'),         # his old message
+    ("Danny was right to say no.", 'mom'),
+    ("Write your name?", 'evie'),
+    ("No. I'm not your only.", 'adam'),
+    ("I hope you find lots of people.", 'adam'),
+    ("He said no.", 'mom'),
+    ("Only me. I'm here, I'm he-", 'evie'),               # sung, stretched, cut off
+    ("Me and you, and others too", 'lina'),               # the healed song, sung
+    ("I think I'm the one who couldn't let go.", 'adam'),
+    ("That was brave. Caring isn't owning.", 'rahman'),
+    ("Sorry. I'll give you space.", 'adam'),              # the message he types
+    ("Can we sit here? All of us?", 'danny'),
+    ("Yeah. All of you.", 'adam'),
+    ("I crossed it out.", 'danny'),
+    ("It's your fault\" is never true", 'N'),             # outro checklist, read by the narrator
 ]
 
-SPEECH = [(r'FRI\. O\'S BIRTHDAY\.', "Friday. O's birthday."),
-          (r'Under FRI, I wrote: MOM IT\'S OWEN I\'M HERE\.', "Under Friday, I wrote: Mom, it's Owen. I'm here."),
-          (r'THE CHAT\. THE PHOTO\. THE COAT\. THE CAR\. 2 A\.M\. I WISHED FOR A DIFFERENT MOM\.',
-           'The chat. The photo. The coat. The car. Two a.m. I wished for a different mom.')]
+# Evie's register per line, in story order (sweet -> too sweet -> wrong); checked against her file
+EVIE_REGISTER = [
+    'sweet', 'too sweet (does not blink)', 'too sweet (message, whispered)', 'too sweet (message, a little hurt)',
+    'too sweet (dark screen, delighted)', 'too sweet', 'too sweet (wounded)', 'wrong (message, content)',
+    'wrong (flat delight)', 'wrong (mouthed at the window, message voice)', 'wrong (same)',
+    'wrong (letterbox, close and flat)', 'wrong (letterbox, then a clipped giggle)', 'wrong (whisper)',
+    'sweet again on the doormat (bright, hopeful: the trap)', 'wrong (sung, stretched thin, cut off)',
+]
+
+SPEECH = [(r'(^|[.!?] )ONLY ME\b', r'\1Only me'), (r'\bONLY ME\b', 'only me'),
+          (r'\bONLY\b', 'Only'), (r'\bDANNY\b', 'Danny'), (r'\bADAM\b', 'Adam')]
+CUT_BEFORE = ('Rule number', 'Okay. Breathe.')   # preferred narrator part starts
+SOUNDS = ('Ping.', 'Clank.')
+SOUND_RE = r'(^|\s)(' + '|'.join(re.escape(s) for s in SOUNDS) + r')(?=\s|$)'
+
+
+def speech(p):
+    for a, b in SPEECH:
+        p = re.sub(a, b, p)
+    return p
 
 
 def clean_narr(p):
-    for a, b in SPEECH:
-        p = re.sub(a, b, p)
-    p = re.sub(r'(^|\s)(Tik\.|Ping\.)(?=\s|$)', ' ', p)          # sounds, not words
+    p = speech(p)
+    p = re.sub(SOUND_RE, ' ', p)          # sounds, not words
     p = re.sub(r'\s+', ' ', p).strip()
     return p
 
@@ -87,7 +96,8 @@ def clean_narr(p):
 def main():
     text = open(SRC).read().strip()
     paras = [p.strip() for p in re.split(r'\n\s*\n', text) if p.strip()]
-    files = {k: [] for k in ('narrator', 'mom', 'blank', 'owen', 'son', 'dunn', 'mensah')}
+    keys = ('narrator', 'adam7', 'adam', 'evie', 'danny', 'lina', 'mom', 'rahman')
+    files = {k: [] for k in keys}
     order, wi = [], 0
     for p in paras:
         q = list(re.finditer(r'"([^"]*)"', p))
@@ -102,11 +112,13 @@ def main():
                     break
             if k is None:
                 raise SystemExit('no speaker for quote: %r' % body)
+            if k != wi:
+                raise SystemExit('quote %r matched WHO entry %d, expected %d (%r)' % (body, k, wi, WHO[wi][0]))
             wi = k + 1
             who = WHO[k][1]
             if who == 'N':
                 continue
-            said.append((who, body))
+            said.append((who, speech(body)))
             narr = narr.replace(m.group(0), ' ', 1)
         narr = clean_narr(narr)
         # a paragraph's narrator words come before its quote (action, then the line)
@@ -118,7 +130,12 @@ def main():
             order.append((who, body))
     if wi != len(WHO):
         raise SystemExit('unused speaker entries from %r' % (WHO[wi][0],))
+    if len(files['evie']) != len(EVIE_REGISTER):
+        raise SystemExit('Evie has %d lines but %d register notes' % (len(files['evie']), len(EVIE_REGISTER)))
     os.makedirs(OUT, exist_ok=True)
+    for old in os.listdir(OUT):
+        if old.endswith('.txt') or old == 'index.json':
+            os.remove(os.path.join(OUT, old))
     # narrator parts, cut at paragraph ends, preferring a cut just before "Rule number"
     parts, cur = [], []
     for p in files['narrator']:
@@ -127,33 +144,60 @@ def main():
             # step back to the last "Rule number" start in this part if it leaves a part of reasonable size
             cut = len(cur)
             for i in range(len(cur) - 1, 0, -1):
-                if cur[i].startswith('Rule number') and len('\n\n'.join(cur[:i])) > PART_MAX * 0.55:
+                if cur[i].startswith(CUT_BEFORE) and len('\n\n'.join(cur[:i])) > PART_MAX * 0.55:
                     cut = i
                     break
             parts.append(cur[:cut])
             cur = cur[cut:]
         cur.append(p)
     parts.append(cur)
+    # no tiny last part: re-cut the last two parts, at a preferred start if one keeps both under PART_MAX,
+    # else at the paragraph end nearest the middle
+    if len(parts) > 1 and len('\n\n'.join(parts[-1])) < PART_MAX * 0.35:
+        both = parts[-2] + parts[-1]
+        fits = [i for i in range(1, len(both)) if len('\n\n'.join(both[:i])) <= PART_MAX
+                and len('\n\n'.join(both[i:])) <= PART_MAX]
+        half = len('\n\n'.join(both)) / 2
+        pref = [i for i in fits if both[i].startswith(CUT_BEFORE)]
+        cut = min(pref or fits, key=lambda i: abs(len('\n\n'.join(both[:i])) - half))
+        parts[-2:] = [both[:cut], both[cut:]]
     idx = {'narrator_parts': []}
     for i, ps in enumerate(parts, 1):
         name = 'narrator_part%d.txt' % i
-        open(os.path.join(OUT, name), 'w').write('\n\n'.join(ps) + '\n')
-        idx['narrator_parts'].append({'file': name, 'chars': len('\n\n'.join(ps)), 'paragraphs': len(ps)})
-    for who in ('mom', 'blank', 'dunn', 'mensah'):
+        body = '\n\n'.join(ps)
+        assert len(body) <= PART_MAX, (name, len(body))
+        open(os.path.join(OUT, name), 'w').write(body + '\n')
+        idx['narrator_parts'].append({'file': name, 'chars': len(body), 'paragraphs': len(ps),
+                                      'starts': ps[0][:40]})
+    for who in ('evie', 'danny', 'lina', 'mom', 'rahman'):
         open(os.path.join(OUT, who + '.txt'), 'w').write('\n\n'.join(files[who]) + '\n')
         idx[who] = len(files[who])
-    kids = files['owen'] + files['son']
+    idx['evie'] = {'lines': len(files['evie']),
+                   'note': 'One file, story order. Designed young-adult woman voice, shifted younger. '
+                           'Registers: sweet -> too sweet -> wrong; see registers.',
+                   'registers': [{'line': i + 1, 'register': r, 'text': t}
+                                 for i, (r, t) in enumerate(zip(EVIE_REGISTER, files['evie']))]}
+    kids = files['adam7'] + files['adam']
     open(os.path.join(OUT, 'kids_adult_take.txt'), 'w').write('\n\n'.join(kids) + '\n')
-    idx['kids_adult_take'] = {'owen': len(files['owen']), 'son': len(files['son']),
-                              'note': 'Owen lines first, then the son; one adult take with the narrator voice'}
+    idx['kids_adult_take'] = {'adam_age7': len(files['adam7']), 'adam_age12': len(files['adam']),
+                              'note': 'Line 1 is Adam at 7 (the song, sung sweetly, pitched higher); lines 2 on '
+                                      'are Adam at 12, in story order. One adult take with the narrator voice, '
+                                      'pitched up by us.'}
     idx['order'] = order
     json.dump(idx, open(os.path.join(OUT, 'index.json'), 'w'), indent=1, ensure_ascii=False)
     for k in idx['narrator_parts']:
         print(k)
-    print({k: idx[k] for k in ('mom', 'blank', 'dunn', 'mensah', 'kids_adult_take')})
-    # words check: every word of the script is in exactly one file (minus sounds and spoken-out capitals)
+    print({'evie': idx['evie']['lines'], 'danny': idx['danny'], 'lina': idx['lina'], 'mom': idx['mom'],
+           'rahman': idx['rahman'], 'kids_adult_take': {k: v for k, v in idx['kids_adult_take'].items()
+                                                         if k != 'note'}})
+    # words check: every word of the script is in exactly one file, minus the dropped sounds
+    # (spoken-out capitals keep the word count)
     allw = ' '.join(x for _, x in order)
-    print('words in files', len(allw.split()), 'script words', len(text.split()))
+    sounds = len(re.findall(SOUND_RE, text))
+    got, want = len(allw.split()), len(text.split()) - sounds
+    print('words in files', got, '| script words', len(text.split()), '- sounds', sounds, '=', want)
+    if got != want:
+        raise SystemExit('word check failed')
 
 
 main()
