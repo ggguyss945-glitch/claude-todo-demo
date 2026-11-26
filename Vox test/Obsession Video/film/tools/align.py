@@ -30,7 +30,7 @@ import difflib, json, os, re, sys
 import numpy as np, soundfile as sf, librosa
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(os.path.dirname(HERE))                               # .../Buttons Video
+ROOT = os.path.dirname(os.path.dirname(HERE))                               # .../Obsession Video
 W = os.path.join(ROOT, 'film', '_work')
 MODELS = os.environ.get('VO_MODELS') or '/tmp/claude-0/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/scratchpad/models'
 args = [a for a in sys.argv[1:] if not a.startswith('--')]

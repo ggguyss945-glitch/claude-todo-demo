@@ -54,7 +54,7 @@ TAKE = {'evie': 'evie', 'lina': 'lina', 'mom': 'mom', 'rahman': 'rahman', 'adam'
 # Danny's better reading per line (default danny2, the second take: slower, softer, each full stop a real stop, which
 # suits "soft, slightly hesitant"; the kids take has the real question on "Can we sit here? All of us?")
 DANNY_SRC = {'danny_can_we_sit': 'kids'}
-VOICE_LU = {'evie': 0.0, 'lina': -0.5, 'mom': 0.0, 'rahman': 0.0, 'adam': -0.5, 'adam7': -1.0, 'danny': -1.0}   # dB vs the narrator's median speech level (before any fx offset)
+VOICE_LU = {'evie': 0.0, 'lina': -0.5, 'mom': 0.0, 'rahman': 0.0, 'adam': 0.0, 'adam7': 0.0, 'danny': -0.5}   # dB vs the narrator's median speech level (before any fx offset)
 THR = -60.0                                        # island threshold (dBFS, 5 ms RMS)
 LEAD, TAIL = 0.30, 0.60
 NAT_MIN = 0.12                                     # shortest gap between two narrator sentences (s)
@@ -69,8 +69,9 @@ HOLD = {'adam7': 1.0, 'lina': 1.0}                 # x the clamp's upper bound f
 # before, start of this one) is two cuts in silence. "I scrubbed it off": part 6 sings a stray, drawn-out "I." (34.62-
 # 35.28 s, a glitch of the take) between "Only." and "I scrubbed"; both cuts sit in its -86 dB silences
 CUTS = {'i_scrubbed_it': (34.40, 35.31)}
-# "I didn't open." is read "I didn't open it." (part 4): the line ends in the -72 dB dip before "it" (34.425 s)
-ENDS = {'i_didnt_open': 34.425}
+# (tried: "I didn't open." ends in the -72 dB dip before the take's "it" at 34.425 s, but alone it then read "I didn't
+# know": the take's "open it" is one gesture, so the line keeps its faint "it", which both passes read as "I didn't open.")
+ENDS = {}
 # a line built from hand-picked pieces of its take: [(a or None = the line's start cut, b, gain dB, fade out ms)]. Evie's
 # take sings "I'm here. I'm h" (the take stops on a breathy h, no vowel), so "he-" is the h + the first 105 ms of the
 # "ee" of her first "here" (47.925-48.175 s; F3 starts falling into the r at 48.19 s), after her own second "I'm" (lifted
@@ -82,7 +83,7 @@ ASR_ADD = {'narrator_part4': [('Adam', 84.25, 84.80)]}
 
 NUM = {'zero': '0', 'one': '1', 'two': '2', 'to': '2', 'too': '2', 'three': '3', 'four': '4', 'five': '5', 'six': '6',
        'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10', 'twelve': '12', 'fourteen': '14', 'fifty': '50',
-       'sixty': '60', 'hundred': '100', 'first': '1st', 'fifth': '5th'}
+       'sixty': '60', 'thirty': '30', 'forty': '40', 'hundred': '100', 'first': '1st', 'fifth': '5th'}
 SAME = {'larksburg': 'larkspur', 'larkspurs': 'larkspur', 'markspur': 'larkspur', 'pel': 'pell', 'pells': 'pell',
         'grey': 'gray', 'shh': 'shhh', 'sh': 'shhh', 'mr': 'mister', 'mrs': 'missus', 'hushabai': 'hushabye',
         'hushaby': 'hushabye', 'hushabi': 'hushabye', 'okay': 'ok', 'goodnight': 'good night', 'dabrowskis': 'dabrowski',

@@ -12,7 +12,7 @@ recogniser on its own (tools/vo_asrcheck.py --every). The narrator is never proc
     thin       her last sung line "Only me. I'm here, I'm he-" (already slowed into the cut by vo_voices.py): stretched
                thin by effect: the body thins more and more along the line (a 650 Hz-5 kHz band blended in from 20 % to
                85 %), a faint high detuned double (+12 cents, 11 ms, -16 dB); the voice stops dead on "he-" (a 10 ms fade,
-               no click) and only a short airy tail of the thin layer rings on (0.3 s, faded)
+               no click) and only a short airy tail of the thin layer rings on (0.25 s decay, about 12 dB under the voice)
     tape       little Adam's song at seven, heard off Mom's old VHS camcorder tape: warm and band-limited (160 Hz-7 kHz,
                +2 dB at 300 Hz, -2.5 dB from 4 kHz, a soft tape drive), a touch of wow (0.55 Hz, 0.25 %) and flutter
                (7.5 Hz, 0.06 %) and a faint hiss under the voice only (-40 dB); every word still clear
@@ -171,10 +171,10 @@ def thin(y):
     w = z * (1 - r) + band * r
     w = mix_wet(w, _late(world(w, semis=0.12), 0.011), -16)
     head = w.copy(); head[n0:] = 0.0                                  # the voice stops dead at the cut ...
-    tl = signal.fftconvolve(head * (np.arange(len(head)) > n0 - int(0.25 * SR)), room(0.45, 0.30, 6500, 41))[:len(w)]
+    tl = signal.fftconvolve(head * (np.arange(len(head)) > n0 - int(0.25 * SR)), room(0.40, 0.25, 6500, 41))[:len(w)]
     tl = signal.sosfilt(_sos('highpass', 900, 2), tl)                 # ... and a short airy tail of the thin layer
     tl[:n0] *= np.linspace(0, 1, n0) ** 4                             # rings on after it (under the line it is faint)
-    out = mix_wet(head, tl, -14)
+    out = mix_wet(head, tl, -19)
     f = int(0.10 * SR); out[-f:] *= np.linspace(1, 0, f) ** 2
     return out
 

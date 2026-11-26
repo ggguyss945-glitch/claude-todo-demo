@@ -192,6 +192,13 @@ configurable (`set_render_size(w, h)`) so tests can run at 960×540.
   `who='narrator'`): mix.py adds no voice effect. The owner's per-event check (edges, foley under the voice, scares
   +6..+10 LU) is in `audio/measure_mix.py` (`--events` alone, or in every mix measure); tests:
   `audio/sfx_tests_buttons.py`.
+- Voice track of the OBSESSED film (Obsession Video): `tools/vo_lines.py` -> `script/lines.py` (383 lines, who:
+  narrator, evie, lina, mom, rahman, adam, adam7, danny); `tools/vo_edit.py build` -> `W/narration/narration_en.wav`
+  (12:42.1) + `edit_list.json`; then `tools/vo_check.py`, `tools/align.py` (-> `W/align/timeline.json`) and
+  `tools/vo_asrcheck.py --every` (set `WHISPER_DIR` to a sherpa-onnx whisper-base.en dir for the second opinion).
+  The script's 5 Ping and 1 Clank sound paragraphs are beats in `W/align/beats.json` ({kind, t, line, tag}); the
+  baked voice fx (message, letterbox, thin, tape) and their times are in `W/align/voice_fx.json` (tape = little Adam's
+  song off the VHS camcorder tape: the picture shows the tape there).
 
 ### Cue sheets: the contract between picture and sound
 `film.py` writes these to `$S/pov2/cues/`.

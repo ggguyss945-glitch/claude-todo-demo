@@ -1,6 +1,160 @@
-# CAST: "If Your Mom's Eyes Turn Into Buttons... DON'T KEEP HER SECRET"
+# CAST: "If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME"
 
-## Buttons film (this film): `characters_buttons.py`, see `BUTTONS_API`
+## The family and helpers: `characters_obsession.py`, see `OBSESSION_API`
+Run in the `characters` namespace by the one exec line at the very end of characters.py (after Evie's); `import characters as CH`. Every id is a v3 cast entry on the existing people rig (faces, lip sync, poses, `look_at`, `reach_to`, props, `kneel_down`, `seated`, `walk`, `run`, `climb`, `swing_ride`), so all of their clips work. This film takes the plain names; the older films' ones live on as `adam_ice`, `lina_ice`, `mom_buttons`, `sam_walls`. Times below are film seconds from `_work/align/timeline.json` (key shots to the line tags; the times move if the voice edit changes).
+
+### Who's who
+| id | look | notes |
+|---|---|---|
+| `adam` | **Adam, 12.** One family face with Mom and Lina (warm light-olive skin, near-black hair, brown eyes). A messy dark mop (`shaggy`) that falls into his eyes, thick straight brows that do the acting, a guarded low upper lid, a long face for his age, thin and a little hunched. An oversized grey hoodie (white strings, kangaroo pocket), dark joggers, scuffed white trainers. His phone is always within reach. | Expressions: `adam_guarded` (Monday, "Art."), `adam_lonely` (lunch alone, the bracelet), `adam_scared` (the lit screen, the window, the stairs), `adam_ashamed` (the reveal, telling Mom), `adam_steady` (the kind clear no, Mrs. Rahman, the coda). State `ob_chalk` 1: the hoodie sleeves dusty chalk-white from cuff to elbow (Monday); `ob_tired` grows through the week. |
+| `adam_night` | The same boy in navy long-sleeved pyjamas and socks (bed, window, stairs, kitchen at midnight, the door). | Phone glow: `phone_type` sets `ob_glow`; light the face with `light=dict(under='#cfe0ff', under_a=150, key=-0.3)`. |
+| `adam7` | **Adam at 7, on the tape.** Rounder, a big happy grin, the same mop cut short; a sunny yellow tee, light trousers, blue trainers. | Sings "Stick Like Glue": `talk` on line `adam7_me_and_you` + `sing_sway`. |
+| `danny` | **Danny, 12.** A head shorter than Adam, soft and round-faced, pink cheeks; sandy-brown hair combed to the side; round dark-rimmed glasses; a mustard jumper over a white collar; navy trousers. A chewed blue pen tucked behind his right ear (hides when he faces away). Bare left wrist. | `danny_shy` (eyes off Adam: `not_meeting`), `danny_kind` (the gentle explanation, "Can we sit here?"). |
+| `danny7` | **Danny at 7, on the tape.** The same glasses and side parting, a sky-blue tee, the green-and-gold woven bracelet on his left wrist (`bracelet=1`). | |
+| `mom` | **Mom, 40s.** Warm, tired, sharp. Near-black hair pulled straight back into a low ponytail, tired lower lids (`bags` 0.6), straight brows that go firm; a dusty-blue long-sleeved work shirt (collar, buttons, two pockets) over a cream tee, charcoal trousers, flats. | `mom_warm`, `mom_watchful` (the look a beat too long, fork down), `mom_tired` (dawn, the phone), `mom_firm` (Save / Block / Report, the look at the door). State `ob_knuck` 1: red raw knuckles on every scrubbing morning and at midnight. |
+| `lina` | **Lina, 7.** Adam's eyes in a round face, two low pigtails with yellow bobbles, a straight fringe; oversized lilac pyjamas with soft-yellow stars, sleeves over her hands, legs pooling on her socks. Crayons and drawings. | `lina_earnest` (at his door, under the bulb), `lina_sing` (the healed song). Never creepy. |
+| `rahman` | **Mrs. Rahman, 50s,** the counsellor: calm, unshockable. Warm brown skin, kind dark eyes with smile lines; a **navy hijab** framing her face (a lighter under-cap edge at the brow, the drape over neck and chest, folds from the temples; the face window follows every head turn, so the face reads in 3/4 and profile); a long grey jacket over a cream blouse, navy trousers, flats; a teal lanyard with her ID card. | `rahman_calm`, `rahman_kind`, `nod`, `listen_tilt`. |
+| `kofi`, `sam` | Danny's new friends (silent). Kofi: tall, close crop, steel-blue zip jacket. Sam: smaller, black curls, an orange tee. | Background reactions: `look_at`, `kind_smile`, `talk`. |
+| `caretaker` | 60s: grey hair and moustache, a weathered kind face; navy bib overalls (straps, brass buttons, a pencil in the bib pocket) over a grey work shirt; work boots. | `squint_up` + a hand shading his eyes under the floodlight; `roller` paints the square. |
+| `danny_mom` | Only ever the silhouette at her upstairs window, phone to her ear. | `draw_silhouette(pen, 'danny_mom', ..., rim='#e8c88a')` with `phone_to_ear`. |
+| `adam_grown` | Grown Adam's hands only: a charcoal hoodie (his grey one, grown up). | `draw_arm`; `ob_tips` 1 = "My fingertips went white". |
+
+Heights to scale (`height_px(id, ppm)`, feet to crown): caretaker 1.76 m, mom 1.66, danny_mom 1.65, rahman 1.62, kofi 1.56, adam 1.52, sam 1.49, danny 1.45, evie 1.40, adam7 1.22, lina 1.17, danny7 1.17. Seated people: stage in 3/4 (`turn` +-0.5) at the table edge (hands on the top reach without leaning).
+
+### Beat map: clips to call
+| time (tag) | beat | clip(s) |
+|---|---|---|
+| 49.2 `now_he_ate` / 51.4 `chewed_blue_pen` | Danny at lunch with Kofi and Sam; the pen | all `seated`; Kofi `talk`, Sam and Kofi `look_at` Danny, Danny `kind_smile`; a CU of the pen behind his ear |
+| 54.7-66.4 `at_seven_on`, `adam7_me_and_you` | the tape: swings, singing; the bracelet | `adam7` / `danny7` `seated(seat_y)` + `swing_ride(t0, t1, pivot, L)` + `sing_sway`; `adam7.talk_lines(L, who='adam7')`; `CH.draw_swing(..., part='back')`, figure, `part='front'` |
+| 68.9 `dannys_wrist_was` | the bare wrist | `danny` insert of the left wrist (no bracelet) |
+| 74.1-81.7 `monday_mom_held` ... `she_looked_a` | Mom holds up the hoodie; "Art."; the look | mom `hold_hoodie(t0)` (sleeves chalk-white), `expr('mom_watchful')` from 80.1; adam `ob_chalk` 1, `adam_guarded`, `talk` on `adam_art`, `look_at` away |
+| 127.6-136.6 `then_danny_crossed`, `danny_my_mom_wrote` | Danny crosses the hall with the card, hands it over without meeting his eyes; Mrs. Rahman in her doorway nods | danny `walk` + `CH.PropTrack('rule_card', ...)` held, `give(track, t, 1, adam, -1)`, `not_meeting(t, adam)`, `talk`; rahman `look_at` Danny, `nod(t)` |
+| night of Wed (`the_dark_screen` 156.1) | Adam in bed typing / the screen lights | adam_night `seated(mattress_y)` + `phone_type(t0, t1)` (duvet drawn over his legs by the set) |
+| 169.9 `below_me_our` | he looks down from his window, then ducks | adam_night `look_down_at(t0, street_pt)`, `duck(t)` |
+| "Bucket by the door. Mom on the phone, knuckles red." / 183.1 `mom_i_know_ill` | Mom on the phone in the kitchen | mom `ob_knuck` 1, `phone_to_ear(t0, t1)`, `talk`; `CH.draw_bucket(pen, x, y, ppc)` by the door |
+| 208.3 `inside_my_locked` | the locker, the bracelet | adam `reach_to` the handle (release before the door finishes its swing), `pick_up(PropTrack('bracelet_real', ...))` on the shelf, `look_at` it, `adam_scared` |
+| 254.5 `i_typed_mine` | he types his password | adam `seated` + `phone_type` |
+| 279.8-284.9 `mrs_rahman_the`, `rahman_just_checking_i` | Mrs. Rahman at her open door | rahman `rahman_kind`, `talk`, `nod`; adam `walk` past |
+| "Mom's car. Red light." ... 306.8 `next_red_light` | in Mom's car at red lights | mom `seated` + `drive(t0, t1, g10, g2)` (grips from `CH.draw_steering_wheel`), eyes on the road; adam `seated`, `look_at` his window |
+| 314.8-319.6 `i_found_danny` ... `danny_what_song` | "You told her our song?" / "What song?" | adam `talk`, `adam_scared`; danny `blink`, `danny_shy` -> `puzzled`, `talk` |
+| 321-365 `at_sunset_i` ... `i_ran` | to the square; runs home | `walk`, `run(t0, t1, x0, x1, surface='outside')` |
+| "Clank. Floodlight." | the caretaker squints right at them | caretaker `expr('squint_up')`, `reach_to` a flat hand to his brow, light `dict(rim='#f4f0d8', rim_a=130)` |
+| 379.8-407.2 `saturday_dinner` ... `adam_youre_my_only` | dinner: fork down, "Anything...", phone into his lap; Lina's drawing; he types | mom `seated`, fork `hold_prop` -> `set_down(t, 'fork', 1, xy)` at 395.0, `mom_watchful`, `talk`; lina `hold_prop('lina_drawing')` out to him; adam `phone_type`, `adam_ashamed` |
+| 414.3-420.9 `lina_knocked` ... `i_looked_down` | Lina at his shut door; she points up at his window | lina `knock(t, n=2, side=+1)`, `talk`; `point_at(t, window_pt)` (the bible: "There's a girl at our door" heard through the door) |
+| 465.7 `my_feet_moved` | top of the stairs, one step, two, halfway | adam_night `climb(t0, t1, 0, -rise, 4, run)` from the landing |
+| 471.9-478.5 `lina_under_the`, `lina_it_says_your` | Lina under the bare bulb holds up the card | lina `reach_to` up-front with `prop='rule_card'` + `hold_prop`, `talk`; bulb light `dict(rim='#fff1c8', rim_a=110, side=1)` |
+| 493.6 `i_stepped_over` | he steps over the chalk | adam_night `walk` + `step_up(t, side=1)` starting 0.3 s before the foot reaches the letters |
+| 496.5-503.6 `the_kitchen_light` ... `i_told_her` | Mom still dressed, red knuckles; he tells her | both `seated` 3/4 at the table edge, adam hands on the table, `adam_ashamed` -> `adam_steady`; mom `listening_soft`, `nod`, `ob_knuck` 1 |
+| 531.9 `mom_saved_every` | Save, Block, Report | mom `phone_taps([t1, t2, t3])`, `mom_firm` |
+| 566.8-587.6 `mom_didnt_look` ... `adam_i_hope_you` | at the open door, side by side; "No." | mom `mom_firm`, `look_at` Evie on the doormat; adam `adam_steady`, `talk`; nobody touches |
+| 600.8 `at_dawn_we` / 607.6 `lina_me_and_you` | scrubbing together; Lina sings | mom `scrub(t0, t1, pt)`; lina `scrub(..., amp=10)` + `sing_sway` + `talk` |
+| 616.7-625.5 `monday_i_told` ... `rahman_that_was_brave` | in her office chair | rahman `seated`, `listen_tilt`, `nod(t, n=2)`, `rahman_kind`, `talk`; adam `seated`, `adam_steady` |
+| 640.4 `the_caretaker_painted` | paints the square over (from behind) | caretaker `roller(t0, t1, ground_pt)` standing about 1 m from it; `CH.draw_roller(pen, a, t, ppc)` |
+| 643-664.5 `weeks_later_danny` ... `danny_i_crossed_it` | "Can we sit here?"; the shoebox; the card | danny `talk`; shoebox `CH.draw_shoebox(pen, x(t), table_y, ppc, open_)` pushed with both palms, released, slides; adam palms on the lid; danny `danny_kind` + `talk` |
+| 670.6 `my_fingertips_went` / 678.6 `i_scrubbed_it` | grown hands: white fingertips, the phone; scrubbing ONLY | `adam_grown` `draw_arm` with `ob_tips` 1, `phone_ob`; `scrub_brush` |
+| cold-open replay | Danny's mom at the lit window | `draw_silhouette(pen, 'danny_mom', ...)` + `phone_to_ear` |
+
+### Props (`PROPS3`, cm) and free functions
+`phone_ob` (Adam's dark phone), `phone_ob_lit` (screen glow spilling round it), `phone_mom` (teal case), `scrub_brush`, `bucket` (held by the handle), `hoodie_held` (grey, sleeves chalk-white to the elbow), `crayon`, `rule_card` / `rule_card_back` (cream, purple handwriting, a blue scribble at the top; the full-screen card is the UI's), `bracelet_real` (green and gold, no chalk; Evie's chalky one is `evie_bracelet`), `fork`, `lina_drawing` (a crayon drawing of the two of them, LINA in the corner). Free: `draw_bucket(pen, x, y_base, ppc, water, brush, wet)`, `draw_shoebox(pen, x, y_base, ppc, open_)`, `draw_roller(pen, actor, t, ppc)`, `draw_silhouette`, `draw_lina_drawing`.
+
+### Sound events the family emits
+`phone_tap` (typing, Save / Block / Report), `brush_scrub` (one per stroke), `paint_roll` (one per roller pass), `cloth_rustle` kind `grab` (the hoodie), plus the rig's own `footsteps_*` (walk, run, the stairs: kind `stair`), `knock_door` (Lina), `swing_creak` (the tape swings).
+
+### Sheets and tests
+`cd film && python3 tools/cast_family.py sheet faces selftest strips` (about 4 min for everything; `strips <group>` for one group). Outputs in `_work/cast/`: `family_sheet.png` (everyone to scale, 18 face busts, states, props), `family_faces_640.jpg` (faces at the size they must read), `family_strips_<group>.jpg` (adam_a, adam_b, adam_c, mom_a, mom_b, lina, danny, help, misc: 27 actions on stand-in sets with a printed reach/feet report), `family_check.jpg`. Self-test: 13 ids x 5 views x 3 detail levels, about 28 ms per full body.
+
+## Evie (this film's villain): `characters_evie.py`, see `EVIE_API`
+Run in the `characters` namespace by the one `characters_evie.py` exec line at the end of characters.py; `import characters as CH`. One id, `'evie'`, for every form: her look follows `EVIE_ARC` on the film clock plus pose fields. All of it is our own design (story bible). Nothing comes from the mood stills.
+
+**Design.** About 12 and 1.40 m, shorter than Adam. She has a round, freckled kid's face with a gap-tooth grin (two front teeth and a gap) and pale grey-blue eyes that open a little too wide. Her two dark braids start from a centre parting, go back behind the ears and come forward over her shoulders onto her chest. They are tied with faded red ribbon bows (`KEEPING_RED` #b0584f, the Keeping Square's red; the sets use the same constant). She wears a long-sleeved white blouse with a high round collar under an ankle-length navy pinafore (bib, straps, crossed straps at the back, two buttons, and a bib pocket with chalk dust on its lip), navy leggings and white sneakers. A worn chalk stub is always in her right hand: `pose.e_stub`, drawn even when a clip forgets it. Chalk dust sits on her fingertips and a little always drifts down, more each night (`e_dust`), and it also gathers on her hem. She is modest in every form: arms, legs and neck are always covered. She never touches anyone, and nothing she does is romantic.
+
+**Her arc (`EVIE_ARC`, automatic, like `WINKS_ARC`).** Each stage starts at a narration line (`EVIE_CUES`). The film sets the real times once: `CH.set_evie_arc({'wed': t, 'r1': t, ...})` or `CH.evie_arc_from_lines(lines)`. Until then, word-count placeholders are used. Stages change on cuts (transition 0). To override one window, use `a.stage(t0, 'r5', t1)`.
+
+| stage | starts at | smile (`e_chalk`) | blinks | braids (`e_unravel`) | dust | night flatness (`e_flatn`) | head tilt |
+|---|---|---|---|---|---|---|---|
+| mon | "That day, a new girl sat behind me." | her real gap-tooth smile | yes | neat | 0.12 | 0 | 0 |
+| wed | "Wednesday, at my shoulder... she didn't blink." | real, held too long | **never again** | 0.08 | 0.25 | 0.30 | 9 |
+| r1 | Rule number one. | real | no | 0.16 | 0.35 | 0.45 | 10 |
+| r2 | Rule number two. | chalk line just past the corners (0.25) | no | 0.30 | 0.45 | 0.52 | 11 |
+| r3 | Rule number three. | mid-cheek (0.42) | no | 0.42 | 0.55 | 0.60 | 12 |
+| r4 | Rule number four. | wider (0.58) | no | 0.55 | 0.66 | 0.68 | 13 |
+| r5 | Rule number five. | almost at her ears (0.80) | no | 0.70 | 0.78 | 0.76 | 14 |
+| r6 / r7 | Rule number six / seven. | ear to ear (1.0) | no | 0.84 / 0.92 | 0.9 / 1.0 | 0.84 / 0.88 | 15 |
+| drain | "Evie was on our doormat, smiling ear to ear." | ear to ear | no | 0.95 | 1.0 | 0.92 | 12 |
+
+- **The chalk smile** is a smooth white chalk line drawn on the face surface over her mouth. The real mouth is gone and the line's ends curl up. It is never a cut: no red, no teeth. When she talks (`talk()` / `m_open`), the line parts in the middle like a drawn mouth, with a dark fill and no teeth.
+- **Night:** call `a.night()` in night shots. Her colour then goes chalk-flat by `e_flatn`. Under a lit hall, use `a.night(amount=0.4)` so the drain still reads.
+- **Braids:** they unravel from the bottom up. The bow droops, loses a loop, and from about R5 hangs untied. Flyaway hairs increase.
+
+**Movement vocabulary (clips; each has a clear start and end, and her feet stay on the ground).**
+- **NORMAL:** `bounce(t0, t1)` (on her toes; she never leaves the ground), `laugh_away(t0, dur, side)`, `wave_hi(t0, t1)` (her left hand, the grin), plus the arc's normal blinks.
+- **OBSESSED:**
+  - Looks: `tilt_hold(t0, deg)`, `lens_lock(t0, t1)` (eyes on the lens, dead still), `hold_smile(t0, t1)`.
+  - Phone: `phone_glow(t0, t1, look='up')` (phone under her chin, face lit from below; for the background before Adam notices her), `type_phone(t0, t1)` (`phone_tap` events).
+  - Closeness: `one_inch(t0, t1, toward)` (the film places her one inch away), `block_wide(t0, t1)` (arms wide across a gate or doorway; never touching).
+  - Bracelet and swing: `hold_out_bracelet(t0, t1, target=None)`, then `seated(seat_y)` + `swing_ride(t0, t1, pivot, length)` + `swing_state(t)` / `draw_swing`, and `sing_song(t0, beat)` (or `talk` on the sung take).
+- **CREEPY:**
+  - Flat: `flat_drawing()` (she IS the chalk girl lying on the ground), `lie_flat(t0, dur, flat_k)` (she folds down into the ground plane, hinged at her feet, and becomes the drawing).
+  - Moving: `slide_flat(t0, dur, to, scale_to)` (a smooth slide that leaves a faint smear), `stand_from_ground(t0, dur)` (the drawing peels up into her with a rubbery overshoot).
+  - `neck_up(t0, dur, length, dx, grow)`: a smooth rubbery stretch toward his window, with no joints and no crack.
+  - Expressions: `evie_flat` (flat delight), `evie_hope` ("Write your name?"), `evie_hurt` ("Don't you trust me?").
+- **DRAIN:** `drain_away(t0, flat_dur, dust_dur, wind=±1)`. Her colour drains to flat chalk-white, then the wind lifts her away as dust (`e_drain` 0..1). The dust leaves from the downwind edge and the top first. What is left stays upright: she never crumbles or falls.
+- **The setup's chalk girl:** `CH.draw_chalk_girl(pen, x, y, h, flat_k=k)` draws a child's chalk drawing with two braids and bows, a pinafore, the stub, and a smile that runs past the face's outline. It stands up into Evie with an actor on `flat_drawing()` + `stand_from_ground()`.
+
+**Letterbox, stub, prints (free functions, placed on the set's points).**
+- **Fingers:** `f = CH.LetterboxFingers(slot=(x, y, w), door_base=(x, y), floor_quad=[nl, nr, fr, fl], text='ONLY', box=(u0, v0, u1, v1), size_cm=(w, d), px_per_cm=k, t_in=t, letter_times=[tO, tN, tL, tY], t_out=None)`. The four fingers are chalk-white and far too long, with soft knuckle creases, rounded tips and no nails. They come through the slot, run down the door, creep across the floor and write in Adam's curly hand.
+  - Calls: `f.draw_chalk(pen, t)` on the floor layer (the letters stay written), `f.draw(pen, t)` over it, `f.tip(t)`, `f.events`.
+  - For R7, use `text='ME', axis='v'` with the box ending at Mom's chair and `t_out=None` (they stop there).
+- **Stub:** `CH.StubDrop(t0, slot_xy, floor_y, stop_xy, px_per_cm)`: it falls, bounces once and rolls to the bottom stair. Calls: `.draw(pen, t)`, `.events`.
+- **Slot smile:** `CH.draw_slot_smile(pen, (x, y, w, h), t, amount, hum)`: only her chalk smile shows in the slot, ear to ear, shivering while she hums.
+- **Writing and marks:**
+  - `CH.chalk_word(pen, 'ONLY ME', quad, box, u)`: the same handwriting for the ONLY ME tracker, ADAM and DANNY.
+  - `CH.draw_sneaker_print(pen, x, y, px_per_cm, angle, squash)`: one white chalk print, pointing the way she went.
+  - `CH.draw_chalk_stub(pen, x, y, px_per_cm, angle)`.
+- **Props:** `chalk_stub`, `evie_phone`, `evie_phone_screen`, `evie_bracelet` (green and gold, chalk dust).
+
+**Beat map (key every time to the timeline's line and word times).**
+| beat | clips |
+|---|---|
+| "someone had chalked a little girl. Two braids. A smile that didn't stop." | `draw_chalk_girl(..., flat_k)` in the square (or an actor on `flat_drawing()`) |
+| "a new girl sat behind me... faded red ribbons" / "Hi! I'm Evie. Like forever." | stage mon, `expr('evie_grin')`, `wave_hi` + `talk`, `bounce` |
+| Tuesday, the locker, the crisps | `bounce`, `laugh_away` |
+| "Wednesday, at my shoulder... she didn't blink." / "favourite person" | `one_inch`, `hold_smile`, `lens_lock`, `tilt_hold`, `talk` |
+| R1 messages; "Under the streetlight, Evie smiled up" | `type_phone` / `phone_glow` cutaways; `night()` + `look_at(window)` + `hold_smile` |
+| "Evie lay down flat, like a chalk drawing... and slid away." | `lie_flat(t, 0.8, flat_k)` then `slide_flat(t, 1.6, to)` |
+| R2 "one inch from my shoulder" / "Only me?" / "Just past the corners." | `one_inch`, `hold_out_bracelet` (optional), `talk`; the night shot shows stage r2 |
+| R3 "Best friends share passwords. Don't you trust me?" | `expr('evie_hurt')` + `talk`; her phone with `reach_to(..., prop='evie_phone_screen')` |
+| R4 the red lights ("She never ran.") | standing still, `lens_lock`, `hold_smile`; she is there on cuts, never moving |
+| "on the swings, she sang my song" | `seated` + `swing_ride` + `sing_song` / `talk` on the sung take |
+| "The chalk slid out... and stood up. Evie. Washed in red." / "Arms spread across the gate." | `flat_drawing` + `slide_flat` + `stand_from_ground`; red sunset rim light; `block_wide`; `expr('evie_flat')` + `talk` |
+| "She was flat chalk again." | `lie_flat(t, 0.35)` (fast) |
+| R5 "Evie's lips moved" at the dark window | `night()`, `lens_lock`, `talk` (the chalk line parts) |
+| "Up... and up... toward my window." | `neck_up(t, 3.0, 900, grow=0.2)` from above |
+| R6 the letterbox: "O. N. L. Y.", humming, the stub | `LetterboxFingers('ONLY', letter_times=...)`, `draw_slot_smile(hum=1)`, `StubDrop` |
+| R7 "Chalk fingers wrote M... E... toward the kitchen" | `LetterboxFingers('ME', axis='v')` stopping at the chair |
+| "on our doormat, smiling ear to ear" / "Write your name?" | stage r7 or drain, `night(0.4)`, `hold_smile`, `expr('evie_hope')` + `talk` |
+| "Only me. I'm here, I'm he-" / "Her colour drained to chalk-white..." | `talk` / `sing_song`, then `drain_away(t, 1.6, 2.8, wind)` |
+
+**Sound events she emits.** Each event is a dict `{t, name, gain_db, pan, params, who: 'evie'}` in `a.events`, `f.events` or `stub.events`.
+
+| event | kinds and level (dB) | suggested sound |
+|---|---|---|
+| `chalk_scrape` | write -13 (one per stroke, `dur`); creep -22 (fingers coming or going); slide -15; flatten -18; rise -14; stretch -24 (the neck: a long soft drag, never a crack) | chalk on a board / floor |
+| `chalk_tap` | tap -16 (`chalk_tap(t)`); beat -18 (`sing_song(taps=True)`); land -16; stop -16 (the stub against the stair) | one soft chalk tap |
+| `chalk_stub_drop` | drop -10, bounce -18 | a small chalk stick on boards |
+| `chalk_roll` | -19, `dur` | a chalk stub rolling |
+| `chalk_dust_whoosh` | -12, `dur` (the drain) | a soft airy whoosh with powder |
+| `phone_tap` | about -22 | screen taps |
+| `swing_creak` | about -22, at each end of the swing | a chain creak |
+
+**Sheets and checks** (`python3 _work/cast/evie_sheets.py [sheet] [strips slide neck letterbox drain swing]`):
+- `W/cast/evie_sheet.png`: every form, the smile stages R1-R7 side by side, the drain steps, the letterbox fingers and the slot smile.
+- `W/cast/evie_strip_*.jpg`: 12 frames at 8 fps of each action, with its events printed.
+- Self-test: `python3 -c "import characters as CH; CH._selftest_evie()"`.
+- Speed (2560x1440, a 1200-px figure): 50 ms against 40 ms for Owen. The drain dust frame takes about 200 ms.
+
+
+## (reference) Buttons film: `characters_buttons.py`, see `BUTTONS_API`
 Run in the `characters` namespace after `characters_walls.py` (the `_BUTTONS_SRC` exec line in characters.py). Use
 `import characters as CH`. Old ids kept: `mom_walls`, `owen_dummy`. All designs are ours (story bible), none from the mood stills.
 

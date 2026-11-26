@@ -10096,3 +10096,12 @@ exec(compile(open(_WALLS_SETS_SRC).read(), _WALLS_SETS_SRC, 'exec'))
 # and the inserts live in sets_buttons.py, run here in this module's namespace after sets_walls.py. See its docstring and SETS.md.
 _BUTTONS_SETS_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sets_buttons.py')
 exec(compile(open(_BUTTONS_SETS_SRC).read(), _BUTTONS_SETS_SRC, 'exec'))
+
+
+# ======================================================================================================================
+# THE OBSESSION FILM ("If a Girl Is OBSESSED With Being Your Only Friend... DON'T WRITE YOUR NAME"): Adam's house (his
+# room, the hall and stairs, the kitchen, the front from his window), Danny's blue door, the school corridor / lunch
+# hall / Mrs. Rahman's office, the playground with the Keeping Square, Mom's camcorder tape, the chalk primitive and the
+# inserts live in sets_obsession.py, run here in this module's namespace after sets_buttons.py. See its docstring and SETS.md.
+_OBSESSION_SETS_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sets_obsession.py')
+exec(compile(open(_OBSESSION_SETS_SRC).read(), _OBSESSION_SETS_SRC, 'exec'))

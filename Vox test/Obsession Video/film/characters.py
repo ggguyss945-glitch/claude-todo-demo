@@ -7624,6 +7624,8 @@ exec(compile(open(_WALLS_SRC).read(), _WALLS_SRC, 'exec'))
 # characters_buttons.py, run here the same way (see BUTTONS_API / CAST.md)
 _BUTTONS_SRC = os.path.join(_HERE, 'characters_buttons.py')
 exec(compile(open(_BUTTONS_SRC).read(), _BUTTONS_SRC, 'exec'))
+exec(compile(open(os.path.join(_HERE, 'characters_evie.py')).read(), os.path.join(_HERE, 'characters_evie.py'), 'exec'))  # Evie (EVIE_API)
+exec(compile(open(os.path.join(_HERE, 'characters_obsession.py')).read(), os.path.join(_HERE, 'characters_obsession.py'), 'exec'))  # family (OBSESSION_API)
 
 
 if __name__ == '__main__' and '--selftest' in sys.argv:

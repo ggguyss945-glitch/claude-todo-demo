@@ -78,6 +78,9 @@ LINE_SET = {                                         # tag -> settings that over
     # her last sung line, "stretched thin": from 60 % of the line the playback slows to 0.88 by the cut-off "he-"
     # (pitch and formants sink 2.2 semitones together, like a stretched tape), then tools/vo_fx.py 'thin'
     'evie_only_me_im': dict(tape=(0.60, 0.88)),
+    # "Art." (a shrug, too quick): at x1.20 the lone word read "Ours" / "Or" at some levels; x1.15 reads "Art" 9/9
+    # (3 levels x 3 paddings, tools test)
+    'adam_art': dict(alpha=1.15),
 }
 
 

@@ -1,9 +1,9 @@
-"""Every line of the edited voice track (the Walls film; adapted from the Ice Cream film) against what the recogniser
+"""Every line of the edited voice track (the OBSESSED film; adapted from the Buttons film) against what the recogniser
 hears in it.
     python3 tools/vo_asrcheck.py [--whole-file-only] [--every]   exit 1 on any mismatch that is not in ALLOW
     --every: also recognise EVERY line on its own (50 ms margins, 0.3 s of silence padding) and judge it the same way
     A one-word line that still fails on its own gets a Whisper second opinion (0.3 and 0.6 s padding; both must read it).
-    The child lines (who owen / son, re-voiced) are stricter: on its own every one must read WORD-PERFECT (normalised
+    The re-voiced lines (who adam, adam7, danny, lina, evie) are stricter: on its own every one must read WORD-PERFECT (normalised
     spellings: "Mamma" = Mama, "street light" = streetlight) by Parakeet; Whisper's reading is printed beside it.
 Reads W/narration/edit_list.json (each line's output span) and W/align/asr_cache.json (Parakeet on narration_en.wav,
 written by align.py: run align.py after every vo_edit.py build, then this). A recognised word belongs to the line whose
@@ -25,16 +25,22 @@ from vo_edit import toks                                           # noqa: E402 
 # what the recogniser cannot help hearing its own way (homophones and spellings: not edit faults)
 SAME = {'vii': '7', 'larksburgh': 'larkspur', 'larksbury': 'larkspur', 'gray': 'grey', 'mr': 'mister', 'dr': 'doctor', 'oh': '0', 'sh': 'shh', 'genes': 'jeans', 'colour': 'color',
         'lena': 'lina', 'lenas': 'linas', 'pajamas': 'pyjamas', 'muster': 'mister',
-        'moms': 'mom', 'mamma': 'mama', 'bravelist': 'bravelist', 'mammas': 'mamas', 'mensa': 'mensah'}   # "Mom's" (apostrophe dropped), homophones
+        'moms': 'mom', 'mamma': 'mama', 'bravelist': 'bravelist', 'mammas': 'mamas', 'mensa': 'mensah',
+        'favorite': 'favourite', 'lena': 'lina', 'eevee': 'evie', 'evy': 'evie', 'color': 'colour',
+        'lights': 'light'}   # "your light's still on": the s of light's runs into "still" (heard "light still")   # "Mom's" (apostrophe dropped), homophones
 JOIN2 = {('snow', 'flake'): 'snowflake', ('door', 'knob'): 'doorknob', ('snow', 'man'): 'snowman', ('grown', 'up'): 'grownup',
          ('street', 'light'): 'streetlight', ('window', 'sill'): 'windowsill', ('head', 'set'): 'headset',
-         ('brave', 'list'): 'bravelist'}   # compounds the recogniser writes as one word or two
+         ('brave', 'list'): 'bravelist', ('on', '2'): 'onto', ('letter', 'box'): 'letterbox', ('non', 'stop'): 'nonstop',
+         ('porch', 'light'): 'porchlight'}   # compounds the recogniser writes as one word or two
 # lines that may fail, by tag, with the reason (checked with a second recogniser, not an edit fault)
 ALLOW_TAGS = {
-    'mom_checked_every': 'the take itself: "notes. Mom" run together with no gap; the raw take from 45.85 s reads '
-                         '"Mon checked" by Whisper (Parakeet "Mom"); the cut sits in its silence (-85 dB at 45.96 s, the '
-                         'onset from 45.97 s is kept): not an edit fault',
+    'evie_only_me_im': 'her last sung line is cut off on "he-" on purpose (tools/vo_edit.py SPLICE: the h and the first '
+                       '105 ms of the "ee", cut at raw 48.175 s before the r at 48.19 s); both recognisers complete the '
+                       'cut-off word to "here"',
+    'shed_called_mrs': 'the take: "She\'d called" with the d unreleased before the k (the whole-file pass reads "She\'d"; '
+                       'alone it reads "She called"); not an edit fault',
 }
+CHILD = ('adam', 'adam7', 'danny', 'lina', 'evie')     # the re-voiced lines (tools/vo_voices.py): word-perfect on their own
 
 
 def norm(s):
@@ -101,10 +107,11 @@ def main(quiet_iso=False, every=False):
             why = judge(norm(txt), norm(e.get('say', e['en'])))
             if why and i not in flagged:
                 bad.append([i, 'on its own: ' + ', '.join(why), e.get('say', e['en']), txt, None])
-        for e in el:                                                  # the child voices: word-perfect on their own
-            if e['who'] in ('owen', 'son'):
+        WH = whisper_opinion([e['i'] for e in el if e['who'] in CHILD], el)
+        for e in el:                                                  # the re-voiced voices: word-perfect on their own
+            if e['who'] in CHILD:
                 txt = iso_all.get(e['i'], '')
-                wh = whisper_opinion([e['i']], el).get(e['i'], [''])[0]
+                wh = WH.get(e['i'], [''])[0]
                 ok = norm(txt) == norm(e.get('say', e['en']))
                 print('child L%-3d %-5s %s | Parakeet: %s | Whisper: %s' % (e['i'], 'OK' if ok else 'FAIL', e.get('say', e['en']), txt, wh))
                 if not ok: bad.append([e['i'], 'child line not word-perfect on its own', e.get('say', e['en']), txt, None])

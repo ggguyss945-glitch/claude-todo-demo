@@ -212,6 +212,10 @@ def _ev_braid_curve(hm, side, P, t):
     X, Y, Z = _rot_head(hm, xs, ys, zs)
     k = np.array([0, 0, 0.3, 0.6, 0.85, 1.0])
     X = X + sw * k
+    # the braids hang from the head but lie on her chest: undo most of the head's roll toward the bottom (gravity)
+    roll = -math.radians(P.tilt + P.h_tilt) * np.array([0, 0.2, 0.55, 0.85, 1.0, 1.0])
+    dX, dY = X - X[0], Y - Y[0]
+    X, Y = X[0] + dX * np.cos(roll) - dY * np.sin(roll), Y[0] + dX * np.sin(roll) + dY * np.cos(roll)
     return _cr(list(zip(X, Y)), 40), Z
 
 
@@ -234,7 +238,7 @@ def _ev_braid_draw(c, a, L, s0, s1, sp, P, det, t, side, cut_head=None):
                 u = np.linspace(0, 1, 16)
                 off = (j * (8 + 16 * un) * u + 3.0 * np.sin(u * 7.0 + j * 2 + t * 0.8) * u)[:, None] * nrm
                 pts = base + off
-                q = _tube([tuple(p) for p in pts[::3]] + [tuple(pts[-1])], [12, 11, 10, 8, 6, 3][:len(pts[::3]) + 1], 0.9)
+                q = _tube([tuple(pts[i]) for i in (0, 3, 6, 9, 12, 15)], [12, 11, 10, 8, 6, 3], 0.9)
                 c.fill(q, hc); c.line(q, c.lw * 0.7)
             if det >= 1:
                 for j in (-0.5, 0.5):
@@ -649,11 +653,11 @@ def _ev_matrix(f):
     return m + [0, 0, 0, 1, 0]
 
 
-def _ev_layer(pen, f, a=1.0):
+def _ev_layer(pen, f, a=1.0, bounds=None):
     if f < 0.005 and a > 0.995: return False
     paint = skia.Paint(Alphaf=clamp(a))
     if f >= 0.005: paint.setColorFilter(skia.ColorFilters.Matrix(_ev_matrix(clamp(f))))
-    pen.cv.saveLayer(None, paint)
+    pen.cv.saveLayer(bounds, paint)
     return True
 
 
@@ -709,8 +713,11 @@ def draw(pen, who, *a, **k):
         if fig_a <= 0.01: return None
         f = _ev_flat(P)
 
+        nk = max(0.0, P.e_neck) * h / 1000.0
+        bnd = skia.Rect.MakeLTRB(fx - 0.95 * h - abs(P.e_neck_dx) * h / 1000.0, fy - 1.3 * h - 1.2 * nk, fx + 0.95 * h + abs(P.e_neck_dx) * h / 1000.0, fy + 0.12 * h)
+
         def fig(pn):
-            lay = _ev_layer(pn, f, fig_a)
+            lay = _ev_layer(pn, f, fig_a, bnd)
             _EV['P'] = P
             try:
                 return _draw_ev_prev(pn, who, x, y, h, P, kw.get('detail'), light, t, kw.get('aim'))
@@ -792,12 +799,14 @@ def _ev_dust_dissolve(pen, fig, fx, fy, h, u, t, wind=1.0, seed=11):
     alpha0 = arr[:, :, 3].astype(np.float32) / 255.0
     # figure-normalised coordinates
     bw, bh = max(bb.width(), 1.0), max(bb.height(), 1.0)
-    xs = (np.arange(W, dtype=np.float32) + L - bb.left()) / bw
-    ys = (np.arange(H, dtype=np.float32) + T - bb.top()) / bh
+    cols = np.where(alpha0.max(axis=0) > 0.1)[0]; rows_ = np.where(alpha0.max(axis=1) > 0.1)[0]
+    if len(cols) < 2 or len(rows_) < 2: return None
+    xs = (np.arange(W, dtype=np.float32) - cols[0]) / max(1.0, cols[-1] - cols[0])     # the figure's own extent
+    ys = (np.arange(H, dtype=np.float32) - rows_[0]) / max(1.0, rows_[-1] - rows_[0])
     xd = xs if wd > 0 else 1.0 - xs                       # 0 upwind .. 1 downwind
     nz = _ev_noise(W, H, seed)
-    field = 0.5 * (1.0 - np.clip(xd, 0, 1))[None, :] + 0.22 * np.clip(ys, 0, 1)[:, None] + 0.34 * nz
-    th = u * 1.18 - 0.08
+    field = 0.45 * (1.0 - np.clip(xd, 0, 1))[None, :] + 0.27 * np.clip(ys, 0, 1)[:, None] + 0.28 * nz
+    th = u * 1.08 - 0.04
     mask = np.clip((field - th) / 0.05, 0.0, 1.0)
     out = (arr.astype(np.float32) * mask[:, :, None]).astype(np.uint8)
     img2 = skia.Image.fromarray(np.ascontiguousarray(out), colorType=img.colorType(), alphaType=img.alphaType())
@@ -805,12 +814,12 @@ def _ev_dust_dissolve(pen, fig, fx, fy, h, u, t, wind=1.0, seed=11):
     c3.drawImage(img2, 0, 0)
     # dust: fixed particles on the figure, each released when the front passes it, then carried up and downwind
     rng = np.random.default_rng(seed + 5)
-    n = 1400
+    n = 2600
     px = rng.random(n); py = rng.random(n) * 1.12 - 0.02
     ix = np.clip(((px * bw + bb.left() - L)).astype(int), 0, W - 1); iy = np.clip(((py * bh + bb.top() - T)).astype(int), 0, H - 1)
     on = alpha0[iy, ix] > 0.3
     fv = field[iy, ix]
-    age = (th - fv) / 1.18
+    age = (th - fv) / 1.08
     sel = on & (age > 0) & (age < 0.55)
     if sel.any():
         ag = age[sel]; k = np.arange(n)[sel]
@@ -843,7 +852,7 @@ def _chalk_girl_paths(smile=1.0, unravel=0.0):
             u = 0.15 + 0.2 * k
             i = min(int(u * 3), 2); s = u * 3 - i
             x_ = br[i][0] + (br[i + 1][0] - br[i][0]) * s; y_ = br[i][1] + (br[i + 1][1] - br[i][1]) * s
-            L_.append(poly([(x_ - 16, y_ - 6), (x_ + 16, y_ + 6)], False))
+            L_.append(poly([(x_ - 9, y_ - 4), (x_ + 9, y_ + 4)], False))
         bx, by = br[-1]
         for lp in (-1, 1):
             L_.append(smooth([(bx, by), (bx + lp * 30, by - 18), (bx + lp * 30, by + 14)], True, 0.7))
@@ -951,3 +960,650 @@ def draw_swing(pen, pivot, length, angle=0.0, px_per_cm=10.0, sep=0.35, seat_w_c
         seat = rrect(sx - hw - 3 * px_per_cm, sy - 2.2 * px_per_cm, 2 * hw + 6 * px_per_cm, 4.4 * px_per_cm, 1.6 * px_per_cm)
         pen.fill(seat, '#3a3b42'); pen.line(seat, lw * 1.2, LINE)
     return sx, sy
+
+
+# ====================================================================================================== acting: her vocabulary
+# NORMAL (Mon, Tue, daylight): bounce, blink, look away and laugh, wave hi. OBSESSED (from Wednesday): head tilt, never
+# blinks (the arc), eye lock to the lens, holds her smile too long, phone glow under her chin, typing, one inch too close,
+# arms wide across a doorway or gate (never touching), the bracelet held out, the swing and the song. CREEPY (nights):
+# lies flat as a chalk drawing and slides, stands up out of the ground, the neck stretch. DRAIN: colour to chalk-white,
+# then the wind takes her as dust. Every clip has a clear start and end; feet stay on the ground (the bounce is on her
+# toes, never a hop off the ground).
+def _ev_night(self, t0=-INF, t1=None, amount=1.0, fade=0.3):
+    """Night: her colour goes chalk-flat by the arc's e_flatn (more each night)."""
+    return self._add(t0, None if t1 is None else t1 + fade, lambda P, t: P.mix(dict(e_night=amount), _env(t, t0, t1, fade, fade)))
+
+
+def _ev_stage(self, t0, name, t1=None, fade=0.3):
+    """Override the arc with stage `name` for a window (e.g. a flash-forward, or the R2 locker beat at R2's smile)."""
+    d = EVIE_STAGES[name]
+    return self._add(t0, None if t1 is None else t1 + fade, lambda P, t: P.mix(d, _env(t, t0, t1, fade, fade)))
+
+
+def _ev_bounce(self, t0, t1, rate=1.9, amp=1.0):
+    """NORMAL: bouncing on her toes, too happy to stand still (heels up on each beat, the head bobbing a beat late, the
+    braids swinging). Her toes never leave the ground."""
+    def fn(P, t):
+        w = _env(t, t0, t1, 0.3, 0.4)
+        if w <= 0: return
+        ph = (t - t0) * rate
+        b = abs(math.sin(PI * ph)) ** 1.5
+        P.tiptoe = max(getattr(P, 'tiptoe', 0.0), 0.85 * amp * b * w)
+        P.h_nod += 0.05 * amp * w * math.sin(2 * PI * ph - 0.9)
+        P.sway += 2.5 * amp * w * math.sin(PI * ph)
+        P.sec_x += 0.4 * w * math.sin(2 * PI * ph)
+    return self._add(t0, t1 + 0.5, fn)
+
+
+def _ev_laugh_away(self, t0, dur=1.5, side=1):
+    """NORMAL: she looks away and laughs (eyes squeezed, shoulders bouncing, the head turned and tipped), then back."""
+    def fn(P, t):
+        w = _env(t, t0, t0 + dur, 0.25, 0.4)
+        if w <= 0: return
+        P.mix(EXPR['evie_laugh'], w)
+        P.h_turn += side * 0.38 * w; P.h_tilt += side * 9.0 * w; P.h_nod += 0.08 * w
+        sh = max(0.0, math.sin(2 * PI * (t - t0) * 4.2)) * w * (1.0 - prog(t, t0, t0 + dur))
+        P.shrug += 0.35 * sh; P.bob += 4.0 * sh
+        P.look_x += side * 0.5 * w
+    return self._add(t0, t0 + dur + 0.6, fn)
+
+
+def _ev_wave_hi(self, t0, t1, side=1):
+    """NORMAL: 'Hi!' A quick bright wave with her free (left) hand, the gap-tooth grin, a little bounce."""
+    self.wave(t0, t1, side=side, speed=1.3, height=0.9)
+    self.expr('evie_grin', t0, t1, 0.25)
+    return self.bounce(t0, t1, rate=1.6, amp=0.6)
+
+
+def _ev_lens_lock(self, t0, t1=None, fade=0.25):
+    """OBSESSED: her eyes lock to the lens (to Adam, to us) and stay, the head dead still, small pupils."""
+    d = dict(lock=1.0, still=0.75, pupil=0.72, _noblink=1.0)
+    return self._add(t0, None if t1 is None else t1 + fade, lambda P, t: P.mix(d, _env(t, t0, t1, fade, fade)))
+
+
+def _ev_hold_smile(self, t0, t1=None, fade=0.4):
+    """OBSESSED: the smile held too long (before rule 2 the real one; after, the chalk line just stays), no blink, still."""
+    def fn(P, t):
+        w = _env(t, t0, t1, fade, fade)
+        if w <= 0: return
+        P.mix(EXPR['evie_hold'], w)
+        P.still = max(P.still, 0.8 * w); P._noblink = max(P._noblink, w)
+    return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+
+def _ev_tilt_hold(self, t0, angle=24.0, dur=1.4, t1=None):
+    """OBSESSED: the slow head tilt, held (the arc already tilts her a little from Wednesday)."""
+    return self.head_tilt(t0, angle, dur, t1, back='ease', back_dur=1.0)
+
+
+def _ev_phone_glow(self, t0, t1=None, side=1, fade=0.5, look='up'):
+    """OBSESSED: in the background before Adam notices her: the phone held just under her chin, its glow lighting her
+    face from below; look='up' (eyes over the phone at Adam) or 'phone'."""
+    def fn(P, t):
+        w = _env(t, t0, t1, fade, fade)
+        if w <= 0: return
+        self._arm(P, side, w, -50.0, 34.0, 150.0, 'grip', up=0.9, prop='evie_phone')
+        P.e_glow = max(P.e_glow, w)
+        P.h_nod += 0.1 * w
+        if look == 'up': P.look_y += -0.35 * w
+        else: P.look_y += 0.7 * w
+        P.still = max(P.still, 0.6 * w)
+    return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+
+def _ev_type_phone(self, t0, t1, side=1, rate=5.5, gain=-22.0):
+    """OBSESSED: typing on her phone (one-handed, the thumb tapping; the screen lights her face); 'phone_tap' events."""
+    def fn(P, t):
+        w = _env(t, t0, t1, 0.4, 0.4)
+        if w <= 0: return
+        tap = max(0.0, math.sin(2 * PI * (t - t0) * rate * 0.5)) ** 3
+        self._arm(P, side, w, -46.0, 128.0 - 6.0 * tap, 150.0, 'grip', up=0.6, prop='evie_phone',
+                  rot=side * 6.0 * tap)
+        P.e_glow = max(P.e_glow, 0.65 * w)
+        P.h_nod += 0.16 * w; P.look_y += 0.75 * w
+    self._add(t0, t1 + 0.4, fn)
+    tt = t0 + 0.45
+    while tt < t1:
+        self._ev(tt, 'phone_tap', gain + 3.0 * (hash01(int(tt * 100), 5) - 0.5)); tt += (1.0 + 0.5 * hash01(int(tt * 37), 6)) / rate
+    return self
+
+
+def _ev_one_inch(self, t0, t1=None, toward=1, fade=0.6):
+    """OBSESSED: suddenly one inch from his shoulder: leaning in, head tilted toward him, very still (the film places
+    her; she never touches)."""
+    def fn(P, t):
+        w = _env(t, t0, t1, fade, fade)
+        if w <= 0: return
+        P.lean += 5.0 * w; P.h_tilt += toward * 7.0 * w; P.h_dx += toward * 6.0 * w
+        P.still = max(P.still, 0.7 * w)
+    return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+
+def _ev_block_wide(self, t0, t1=None, dur=0.8, fade=0.7):
+    """OBSESSED / CREEPY: arms spread wide at shoulder height across a doorway or gate, palm open, the stub still in her
+    right hand; she comes as close as she is let, never touching."""
+    def fn(P, t):
+        w = ease_in_out(prog(t, t0, t0 + dur)) * (1.0 if t1 is None or t < t1 else 1.0 - ease_in_out(prog(t, t1, t1 + fade)))
+        if w <= 0: return
+        self._arm(P, 1, w, 310.0, 12.0, 26.0, 'open', up=0.0)
+        self._arm(P, -1, w, 310.0, 12.0, 26.0, 'grip', up=0.0)
+        P.shrug += 0.12 * w
+    return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+
+def _ev_hold_out_bracelet(self, t0, t1=None, side=1, target=None, dur=0.7, fade=0.5):
+    """OBSESSED: the woven bracelet held out on her fingers ('I made it myself. For you.'), toward target if given (it
+    stops short: a gift is never pressed into a hand)."""
+    if target is not None:
+        return self.reach_to(t0, side, target, t1=t1, dur=dur, z=60.0, contact='tips', shape='relaxed', fade=fade,
+                             prop='evie_bracelet')
+    def fn(P, t):
+        w = _env(t, t0, t1, dur, fade)
+        if w <= 0: return
+        self._arm(P, side, w, 40.0, 140.0, 250.0, 'relaxed', up=0.0, prop='evie_bracelet')
+    return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+
+def _ev_swing_ride(self, t0, t1, pivot, length, amp=20.0, period=2.3, sep=0.35, ramp=1.5, gain=-22.0):
+    """OBSESSED: on a swing (side view, swinging across the screen). The actor must sit on the swing's seat at rest:
+    call a.seated(pivot[1] + length) first; this moves her along the arc, leans her with it, and keeps both hands on the
+    chains. a.swing_state(t) -> (angle deg, seat point) to draw the swing with draw_swing at the same angle.
+    'swing_creak' at each end of the swing."""
+    self._swing = (t0, t1, pivot, length, amp, period, ramp)
+    ppc = self.height / (self.sp['m'] * 100.0)
+    def ang(t):
+        if t < t0: return 0.0
+        e = ease_in_out(prog(t, t0, t0 + ramp)) * (1.0 - ease_in_out(prog(t, t1 - ramp, t1)))
+        return amp * e * math.sin(2 * PI * (t - t0) / period)
+    self._swing_ang = ang
+    def fn(P, t):
+        a = math.radians(ang(t))
+        P.dx += math.sin(a) * length
+        P.dy += -length * (1.0 - math.cos(a))
+        P.tilt += math.degrees(a) * 0.35
+        P.lean += -4.0 * math.sin(a)
+    self._add(t0 - 0.01, t1 + 0.01, fn)
+    for sd in (1, -1):
+        def chain(t, sd=sd):
+            a = math.radians(ang(t))
+            hy = 0.24 * self.height                       # she grips the chains a hand above her lap
+            sx, sy = pivot[0] + math.sin(a) * length, pivot[1] + math.cos(a) * length
+            hw = 46.0 * 0.5 * ppc * sep + 6.0 * ppc * (1 - sep)   # where draw_swing puts the chains
+            return (sx - math.sin(a) * hy + sd * hw * math.cos(a), sy - math.cos(a) * hy + sd * hw * math.sin(a))
+        self.reach_to(t0, sd, chain, t1=t1, dur=0.5, z=0.0, contact='grip', shape='grip', fade=0.5)
+    tt = t0 + period / 4.0
+    while tt < t1:
+        if abs(ang(tt)) > 4.0: self._ev(tt, 'swing_creak', gain + 4.0 * (abs(ang(tt)) / max(amp, 1.0) - 1.0))
+        tt += period / 2.0
+    return self
+
+
+def _ev_swing_state(self, t):
+    """(angle deg, seat point) of the swing swing_ride set up (angle 0 and the rest seat before it starts)."""
+    t0, t1, pivot, length, amp, period, ramp = self._swing
+    a = self._swing_ang(t)
+    r = math.radians(a)
+    return a, (pivot[0] + math.sin(r) * length, pivot[1] + math.cos(r) * length)
+
+
+_STICK_SYLL = [4, 3, 3, 3, 3, 3, 3, 4, 4, 3, 3, 4, 3, 4]     # "Me and you, / and you and me, / stick like glue ..." in beats
+
+
+def _ev_sing_song(self, t0, beat=0.42, n=32, amount=0.55, taps=False, gain=-18.0):
+    """Mouth for "Stick Like Glue" (one syllable per beat, a held note at each phrase end), for when the sung take is not
+    lip-synced with talk(). taps=True also emits one soft 'chalk_tap' per beat (the motif's tap)."""
+    def fn(P, t):
+        if t < t0 or t > t0 + n * beat + 0.3: return
+        u = (t - t0) / beat
+        k = int(u); f = u - k
+        held = (k % 8) == 7
+        o = amount * (math.sin(PI * min(1.0, f / 0.8)) if not held else 0.8)
+        P.m_open = max(P.m_open, o * (0.8 + 0.2 * math.sin(k * 1.7)))
+        P.m_round = max(P.m_round, 0.35 * o * (k % 3 == 0))
+        P.h_tilt += 3.0 * math.sin(2 * PI * u / 4.0)
+    self._add(t0, t0 + n * beat + 0.5, fn)
+    if taps:
+        for k in range(n): self._ev(t0 + k * beat, 'chalk_tap', gain - 2.0 * (k % 4 != 0), kind='beat')
+    return self
+
+
+def _ev_lie_flat(self, t0, dur=0.9, flat_k=None, direction=0.0, gain=-18.0):
+    """CREEPY: she lies down flat, like a chalk drawing: the figure folds down into the ground plane (hinged at her feet)
+    and turns into the chalk girl drawing lying on the ground. flat_k = the ground's foreshortening there."""
+    def fn(P, t):
+        u = ease_in_cubic(prog(t, t0, t0 + dur)) if t < t0 + dur else 1.0
+        P.e_lie = max(P.e_lie, u)
+        if flat_k is not None: P.e_flatk = flat_k
+        P.e_lie_dir = direction
+        P.still = max(P.still, 0.8)
+    self._add(t0, None, fn)
+    self._ev(t0 + dur * 0.55, 'chalk_scrape', gain, kind='flatten', dur=round(dur * 0.6, 3))
+    return self
+
+
+def _ev_flat_drawing(self, t0=-INF, t1=None, flat_k=None, direction=0.0):
+    """CREEPY / setup: she is the chalk drawing on the ground (the little chalk girl in the Keeping Square)."""
+    def fn(P, t):
+        if t1 is not None and t > t1: return
+        P.e_lie = 1.0; P.e_lie_dir = direction
+        if flat_k is not None: P.e_flatk = flat_k
+    return self._add(t0, t1, fn)
+
+
+def _ev_slide_flat(self, t0, dur, to, scale_to=None, gain=-15.0, trail=True):
+    """CREEPY: flat on the ground, she slides away (to = where her feet end up, design px; scale_to = her size there, for
+    a slide in depth), smoothly and never running, leaving a faint chalk smear. 'chalk_scrape' (kind slide)."""
+    def fn(P, t):
+        u = ease_in_out(prog(t, t0, t0 + dur))
+        x0, y0 = self.x0 + P.dx, self.y0 + P.dy
+        P.dx += (to[0] - x0) * u; P.dy += (to[1] - y0) * u
+        if scale_to is not None: P.e_scale *= 1.0 + (scale_to - 1.0) * u
+        if trail:
+            P.e_trail = max(P.e_trail, min(1.0, u * 6.0) * (1.0 - 0.6 * prog(t, t0 + dur, t0 + dur + 2.0)))
+            P.e_tx, P.e_ty = x0 - self.x0, y0 - self.y0
+    self._add(t0, None, fn)
+    self._ev(t0, 'chalk_scrape', gain, kind='slide', dur=round(dur, 3))
+    return self
+
+
+def _ev_stand_from_ground(self, t0, dur=1.4, gain=-14.0):
+    """CREEPY: the chalk drawing stands up out of the ground into Evie: it peels up from the feet, the drawing turns into
+    her, a rubbery overshoot past upright and a settle. Set e_lie = 1 before (flat_drawing / lie_flat)."""
+    def fn(P, t):
+        if t < t0: return
+        u = prog(t, t0, t0 + dur)
+        v = ease_in_out(u) + 0.1 * math.sin(PI * clamp((u - 0.5) / 0.5))       # slow peel up, rubbery overshoot, settle
+        P.e_lie = min(P.e_lie, 1.0 - v) if u < 1 else min(P.e_lie, 0.0)
+        P.still = max(P.still, 0.8 * (1.0 - u))
+    self._add(t0, None, fn)
+    self._ev(t0, 'chalk_scrape', gain, kind='rise', dur=round(dur * 0.85, 3))
+    self._ev(t0 + dur * 0.8, 'chalk_tap', gain - 2.0, kind='land')
+    return self
+
+
+def _ev_neck_up(self, t0, dur, length, dx=0.0, grow=0.0, t1=None, back_dur=1.6, gain=-24.0):
+    """CREEPY (R5): her neck stretches smoothly up toward his window, 'Up... and up...': length in body units (1000 = her
+    height; 900 lifts her head almost her own height), dx sideways, grow = the head's size gain toward a high camera.
+    Rubbery and smooth: no joints, no crack, no cracking sound (only a long soft chalk drag)."""
+    def fn(P, t):
+        u = ease_in_out(prog(t, t0, t0 + dur))
+        if t1 is not None and t > t1: u *= 1.0 - ease_in_out(prog(t, t1, t1 + back_dur))
+        P.e_neck += length * u; P.e_neck_dx += dx * u
+        P.h_scale *= 1.0 + grow * u
+        P.h_tilt += -0.5 * P.h_tilt * u + 4.0 * math.sin(t * 0.9) * u
+        P.still = max(P.still, 0.9 * u)
+    self._add(t0, None if t1 is None else t1 + back_dur, fn)
+    self._ev(t0, 'chalk_scrape', gain, kind='stretch', dur=round(dur, 3))
+    return self
+
+
+def _ev_drain_away(self, t0, flat_dur=1.6, dust_dur=2.8, wind=1.0, gain=-12.0):
+    """DRAIN (R7, on the doormat at full smile): her colour drains to flat chalk-white over flat_dur, then the wind lifts
+    her away as dust over dust_dur (wind +1 blows toward screen right). She never crumbles or falls. 'chalk_dust_whoosh'."""
+    def fn(P, t):
+        u1 = prog(t, t0, t0 + flat_dur); u2 = prog(t, t0 + flat_dur, t0 + flat_dur + dust_dur)
+        P.e_drain = max(P.e_drain, 0.4 * u1 + 0.6 * u2)
+        P.e_wind = wind
+        P.still = max(P.still, 0.9 * u1)
+        P._noblink = 1.0
+    self._add(t0, None, fn)
+    self._ev(t0 + flat_dur * 0.9, 'chalk_dust_whoosh', gain, kind='drain', dur=round(dust_dur + 0.6, 3))
+    return self
+
+
+def _ev_chalk_tap(self, t, gain=-16.0, side=-1):
+    """One soft chalk tap (her stub on a surface, on a beat she chooses): the right hand flicks down; 'chalk_tap'."""
+    def fn(P, tt):
+        k = math.exp(-((tt - t) / 0.07) ** 2)
+        pre = 'hl_' if side > 0 else 'hr_'
+        P.__dict__[pre + 'down'] = P.__dict__.get(pre + 'down', 336.0) + 10.0 * k
+    self._add(t - 0.3, t + 0.3, fn)
+    self._ev(t, 'chalk_tap', gain, kind='tap')
+    return self
+
+
+for _n, _f in (('night', _ev_night), ('stage', _ev_stage), ('bounce', _ev_bounce), ('laugh_away', _ev_laugh_away),
+               ('wave_hi', _ev_wave_hi), ('lens_lock', _ev_lens_lock), ('hold_smile', _ev_hold_smile),
+               ('tilt_hold', _ev_tilt_hold), ('phone_glow', _ev_phone_glow), ('type_phone', _ev_type_phone),
+               ('one_inch', _ev_one_inch), ('block_wide', _ev_block_wide), ('hold_out_bracelet', _ev_hold_out_bracelet),
+               ('swing_ride', _ev_swing_ride), ('swing_state', _ev_swing_state), ('sing_song', _ev_sing_song),
+               ('lie_flat', _ev_lie_flat), ('flat_drawing', _ev_flat_drawing), ('slide_flat', _ev_slide_flat),
+               ('stand_from_ground', _ev_stand_from_ground), ('neck_up', _ev_neck_up), ('drain_away', _ev_drain_away),
+               ('chalk_tap', _ev_chalk_tap)):
+    if hasattr(Acting, _n): raise RuntimeError('characters_evie: Acting.%s already exists' % _n)
+    setattr(Acting, _n, _f)
+
+
+# ====================================================================================================== handwriting in chalk
+# Adam's handwriting (Evie writes in it: she only has what he has): round letters, curly M's. Strokes in a unit box
+# (x 0..1 right, y 0..1 down), traced in order.
+_LETTERS = {
+    'O': [[(0.62, 0.06), (0.24, 0.12), (0.05, 0.5), (0.24, 0.92), (0.6, 0.95), (0.92, 0.6), (0.84, 0.16), (0.55, 0.04), (0.36, 0.13)]],
+    'N': [[(0.02, 0.9), (0.1, 0.98), (0.1, 0.5), (0.12, 0.04), (0.5, 0.52), (0.86, 0.95), (0.88, 0.5), (0.9, 0.03)]],
+    'L': [[(0.2, 0.02), (0.16, 0.5), (0.14, 0.94), (0.5, 0.95), (0.86, 0.88)]],
+    'Y': [[(0.06, 0.04), (0.3, 0.32), (0.5, 0.5)], [(0.94, 0.04), (0.7, 0.3), (0.5, 0.5), (0.4, 0.76), (0.3, 0.98)]],
+    'M': [[(-0.02, 0.86), (0.08, 0.98), (0.1, 0.6), (0.12, 0.2), (0.2, 0.05), (0.31, 0.1), (0.41, 0.46), (0.5, 0.62),
+           (0.57, 0.4), (0.66, 0.08), (0.78, 0.05), (0.88, 0.28), (0.9, 0.82), (0.98, 0.98), (1.08, 0.86)]],
+    'E': [[(0.88, 0.07), (0.22, 0.06), (0.15, 0.5), (0.13, 0.94), (0.88, 0.94)], [(0.15, 0.5), (0.7, 0.5)]],
+    'A': [[(0.05, 0.98), (0.5, 0.02), (0.95, 0.98)], [(0.24, 0.62), (0.76, 0.62)]],
+    'D': [[(0.14, 0.02), (0.13, 0.98)], [(0.14, 0.03), (0.62, 0.07), (0.92, 0.46), (0.66, 0.92), (0.13, 0.97)]],
+}
+
+
+def _homography(quad):
+    """3x3 map from the unit floor square (u across, v away from the camera) to the quad's screen points
+    [near-left (0,0), near-right (1,0), far-right (1,1), far-left (0,1)]."""
+    A, b = [], []
+    for (u, v), (x, y) in zip(((0, 0), (1, 0), (1, 1), (0, 1)), quad):
+        A.append([u, v, 1, 0, 0, 0, -u * x, -v * x]); b.append(x)
+        A.append([0, 0, 0, u, v, 1, -u * y, -v * y]); b.append(y)
+    h = np.linalg.solve(np.array(A, float), np.array(b, float))
+    return np.append(h, 1.0).reshape(3, 3)
+
+
+def _hmap(H, uv):
+    uv = np.atleast_2d(np.asarray(uv, float))
+    q = np.hstack([uv, np.ones((len(uv), 1))]) @ H.T
+    return q[:, :2] / q[:, 2:3]
+
+
+def _chalk_layout(text, box, axis='u'):
+    """Letters of text as stroke lists in floor (u, v) coordinates inside box (u0, v0, u1, v1). axis 'u': side by side
+    across the floor; 'v': one after another along v (M... E... creeping toward the kitchen). Letter tops face +v."""
+    u0, v0, u1, v1 = box
+    chars = [ch for ch in text.upper() if ch in _LETTERS]
+    n = max(1, len(chars))
+    out = []
+    for i, ch in enumerate(chars):
+        if axis == 'u':
+            du = (u1 - u0) / n
+            ua, ub, va, vb = u0 + i * du + 0.1 * du, u0 + (i + 1) * du - 0.1 * du, v0, v1
+        else:
+            dv = (v1 - v0) / n
+            ua, ub, va, vb = u0, u1, v0 + i * dv + 0.12 * dv, v0 + (i + 1) * dv - 0.12 * dv
+        strokes = []
+        for st in _LETTERS[ch]:
+            p = _cr(st, max(12, 6 * len(st)))
+            uv = np.column_stack([ua + p[:, 0] * (ub - ua), max(va, vb) - p[:, 1] * abs(vb - va)])
+            strokes.append(uv)
+        out.append((ch, strokes))
+    return out
+
+
+def _floor_scale(H, uv, size_cm):
+    """Screen px per cm across the floor (u direction) at floor point uv."""
+    a = _hmap(H, [(uv[0] - 0.01, uv[1]), (uv[0] + 0.01, uv[1])])
+    return float(np.hypot(*(a[1] - a[0]))) / (0.02 * size_cm[0])
+
+
+def chalk_word(pen, text, quad, box=(0.05, 0.1, 0.95, 0.9), u=1.0, size_cm=(100.0, 100.0), width_cm=1.7, axis='u',
+               alpha=1.0, colr=CHALK):
+    """Chalk letters in Adam's handwriting (round, curly M's) on a floor or path: quad = the floor rectangle's screen
+    corners [near-left, near-right, far-right, far-left] (size_cm its real size), box = where the word goes in it
+    (u0, v0, u1, v1 in 0..1), u = how much is written (0..1, stroke by stroke). ONLY ME, ADAM, DANNY."""
+    H = _homography(quad)
+    lay = _chalk_layout(text, box, axis)
+    allst = [st for _, sts in lay for st in sts]
+    lens = [float(_arclen(st)[-1]) for st in allst]
+    tot = sum(lens) or 1.0
+    done = u * tot
+    cv = pen.cv
+    for st, ln in zip(allst, lens):
+        if done <= 0: break
+        part = st if done >= ln else _sub_curve(st, 0.0, done, max(3, int(len(st) * done / ln) + 2))
+        done -= ln
+        xy = _hmap(H, part)
+        w = width_cm * _floor_scale(H, st[len(st) // 2], size_cm)
+        _chalk_stroke(cv, _pts_path(xy[:, 0], xy[:, 1], False, 0.6), max(w, 1.0), alpha, colr)
+
+
+class LetterboxFingers:
+    """The long chalk-white fingers (R6 and R7): they slide in through the letterbox, run down the inside of the door to
+    the floor, creep across it and write the text in chalk, stroke by stroke, in Adam's handwriting.
+
+    slot = (x, y, w): the slot's centre and width on the inside face of the door (design px); door_base = the floor point
+    under it; floor_quad / size_cm: the hall floor (see chalk_word); box / axis: where the text goes; px_per_cm = scale
+    at the door. Timing: t_in (fingertips appear), t_write (first stroke; default t_in + reach), letter_times (each
+    letter's start, e.g. on the narrator's 'O. N. L. Y.'), letter_dur, t_out (they slide back out; None = they stay).
+    Use: f.draw_chalk(pen, t) on the floor layer (the letters stay written), f.draw(pen, t) over it (the fingers),
+    f.tip(t) (the writing fingertip), f.events ('chalk_scrape' per stroke, kind write; kind creep while they come in).
+    Four fingers, too long, impossibly many soft knuckle creases, rounded tips, no nails; chalk dust at the tips."""
+
+    def __init__(self, slot, door_base, floor_quad, text='ONLY', box=(0.2, 0.3, 0.8, 0.62), size_cm=(100.0, 140.0),
+                 px_per_cm=8.0, t_in=0.0, reach=1.4, t_write=None, letter_times=None, letter_dur=0.85, t_out=None,
+                 out_dur=1.2, axis='u', width_cm=1.7, finger_cm=1.9, gain=-13.0, seed=0):
+        self.slot, self.base, self.quad = slot, door_base, floor_quad
+        self.H = _homography(floor_quad)
+        self.size_cm, self.ppc, self.wcm, self.fcm = size_cm, px_per_cm, width_cm, finger_cm
+        self.t_in, self.t_out, self.out_dur, self.seed = t_in, t_out, out_dur, seed
+        self.t_write = t_in + reach if t_write is None else t_write
+        lay = _chalk_layout(text, box, axis)
+        n = len(lay)
+        lt = list(letter_times) if letter_times else [self.t_write + i * (letter_dur + 0.25) for i in range(n)]
+        self.strokes = []                     # (t_start, t_end, uv array)
+        for i, (ch, sts) in enumerate(lay):
+            avail = (lt[i + 1] - lt[i] - 0.15) if i + 1 < n else letter_dur
+            d = max(0.25, min(letter_dur, avail))
+            lens = [float(_arclen(s)[-1]) for s in sts]
+            tot = sum(lens) or 1.0
+            tt = lt[i]
+            lift = 0.08 if len(sts) > 1 else 0.0
+            for s, ln in zip(sts, lens):
+                dd = (d - lift * (len(sts) - 1)) * ln / tot
+                self.strokes.append((tt, tt + dd, s)); tt += dd + lift
+        self.events = []
+        self.events.append(dict(t=round(t_in, 4), name='chalk_scrape', gain_db=gain - 9.0, pan=0.0,
+                                params=dict(kind='creep', dur=round(self.t_write - t_in, 3)), who='evie'))
+        for (a, b, s) in self.strokes:
+            self.events.append(dict(t=round(a, 4), name='chalk_scrape', gain_db=gain, pan=0.0,
+                                    params=dict(kind='write', dur=round(b - a, 3)), who='evie'))
+        if t_out is not None:
+            self.events.append(dict(t=round(t_out, 4), name='chalk_scrape', gain_db=gain - 8.0, pan=0.0,
+                                    params=dict(kind='creep', dur=round(out_dur, 3)), who='evie'))
+
+    # ---------------------------------------------------------------- geometry
+    def _xy(self, uv): return _hmap(self.H, uv)[0]
+
+    def _approach(self):
+        sx, sy, sw = self.slot
+        bx, by = self.base
+        first = self._xy(self.strokes[0][2][0]) if self.strokes else np.array([bx, by + 40.0])
+        return _cr([(sx, sy + 2), (sx, sy + 0.25 * (by - sy)), (sx + (bx - sx) * 0.7, sy + 0.8 * (by - sy)), (bx, by),
+                    ((bx + first[0]) / 2, (by + first[1]) / 2), tuple(first)], 60)
+
+    def tip(self, t):
+        """(x, y, on_floor_uv or None, writing) of the writing fingertip at t (None before t_in)."""
+        if t < self.t_in: return None
+        a = self._approach(); L = _arclen(a)
+        if t < self.t_write:
+            p, _ = _at_len(a, L[-1] * ease_in_out(prog(t, self.t_in, self.t_write)), L)
+            return float(p[0]), float(p[1]), None, False
+        cur = None
+        for k, (ta, tb, s) in enumerate(self.strokes):
+            if t < ta:
+                if k == 0: cur = (s[0], False)
+                else:
+                    pe, pa = self.strokes[k - 1][2][-1], s[0]
+                    u = ease_in_out(prog(t, self.strokes[k - 1][1], ta))
+                    cur = (pe + (pa - pe) * u, False)
+                break
+            if t <= tb:
+                ln = _arclen(s)
+                p, _ = _at_len(s, ln[-1] * prog(t, ta, tb), ln)
+                cur = (p, True)
+                break
+        if cur is None: cur = (self.strokes[-1][2][-1], False)
+        xy = self._xy(cur[0])
+        return float(xy[0]), float(xy[1]), cur[0], cur[1]
+
+    # ---------------------------------------------------------------- drawing
+    def draw_chalk(self, pen, t, alpha=1.0):
+        cv = pen.cv
+        for (ta, tb, s) in self.strokes:
+            if t <= ta: break
+            part = s if t >= tb else _sub_curve(s, 0.0, float(_arclen(s)[-1]) * prog(t, ta, tb), max(3, int(len(s) * prog(t, ta, tb)) + 2))
+            xy = _hmap(self.H, part)
+            w = self.wcm * _floor_scale(self.H, s[len(s) // 2], self.size_cm)
+            _chalk_stroke(cv, _pts_path(xy[:, 0], xy[:, 1], False, 0.6), max(w, 1.0), alpha)
+
+    def draw(self, pen, t, detail=2):
+        tp = self.tip(t)
+        if tp is None: return
+        sx, sy, sw = self.slot
+        bx, by = self.base
+        tx, ty, uv, writing = tp
+        back = 0.0
+        if self.t_out is not None and t > self.t_out:
+            back = ease_in_out(prog(t, self.t_out, self.t_out + self.out_dur))
+            if back >= 1.0: return
+        ptip = self._xy(uv) if uv is not None else None
+        sc_tip = _floor_scale(self.H, uv, self.size_cm) if uv is not None else self.ppc
+        a_ap = self._approach()
+        on_floor = uv is not None
+        cv = pen.cv
+        fl = []
+        for j in range(4):                                     # index (writes) .. little finger
+            off_slot = (j - 1.5) * self.fcm * 1.2 * self.ppc
+            if on_floor:
+                d = np.array([tx - bx, ty - by]); dl = np.hypot(*d) or 1.0
+                nrm = np.array([-d[1], d[0]]) / dl
+                wig = np.array([math.sin(t * 3.1 + j * 1.7), math.cos(t * 2.3 + j)]) * 0.6 * sc_tip * (j > 0)
+                tipj = np.array([tx, ty]) + nrm * j * self.fcm * 2.6 * sc_tip * (1 if self.seed % 2 == 0 else -1) \
+                    - d / dl * j * 3.0 * sc_tip + wig
+                lift = 0.0 if writing or j else 0.6 * sc_tip
+                pts = [(sx + off_slot, sy + 2), (sx + off_slot, sy + 0.25 * (by - sy)), (bx + off_slot * 0.8, by - 0.12 * (by - sy)),
+                       (bx + off_slot * 0.7, by), ((bx + tipj[0]) / 2 + off_slot * 0.3, (by + tipj[1]) / 2 - lift),
+                       (tipj[0], tipj[1] - lift)]
+                c_ = _cr(pts, 64)
+            else:
+                Lp = _arclen(a_ap)
+                sfrac = math.hypot(tx - a_ap[0][0], ty - a_ap[0][1])
+                k = int(np.argmin(np.hypot(a_ap[:, 0] - tx, a_ap[:, 1] - ty)))
+                c_ = a_ap[:max(k, 1) + 1].copy()
+                c_[:, 0] += off_slot * np.linspace(1.0, 0.8, len(c_))
+                c_ = c_[:max(2, len(c_) - j)]
+            if back > 0:                                        # sliding back out: the curve shortens from the tip
+                Lc = _arclen(c_)
+                c_ = _sub_curve(c_, 0.0, Lc[-1] * (1.0 - back), max(4, int(len(c_) * (1.0 - back))), Lc)
+            fl.append(c_)
+        for j in (3, 2, 1, 0):
+            self._finger(cv, fl[j], self.ppc, sc_tip if on_floor else self.ppc, j, t, detail)
+        # the back of the hand, pressed into the slot (knuckles across it)
+        kn = rrect(sx - 2.4 * self.fcm * self.ppc, sy - 1.1 * self.ppc, 4.8 * self.fcm * self.ppc, 2.6 * self.ppc, 1.2 * self.ppc)
+        cv.save(); cv.clipRect(skia.Rect.MakeXYWH(sx - sw / 2, sy - 2.0 * self.ppc, sw, 4.0 * self.ppc), skia.ClipOp.kIntersect, True)
+        pen.fill(kn, '#e9e7df'); pen.line(kn, max(1.0, 0.25 * self.ppc), '#6e6d69')
+        cv.restore()
+
+    def _finger(self, cv, c_, s0, s1, j, t, detail):
+        if len(c_) < 2: return
+        L = _arclen(c_)
+        if L[-1] < 1.0: return
+        n = len(c_)
+        ws = np.interp(np.linspace(0, 1, n), [0, 0.35, 1.0], [s0, s0 * 0.9 + s1 * 0.1, s1]) * self.fcm * (1.0 - 0.1 * j) * 0.5
+        ws = ws * np.interp(np.linspace(0, 1, n), [0, 0.5, 0.88, 0.96, 1.0], [1.08, 0.86, 0.9, 1.1, 1.0])   # a pad at the tip
+        tg = np.gradient(c_, axis=0); tg /= (np.hypot(tg[:, 0], tg[:, 1])[:, None] + 1e-6)
+        nr = np.column_stack([-tg[:, 1], tg[:, 0]])
+        left = c_ + nr * ws[:, None]; right = c_ - nr * ws[:, None]
+        ang0 = math.atan2(tg[-1, 1], tg[-1, 0])
+        cap = [(c_[-1, 0] + math.cos(ang0 + a) * ws[-1], c_[-1, 1] + math.sin(ang0 + a) * ws[-1]) for a in np.linspace(PI / 2, -PI / 2, 9)]
+        pts = [tuple(p) for p in left] + cap + [tuple(p) for p in right[::-1]]
+        path = poly(pts, True)
+        lw = max(1.0, 0.22 * s1)
+        cv.drawPath(path, skia.Paint(Color=col('#edebe3', 255), AntiAlias=True))
+        sh = _pts_path((c_ - nr * ws[:, None] * 0.55)[:, 0], (c_ - nr * ws[:, None] * 0.55)[:, 1], False, 0.6)
+        cv.drawPath(sh, _chalk_paint(CHALK_SH, 150, float(np.mean(ws)) * 0.6))
+        if detail >= 1:                                         # soft knuckle creases, far too many of them
+            cr = skia.Path()
+            step = 3.2 * float(np.mean([s0, s1]))
+            s = step * 1.3
+            while s < L[-1] - step * 0.6:
+                p, tgv = _at_len(c_, s, L)
+                w = float(np.interp(s, L, ws)) * 0.7
+                nx, ny = -tgv[1], tgv[0]
+                cr.moveTo(p[0] + nx * w, p[1] + ny * w)
+                cr.quadTo(p[0] + tgv[0] * w * 0.35, p[1] + tgv[1] * w * 0.35, p[0] - nx * w, p[1] - ny * w)
+                s += step
+            cv.drawPath(cr, _chalk_paint(CHALK_DK, 85, lw * 0.8))
+        cv.drawPath(path, _chalk_paint('#77766f', 230, lw))
+        tx, ty = c_[-1]
+        cv.drawCircle(float(tx + math.cos(ang0) * ws[-1] * 0.6), float(ty + math.sin(ang0) * ws[-1] * 0.6), float(ws[-1] * 1.6),
+                      skia.Paint(Color=col(CHALK, 70), AntiAlias=True, MaskFilter=skia.MaskFilter.MakeBlur(skia.kNormal_BlurStyle, float(ws[-1] * 0.6))))
+
+
+class StubDrop:
+    """The chalk stub dropping through the letterbox (R6): it falls from the slot to the floor at the door, bounces once,
+    and rolls to the bottom stair. slot_xy = where it drops from, floor_y = the floor's screen y under the slot, stop_xy =
+    where it comes to rest (against the bottom stair), px_per_cm = scale at the door. pos(t) -> (x, y, angle) or None;
+    draw(pen, t); events: 'chalk_stub_drop' (kind drop, bounce), 'chalk_roll' (dur), 'chalk_tap' (kind stop)."""
+
+    def __init__(self, t0, slot_xy, floor_y, stop_xy, px_per_cm=8.0, roll_dur=1.5, gain=-10.0):
+        self.t0, self.p0, self.fy, self.p1, self.ppc, self.rd = t0, slot_xy, floor_y, stop_xy, px_per_cm, roll_dur
+        hm = max(0.05, (floor_y - slot_xy[1]) / (px_per_cm * 100.0))
+        self.tf = math.sqrt(2 * hm / 9.81)
+        self.tb = 0.2
+        self.events = [dict(t=round(t0 + self.tf, 4), name='chalk_stub_drop', gain_db=gain, pan=0.0, params=dict(kind='drop'), who='evie'),
+                       dict(t=round(t0 + self.tf + self.tb, 4), name='chalk_stub_drop', gain_db=gain - 8.0, pan=0.0,
+                            params=dict(kind='bounce'), who='evie'),
+                       dict(t=round(t0 + self.tf + self.tb, 4), name='chalk_roll', gain_db=gain - 9.0, pan=0.0,
+                            params=dict(dur=round(roll_dur, 3)), who='evie'),
+                       dict(t=round(t0 + self.tf + self.tb + roll_dur, 4), name='chalk_tap', gain_db=gain - 6.0, pan=0.0,
+                            params=dict(kind='stop'), who='evie')]
+
+    def pos(self, t):
+        if t < self.t0: return None
+        x0, y0 = self.p0; x1, y1 = self.p1
+        dt = t - self.t0
+        if dt < self.tf:
+            u = dt / self.tf
+            return x0, y0 + (self.fy - y0) * u * u, 90.0 + 160.0 * u
+        dt -= self.tf
+        land = (x0, self.fy)
+        if dt < self.tb:
+            u = dt / self.tb
+            return land[0] + (x1 - land[0]) * 0.05 * u, self.fy - 4.0 * self.ppc * math.sin(PI * u) + (y1 - self.fy) * 0.05 * u, 250.0 + 40 * u
+        dt -= self.tb
+        u = ease_out_cubic(prog(dt, 0.0, self.rd))
+        k = 0.05 + 0.95 * u
+        return land[0] + (x1 - land[0]) * k, self.fy + (y1 - self.fy) * k, 290.0 + 260.0 * u
+
+    def draw(self, pen, t, detail=2):
+        p = self.pos(t)
+        if p is None: return
+        draw_chalk_stub(pen, p[0], p[1], self.ppc, p[2], detail)
+
+
+# ====================================================================================================== self-test
+def _selftest_evie():
+    """Evie: arc stages, every form draws (front, 3/4, back, bust, flat drawing, neck, drain), clips and events."""
+    from engine.core import set_render_size
+    set_render_size(640, 360)
+    s = skia.Surface(640, 360); cv = s.getCanvas(); pen = Pen(cv)
+    st = [evie_stage(_EV_T0[k] + 0.5)['e_chalk'] for k in _EV_ORDER]
+    assert st == sorted(st) and st[-1] == 1.0 and st[2] == 0.0, st
+    assert evie_stage(_EV_T0['wed'] + 1)['_noblink'] == 1.0 and evie_stage(_EV_T0['mon'] + 1)['_noblink'] == 0.0
+    a = Acting('evie', height=300.0).place(320, 340)
+    a.bounce(0.0, 1.0); a.laugh_away(1.0); a.wave_hi(2.0, 3.0); a.phone_glow(3.0, 4.0); a.type_phone(4.0, 5.0)
+    a.block_wide(5.0, 6.0); a.lie_flat(6.0); a.slide_flat(7.0, 1.0, (200, 330)); a.stand_from_ground(8.5)
+    a.neck_up(10.0, 2.0, 600.0); a.drain_away(12.5)
+    for t in (0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 9.2, 11.5, 13.0, 14.5, 15.5):
+        P = a.at(t)
+        for tr in (0.0, 0.5, 1.6):
+            P.turn = tr
+            draw(pen, 'evie', 320, 340, 300, P, t=t)
+    draw_bust(pen, 'evie', 320, 180, 1.0, Pose(e_chalk=1.0, m_open=0.4), t=1.0)
+    names = {e['name'] for e in a.events}
+    assert {'phone_tap', 'chalk_scrape', 'chalk_tap', 'chalk_dust_whoosh'} <= names, names
+    f = LetterboxFingers((320, 120, 60), (330, 300), [(150, 350), (500, 350), (440, 250), (210, 250)], t_in=0.0)
+    for t in (0.3, 1.0, 2.0, 3.0, 5.0): f.draw_chalk(pen, t); f.draw(pen, t)
+    sd = StubDrop(0.0, (320, 130), 300, (200, 330))
+    for t in (0.1, 0.5, 1.0, 3.0): sd.draw(pen, t)
+    return True
+
+
+_selftest_ev_prev = _selftest
+
+
+def _selftest():
+    _selftest_ev_prev()
+    _selftest_evie()
+    print('evie self-test ok (arc stages, every form in 3 views, bust, flat drawing, neck, drain dust, letterbox, stub)')

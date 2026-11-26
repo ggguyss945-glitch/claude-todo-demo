@@ -23,10 +23,9 @@ import vo_edit as V                                                 # noqa: E402
 
 SR = V.SR
 
+KNOWN_UNVOICED = {}
 
 # lines whose one unvoiced island was measured to be a word's consonant, not a breath (tag: evidence)
-KNOWN_UNVOICED = {'blank_one_for_warm': 'the "th" of "three" in her sung line: raw take 60.80-60.90 s is noise above '
-                                        '2.5 kHz only (-52..-58 dB, nothing under 800 Hz), voicing from 60.94 s'}
 
 
 def main():
@@ -48,6 +47,8 @@ def main():
         err = g - a['pause']
         soft = 0.06 if (a.get('fx') or b.get('fx') or a.get('voice') or b.get('voice')) else 0.0   # a processed
         tail = min(a.get('fx_tail', 0), max(0.0, a['pause'] - 0.10))          # an fx decay runs into its gap
+        dec = e[int(s_end * 1000):int(a['out'][1] * 1000)]             # a soft decay (all under -55 dBFS) before the
+        if err > 0 and len(dec) and dec.max() < -55: err = max(0.0, err - len(dec) / 1000.0)   # line's end is no gap error
         if err < -0.03 - soft - tail or err > 0.045 + a.get('fx_tail', 0) + soft:   # (a decay under -60 dBFS reads as gap)         # line's quiet onset / decay
             gaps.append([a['i'], a['tag'], round(a['pause'], 3), round(g, 3)])
     res['gaps_off'] = gaps
