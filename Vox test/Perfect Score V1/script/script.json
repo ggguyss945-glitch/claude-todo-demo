@@ -1,0 +1,206 @@
+{
+ "title": "Imagine you scored 100% on every exam",
+ "beats": [
+  {
+   "beat": "HOOK",
+   "lines": [
+    {
+     "t": "Imagine you scored a perfect hundred on every single exam.",
+     "speed": 1.04,
+     "pause": 0.22
+    },
+    {
+     "t": "This is how fast it would take for your school to accuse you of cheating.",
+     "speed": 1.08,
+     "pause": 0.5
+    }
+   ]
+  },
+  {
+   "beat": "RISING ACTION",
+   "lines": [
+    {
+     "t": "Your first perfect score, nobody notices.",
+     "speed": 1.06,
+     "pause": 0.18
+    },
+    {
+     "t": "Anyone can have a good day.",
+     "speed": 1.06,
+     "pause": 0.3
+    },
+    {
+     "t": "But after your second and third hundred, your teacher starts to notice.",
+     "speed": 1.12,
+     "pause": 0.28
+    },
+    {
+     "t": "He doesn't say a word.",
+     "speed": 1.0,
+     "pause": 0.16
+    },
+    {
+     "t": "He just keeps an eye on you.",
+     "speed": 1.08,
+     "pause": 0.4
+    }
+   ]
+  },
+  {
+   "beat": "CONFLICT",
+   "lines": [
+    {
+     "t": "By your fifth in a row, your desk gets moved to the front, right next to his.",
+     "speed": 1.12,
+     "pause": 0.2
+    },
+    {
+     "t": "Every time you look up, he's already watching.",
+     "speed": 1.04,
+     "pause": 0.4
+    },
+    {
+     "t": "Then comes the hardest exam of the year, with a bonus question nobody has ever solved.",
+     "speed": 1.1,
+     "pause": 0.3
+    },
+    {
+     "t": "You solve it.",
+     "speed": 0.92,
+     "pause": 0.45
+    },
+    {
+     "t": "And now, this can't be ignored.",
+     "speed": 1.0,
+     "pause": 0.42
+    },
+    {
+     "t": "You're called to the principal's office.",
+     "speed": 1.08,
+     "pause": 0.2
+    },
+    {
+     "t": "They search your bag, your pencil case, even the label on your water bottle.",
+     "speed": 1.12,
+     "pause": 0.22
+    },
+    {
+     "t": "They replay the classroom camera, and compare your answers with the smartest kid in class.",
+     "speed": 1.14,
+     "pause": 0.3
+    },
+    {
+     "t": "Nothing.",
+     "speed": 0.95,
+     "pause": 0.3
+    },
+    {
+     "t": "No notes, no signals, no copying.",
+     "speed": 1.04,
+     "pause": 0.5
+    }
+   ]
+  },
+  {
+   "beat": "COMEBACK (the dip)",
+   "lines": [
+    {
+     "t": "But nobody believes you.",
+     "speed": 0.96,
+     "pause": 0.35
+    },
+    {
+     "t": "Your parents get a phone call.",
+     "speed": 1.04,
+     "pause": 0.15
+    },
+    {
+     "t": "Your score gets cancelled.",
+     "speed": 1.04,
+     "pause": 0.2
+    },
+    {
+     "t": "By lunch, the whole school is whispering one word.",
+     "speed": 1.06,
+     "pause": 0.35
+    },
+    {
+     "t": "Cheater.",
+     "speed": 0.9,
+     "pause": 0.6
+    },
+    {
+     "t": "So the principal makes a decision.",
+     "speed": 1.04,
+     "pause": 0.25
+    },
+    {
+     "t": "A brand new exam, taken alone in his office, with three teachers watching your every move.",
+     "speed": 1.12,
+     "pause": 0.45
+    }
+   ]
+  },
+  {
+   "beat": "RISING ACTION",
+   "lines": [
+    {
+     "t": "You pick up your pencil.",
+     "speed": 1.0,
+     "pause": 0.3
+    },
+    {
+     "t": "Twenty minutes later, you put it down.",
+     "speed": 1.04,
+     "pause": 0.3
+    },
+    {
+     "t": "They grade it right in front of you.",
+     "speed": 1.06,
+     "pause": 2.1,
+     "note": "hold: three red-pen ticks land in this pause (SFX), clock ticking"
+    }
+   ]
+  },
+  {
+   "beat": "PAYOFF",
+   "lines": [
+    {
+     "t": "One hundred.",
+     "speed": 0.9,
+     "pause": 0.65
+    },
+    {
+     "t": "The room goes silent.",
+     "speed": 0.98,
+     "pause": 0.35
+    },
+    {
+     "t": "Because you were never cheating.",
+     "speed": 1.0,
+     "pause": 0.15
+    },
+    {
+     "t": "You were just studying every single night, while everyone else was on their phones.",
+     "speed": 1.08,
+     "pause": 0.4
+    },
+    {
+     "t": "The principal apologizes, and puts your name on the wall of honor.",
+     "speed": 1.08,
+     "pause": 0.3
+    },
+    {
+     "t": "And your desk gets moved again, to the very back.",
+     "speed": 1.06,
+     "pause": 0.22
+    },
+    {
+     "t": "This time, so nobody can copy you.",
+     "speed": 1.02,
+     "pause": 0.6
+    }
+   ]
+  }
+ ]
+}

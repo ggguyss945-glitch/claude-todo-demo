@@ -1,0 +1,1035 @@
+{
+ "narrator_parts": [
+  {
+   "file": "narrator_part1.txt",
+   "chars": 1739,
+   "paragraphs": 22,
+   "starts": "If someone you met three days ago says y"
+  },
+  {
+   "file": "narrator_part2.txt",
+   "chars": 1497,
+   "paragraphs": 30,
+   "starts": "Wednesday, at my shoulder... she didn't "
+  },
+  {
+   "file": "narrator_part3.txt",
+   "chars": 1690,
+   "paragraphs": 39,
+   "starts": "Rule number three."
+  },
+  {
+   "file": "narrator_part4.txt",
+   "chars": 1286,
+   "paragraphs": 27,
+   "starts": "Rule number five."
+  },
+  {
+   "file": "narrator_part5.txt",
+   "chars": 1727,
+   "paragraphs": 32,
+   "starts": "Rule number seven."
+  },
+  {
+   "file": "narrator_part6.txt",
+   "chars": 616,
+   "paragraphs": 14,
+   "starts": "The bracelet in my drawer was chalk dust"
+  },
+  {
+   "file": "narrator_part7.txt",
+   "chars": 1224,
+   "paragraphs": 18,
+   "starts": "Okay. Breathe. You can turn a light on n"
+  }
+ ],
+ "evie": {
+  "lines": 16,
+  "note": "One file, story order. Designed young-adult woman voice, shifted younger. Registers: sweet -> too sweet -> wrong; see registers.",
+  "registers": [
+   {
+    "line": 1,
+    "register": "sweet",
+    "text": "Hi! I'm Evie. Like forever."
+   },
+   {
+    "line": 2,
+    "register": "too sweet (does not blink)",
+    "text": "You're my favourite person in the whole world."
+   },
+   {
+    "line": 3,
+    "register": "too sweet (message, whispered)",
+    "text": "Are you awake?"
+   },
+   {
+    "line": 4,
+    "register": "too sweet (message, a little hurt)",
+    "text": "Why aren't you answering?"
+   },
+   {
+    "line": 5,
+    "register": "too sweet (dark screen, delighted)",
+    "text": "I can see your light's still on."
+   },
+   {
+    "line": 6,
+    "register": "too sweet",
+    "text": "I made it myself. For you. Only me?"
+   },
+   {
+    "line": 7,
+    "register": "too sweet (wounded)",
+    "text": "Best friends share passwords. Don't you trust me?"
+   },
+   {
+    "line": 8,
+    "register": "wrong (message, content)",
+    "text": "There. Now it's only me."
+   },
+   {
+    "line": 9,
+    "register": "wrong (flat delight)",
+    "text": "You asked for someone who'd never leave. Here I am."
+   },
+   {
+    "line": 10,
+    "register": "wrong (mouthed at the window, message voice)",
+    "text": "Your mom's always on the phone about you. She thinks something's wrong with you."
+   },
+   {
+    "line": 11,
+    "register": "wrong (same)",
+    "text": "Your sister's a baby. Only I get you."
+   },
+   {
+    "line": 12,
+    "register": "wrong (letterbox, close and flat)",
+    "text": "After everything I gave you."
+   },
+   {
+    "line": 13,
+    "register": "wrong (letterbox, then a clipped giggle)",
+    "text": "If you leave, it's your fault. I'll stand here forever."
+   },
+   {
+    "line": 14,
+    "register": "wrong (whisper)",
+    "text": "Write your name. Under only me."
+   },
+   {
+    "line": 15,
+    "register": "sweet again on the doormat (bright, hopeful: the trap)",
+    "text": "Write your name?"
+   },
+   {
+    "line": 16,
+    "register": "wrong (sung, stretched thin, cut off)",
+    "text": "Only me. I'm here, I'm he-"
+   }
+  ]
+ },
+ "danny": 5,
+ "lina": 3,
+ "mom": 6,
+ "rahman": 2,
+ "kids_adult_take": {
+  "adam_age7": 1,
+  "adam_age12": 8,
+  "note": "Line 1 is Adam at 7 (the song, sung sweetly, pitched higher); lines 2 on are Adam at 12, in story order. One adult take with the narrator voice, pitched up by us."
+ },
+ "order": [
+  [
+   "narrator",
+   "If someone you met three days ago says you're their favourite person in the whole world... don't say it back. Especially if she doesn't blink."
+  ],
+  [
+   "narrator",
+   "If your phone is off... and it still lights up: \"I can see your light's still on\"... don't look out the window."
+  ],
+  [
+   "narrator",
+   "And if you look down at midnight... and someone at your blue front door is smiling up, two words chalked at their feet..."
+  ],
+  [
+   "narrator",
+   "...don't go down. Wake a grown-up."
+  ],
+  [
+   "narrator",
+   "I know who it is."
+  ],
+  [
+   "narrator",
+   "When I was twelve, my best friend handed me seven rules on a card. His mom's purple handwriting. At the top, one name, scribbled out in blue pen."
+  ],
+  [
+   "narrator",
+   "That week, a new girl decided I'd be her best friend. Only hers. By Saturday midnight, she was on our doormat, my sister was reading a name under the landing light... and I was halfway down the stairs to let her in."
+  ],
+  [
+   "narrator",
+   "Danny had been my best friend since we were seven. Now he ate lunch with Kofi and Sam. Chewed blue pen behind his ear."
+  ],
+  [
+   "narrator",
+   "I ate alone."
+  ],
+  [
+   "narrator",
+   "At seven, on the swings, I made up a song for him."
+  ],
+  [
+   "adam7",
+   "Me and you, and you and me, stick like glue, and you will see. Everywhere you go, I'm near. Only me. I'm here, I'm here."
+  ],
+  [
+   "narrator",
+   "I made it up. Nobody else knows it."
+  ],
+  [
+   "narrator",
+   "Danny's wrist was bare. The green-and-gold bracelet I wove him in third grade... gone."
+  ],
+  [
+   "narrator",
+   "Monday, Mom held up my grey hoodie. Sleeves white to the elbow."
+  ],
+  [
+   "mom",
+   "Anything you want to tell me?"
+  ],
+  [
+   "adam",
+   "Art."
+  ],
+  [
+   "narrator",
+   "She looked a beat too long."
+  ],
+  [
+   "narrator",
+   "Behind our school: an old hopscotch. All new paint, except the top square. Faded red."
+  ],
+  [
+   "narrator",
+   "The Keeping Square."
+  ],
+  [
+   "narrator",
+   "Hop it alone at sunset. Chalk a name, and under it, only me. That person will never leave you."
+  ],
+  [
+   "narrator",
+   "Nobody was cruel enough to try it."
+  ],
+  [
+   "narrator",
+   "In the square, someone had chalked a little girl. Two braids. A smile that didn't stop."
+  ],
+  [
+   "narrator",
+   "That day, a new girl sat behind me. Freckles. Gap-tooth grin. Braids tied with faded red ribbons."
+  ],
+  [
+   "evie",
+   "Hi! I'm Evie. Like forever."
+  ],
+  [
+   "narrator",
+   "By Tuesday, she was waiting at my locker. She knew my favourite crisps."
+  ],
+  [
+   "narrator",
+   "Somebody waiting for me, for once."
+  ],
+  [
+   "narrator",
+   "Wednesday, at my shoulder... she didn't blink."
+  ],
+  [
+   "evie",
+   "You're my favourite person in the whole world."
+  ],
+  [
+   "narrator",
+   "We'd met on Monday."
+  ],
+  [
+   "narrator",
+   "Then Danny crossed the hall, first time in weeks, with the card."
+  ],
+  [
+   "danny",
+   "My mom wrote these. For when someone holds on too tight. They helped."
+  ],
+  [
+   "narrator",
+   "Rule number one."
+  ],
+  [
+   "narrator",
+   "You don't have to answer after goodnight. Phone off. Sleep."
+  ],
+  [
+   "narrator",
+   "Wednesday night."
+  ],
+  [
+   "narrator",
+   "Every ping, one note of my song. Twelve messages. Thirty. Forty-seven."
+  ],
+  [
+   "evie",
+   "Are you awake?"
+  ],
+  [
+   "evie",
+   "Why aren't you answering?"
+  ],
+  [
+   "narrator",
+   "I kept rule one. Phone off."
+  ],
+  [
+   "narrator",
+   "The dark screen lit up anyway."
+  ],
+  [
+   "evie",
+   "I can see your light's still on."
+  ],
+  [
+   "narrator",
+   "Under the streetlight, Evie smiled up. At her feet, in big curly chalk..."
+  ],
+  [
+   "narrator",
+   "Only me."
+  ],
+  [
+   "narrator",
+   "She didn't blink."
+  ],
+  [
+   "narrator",
+   "I switched off my light. Below me, our porch light clicked on. Evie lay down flat, like a chalk drawing... and slid away."
+  ],
+  [
+   "narrator",
+   "Thursday morning, our path was wet and clean."
+  ],
+  [
+   "narrator",
+   "Must have rained."
+  ],
+  [
+   "narrator",
+   "Bucket by the door. Mom on the phone, knuckles red."
+  ],
+  [
+   "mom",
+   "I know. I'll talk to him. Thank you for telling me."
+  ],
+  [
+   "narrator",
+   "Somebody had noticed Evie. Good."
+  ],
+  [
+   "narrator",
+   "On our wet step: one white sneaker print. Pointing in."
+  ],
+  [
+   "narrator",
+   "Forty-seven messages, in one night. Before rule two, one word in the comments."
+  ],
+  [
+   "narrator",
+   "If someone did that for you... would you feel Special, or Trapped?"
+  ],
+  [
+   "narrator",
+   "Rule number two."
+  ],
+  [
+   "narrator",
+   "A gift is not a bill. If a present makes you feel you owe someone, give it back."
+  ],
+  [
+   "narrator",
+   "Inside my locked locker: a woven bracelet. Green and gold. Chalk dust on it."
+  ],
+  [
+   "narrator",
+   "Suddenly Evie was one inch from my shoulder. Not touching. Never touching."
+  ],
+  [
+   "evie",
+   "I made it myself. For you. Only me?"
+  ],
+  [
+   "narrator",
+   "She didn't. I did. It was Danny's bracelet."
+  ],
+  [
+   "narrator",
+   "So Danny gave it away. And I'd only ever messaged him a normal amount."
+  ],
+  [
+   "narrator",
+   "I kept it. Heavy as a stone."
+  ],
+  [
+   "narrator",
+   "Now I owed her."
+  ],
+  [
+   "narrator",
+   "That night, only me was halfway up our path. Evie on it, smiling up."
+  ],
+  [
+   "narrator",
+   "Her smile was a white chalk line now. Just past the corners."
+  ],
+  [
+   "narrator",
+   "Rule number three."
+  ],
+  [
+   "narrator",
+   "Your password is yours. Your location is for your parents only."
+  ],
+  [
+   "narrator",
+   "At lunch, Evie slid her phone across the table."
+  ],
+  [
+   "evie",
+   "Best friends share passwords. Don't you trust me?"
+  ],
+  [
+   "narrator",
+   "I typed mine in."
+  ],
+  [
+   "narrator",
+   "On my map, a white dot joined my blue one."
+  ],
+  [
+   "narrator",
+   "Her dot got everywhere first. The bus stop. The shop. Danny's street."
+  ],
+  [
+   "narrator",
+   "Two a.m. Her dot was on our house."
+  ],
+  [
+   "narrator",
+   "Then inside it."
+  ],
+  [
+   "narrator",
+   "Then in my room."
+  ],
+  [
+   "narrator",
+   "I swung my torch. Nobody."
+  ],
+  [
+   "narrator",
+   "Just one white chalk fingerprint... on the inside of my window."
+  ],
+  [
+   "narrator",
+   "Outside, only me had reached the foot of our step."
+  ],
+  [
+   "narrator",
+   "Friday. Mrs. Rahman, the counsellor, at her open door."
+  ],
+  [
+   "rahman",
+   "Just checking in, Adam. My door's open."
+  ],
+  [
+   "narrator",
+   "I walked past."
+  ],
+  [
+   "narrator",
+   "On my phone, mute icons. By Mom. By my sister, Lina. By Danny."
+  ],
+  [
+   "narrator",
+   "I hadn't muted them."
+  ],
+  [
+   "evie",
+   "There. Now it's only me."
+  ],
+  [
+   "narrator",
+   "Rule number four."
+  ],
+  [
+   "narrator",
+   "If someone keeps turning up where you are, tell a grown-up. Never go alone to sort it out."
+  ],
+  [
+   "narrator",
+   "Mom's car. Red light. Evie, on the pavement, right by my window."
+  ],
+  [
+   "narrator",
+   "Green light. Gone."
+  ],
+  [
+   "narrator",
+   "Next red light. There."
+  ],
+  [
+   "narrator",
+   "She never ran."
+  ],
+  [
+   "narrator",
+   "At break, on the swings, she sang my song. Every word perfect."
+  ],
+  [
+   "narrator",
+   "I found Danny."
+  ],
+  [
+   "adam",
+   "You told her our song?"
+  ],
+  [
+   "narrator",
+   "He just blinked."
+  ],
+  [
+   "danny",
+   "What song?"
+  ],
+  [
+   "narrator",
+   "At sunset, I went to sort it out. Alone. Her white prints led to the square."
+  ],
+  [
+   "narrator",
+   "It was covered in chalk. My handwriting. My curly M's."
+  ],
+  [
+   "narrator",
+   "A name, rubbed out: Danny. Written over it: Adam. And under that..."
+  ],
+  [
+   "narrator",
+   "Only me."
+  ],
+  [
+   "narrator",
+   "From the square, slowed down, came my song. In my seven-year-old voice."
+  ],
+  [
+   "narrator",
+   "I told you nobody was cruel enough to try it."
+  ],
+  [
+   "narrator",
+   "I was."
+  ],
+  [
+   "narrator",
+   "Last Sunday. I'd chalked Danny's name. I thought it hadn't worked."
+  ],
+  [
+   "narrator",
+   "The chalk slid out, flat across the playground... and stood up."
+  ],
+  [
+   "narrator",
+   "Evie. Washed in red."
+  ],
+  [
+   "narrator",
+   "Arms spread across the gate. Never touching."
+  ],
+  [
+   "evie",
+   "You asked for someone who'd never leave. Here I am."
+  ],
+  [
+   "narrator",
+   "Floodlight. The caretaker, squinting right at us. She was flat chalk again."
+  ],
+  [
+   "narrator",
+   "I ran."
+  ],
+  [
+   "narrator",
+   "That night, only me was on our step. Under it, one empty chalk line. Waiting for a name."
+  ],
+  [
+   "narrator",
+   "Rule number five."
+  ],
+  [
+   "narrator",
+   "A real friend is happy you have other people. Never let anyone pull you away from your family."
+  ],
+  [
+   "narrator",
+   "Saturday dinner."
+  ],
+  [
+   "narrator",
+   "Behind Mom, outside the dark window, Evie's lips moved. My phone buzzed with every word."
+  ],
+  [
+   "evie",
+   "Your mom's always on the phone about you. She thinks something's wrong with you."
+  ],
+  [
+   "evie",
+   "Your sister's a baby. Only I get you."
+  ],
+  [
+   "narrator",
+   "Mom put her fork down."
+  ],
+  [
+   "mom",
+   "Anything you want to tell me?"
+  ],
+  [
+   "narrator",
+   "I pulled my phone into my lap."
+  ],
+  [
+   "narrator",
+   "Lina held out a drawing of us. I snapped at her and went upstairs."
+  ],
+  [
+   "narrator",
+   "I typed it. And I heard myself."
+  ],
+  [
+   "adam",
+   "You're my only friend."
+  ],
+  [
+   "narrator",
+   "I threw Danny's card on the landing."
+  ],
+  [
+   "narrator",
+   "Only me moved onto our doorstep. Right against our green front door."
+  ],
+  [
+   "narrator",
+   "Lina knocked. I didn't open."
+  ],
+  [
+   "lina",
+   "There's a girl at our door. She's smiling up at your window."
+  ],
+  [
+   "narrator",
+   "I looked down."
+  ],
+  [
+   "narrator",
+   "Evie's neck was bending. Up... and up... toward my window. Her chalk smile almost touched her ears."
+  ],
+  [
+   "narrator",
+   "Rule number six."
+  ],
+  [
+   "narrator",
+   "If someone says their feelings are your fault, they're not. You're allowed to leave."
+  ],
+  [
+   "narrator",
+   "Midnight."
+  ],
+  [
+   "narrator",
+   "From the landing, I heard our letterbox lift."
+  ],
+  [
+   "narrator",
+   "Chalk-white fingers slid through. Far too long. Creeping across the hall floor, writing..."
+  ],
+  [
+   "narrator",
+   "O. N. L. Y."
+  ],
+  [
+   "narrator",
+   "Through the slot, a smile, ear to ear. Humming my song. Slow. Flat."
+  ],
+  [
+   "evie",
+   "After everything I gave you."
+  ],
+  [
+   "evie",
+   "If you leave, it's your fault. I'll stand here forever."
+  ],
+  [
+   "narrator",
+   "A chalk stub dropped through, rolling to the bottom stair."
+  ],
+  [
+   "evie",
+   "Write your name. Under only me."
+  ],
+  [
+   "narrator",
+   "My feet moved. One step down. Two. Halfway."
+  ],
+  [
+   "narrator",
+   "Behind me, the landing light clicked on."
+  ],
+  [
+   "narrator",
+   "Lina, under the bare bulb, held up Danny's card. Light showed through the scribble."
+  ],
+  [
+   "lina",
+   "It says your name."
+  ],
+  [
+   "narrator",
+   "Adam."
+  ],
+  [
+   "narrator",
+   "The rules weren't for me. Danny's mom wrote them to protect Danny."
+  ],
+  [
+   "narrator",
+   "From me."
+  ],
+  [
+   "narrator",
+   "Rule number seven."
+  ],
+  [
+   "narrator",
+   "Don't keep it secret. Tell a grown-up. Save the messages. If they don't listen, tell another. Keep telling."
+  ],
+  [
+   "narrator",
+   "I stepped over the chalk. I didn't go to the door."
+  ],
+  [
+   "narrator",
+   "The kitchen light was already on. Mom, still dressed. Bucket by the door. Red knuckles."
+  ],
+  [
+   "narrator",
+   "I told her everything. The square. The bracelet. My password. Evie."
+  ],
+  [
+   "narrator",
+   "Behind me, the letterbox rattled. Chalk fingers wrote M... E... toward the kitchen."
+  ],
+  [
+   "mom",
+   "Thank you for telling me."
+  ],
+  [
+   "narrator",
+   "The letters crept across the tiles... and stopped at her chair."
+  ],
+  [
+   "narrator",
+   "She'd said that on the phone every morning. To Danny's mom."
+  ],
+  [
+   "narrator",
+   "It never rained. Every dawn, Mom had scrubbed my handwriting off our path. She'd called Mrs. Rahman. She'd sat up every night, listening. And she'd kept asking, until I let her in."
+  ],
+  [
+   "narrator",
+   "Mom saved every message from Evie."
+  ],
+  [
+   "narrator",
+   "Each one a note of my song."
+  ],
+  [
+   "narrator",
+   "Then I scrolled to Danny. My thread. And stopped."
+  ],
+  [
+   "narrator",
+   "The same words. Word for word. Sent by me."
+  ],
+  [
+   "narrator",
+   "Forty-seven. In one night. A normal amount."
+  ],
+  [
+   "narrator",
+   "Under them, Danny's last message."
+  ],
+  [
+   "danny",
+   "Please stop. You're scaring me."
+  ],
+  [
+   "narrator",
+   "That blue front door was Danny's."
+  ],
+  [
+   "narrator",
+   "Sunday. Midnight. Chalk-white sleeves. Smiling up at his dark window, two words at my feet."
+  ],
+  [
+   "narrator",
+   "It was me."
+  ],
+  [
+   "narrator",
+   "Danny didn't go down. He woke his mom."
+  ],
+  [
+   "narrator",
+   "Mom didn't look away."
+  ],
+  [
+   "mom",
+   "Danny was right to say no. And you're not bad."
+  ],
+  [
+   "narrator",
+   "She opened our front door and stood beside me."
+  ],
+  [
+   "narrator",
+   "Evie was on our doormat, smiling ear to ear."
+  ],
+  [
+   "narrator",
+   "Mom looked right at her. Evie came no closer."
+  ],
+  [
+   "evie",
+   "Write your name?"
+  ],
+  [
+   "adam",
+   "No. I'm not your only. And Danny was never mine."
+  ],
+  [
+   "narrator",
+   "I took a breath."
+  ],
+  [
+   "adam",
+   "I hope you find lots of people."
+  ],
+  [
+   "mom",
+   "He said no."
+  ],
+  [
+   "narrator",
+   "Her song came, stretched thin."
+  ],
+  [
+   "evie",
+   "Only me. I'm here, I'm he-"
+  ],
+  [
+   "narrator",
+   "Her colour drained to chalk-white, and the wind carried her off like dust."
+  ],
+  [
+   "narrator",
+   "At dawn, we scrubbed the path together. The hall floor, I did myself."
+  ],
+  [
+   "narrator",
+   "Lina sang new words to my old tune."
+  ],
+  [
+   "lina",
+   "Me and you, and others too, friends for me and friends for you. Go wherever, near or far. I'll still care, wherever you are."
+  ],
+  [
+   "narrator",
+   "Monday, I told Mrs. Rahman too."
+  ],
+  [
+   "adam",
+   "I think I'm the one who couldn't let go."
+  ],
+  [
+   "rahman",
+   "That was brave. Caring isn't owning. We'll work on it together."
+  ],
+  [
+   "narrator",
+   "With Mom beside me, I sent Danny one message."
+  ],
+  [
+   "adam",
+   "Sorry. I'll give you space. You don't have to answer."
+  ],
+  [
+   "narrator",
+   "No reply. I didn't send another. Maybe he'd never answer. That had to be okay."
+  ],
+  [
+   "narrator",
+   "The hardest rule."
+  ],
+  [
+   "narrator",
+   "The bracelet in my drawer was chalk dust. The caretaker painted over the Keeping Square."
+  ],
+  [
+   "narrator",
+   "Weeks later, Danny stopped at my table. Kofi and Sam too."
+  ],
+  [
+   "danny",
+   "Can we sit here? All of us?"
+  ],
+  [
+   "adam",
+   "Yeah. All of you."
+  ],
+  [
+   "narrator",
+   "Danny slid over a shoebox. Every gift I'd given him. On top, the real bracelet."
+  ],
+  [
+   "narrator",
+   "He'd kept them all."
+  ],
+  [
+   "narrator",
+   "Then the card. The scribble... in his chewed blue pen."
+  ],
+  [
+   "danny",
+   "I crossed it out. You were still my friend. I just needed room."
+  ],
+  [
+   "narrator",
+   "He's not my only friend. He's one of my best."
+  ],
+  [
+   "narrator",
+   "Last week, Danny didn't answer all day. My fingertips went white. That old pull."
+  ],
+  [
+   "narrator",
+   "I put my phone down."
+  ],
+  [
+   "narrator",
+   "Next morning, one chalk word on my path."
+  ],
+  [
+   "narrator",
+   "Only."
+  ],
+  [
+   "narrator",
+   "I scrubbed it off, the way Mom did."
+  ],
+  [
+   "narrator",
+   "Then I called Danny."
+  ],
+  [
+   "narrator",
+   "He picked up on the first ring."
+  ],
+  [
+   "narrator",
+   "I only call once."
+  ],
+  [
+   "narrator",
+   "Okay. Breathe. You can turn a light on now."
+  ],
+  [
+   "narrator",
+   "None of this happened. No Keeping Square, no Evie, no chalk."
+  ],
+  [
+   "narrator",
+   "The monster is made up. The warning signs are real."
+  ],
+  [
+   "narrator",
+   "Too much, too fast. Nonstop messages. Gifts that make you feel you owe them."
+  ],
+  [
+   "narrator",
+   "Wanting you all to themselves. Turning up uninvited. Putting down your family and friends."
+  ],
+  [
+   "narrator",
+   "Your passwords are yours. Your location is for your parents."
+  ],
+  [
+   "narrator",
+   "\"It's your fault\" is never true. You can say no, not answer, block and report. Saying no isn't cruel."
+  ],
+  [
+   "narrator",
+   "Don't keep it secret. Tell a grown-up. Save the messages. Keep telling."
+  ],
+  [
+   "narrator",
+   "Can't stop checking on someone? That's holding on, not caring. Tell a grown-up. Asking for help is brave."
+  ],
+  [
+   "narrator",
+   "You can't make anyone like you. And nobody can make you owe them."
+  ],
+  [
+   "narrator",
+   "Now. Special, or Trapped?"
+  ],
+  [
+   "narrator",
+   "Those forty-seven messages were mine first. To Danny."
+  ],
+  [
+   "narrator",
+   "If you said Special, that's what I thought I gave him. If you said Trapped, that's what he felt."
+  ],
+  [
+   "narrator",
+   "Reply to your comment with the word that fixes both: Space."
+  ],
+  [
+   "narrator",
+   "Leave a like for Danny."
+  ],
+  [
+   "narrator",
+   "And subscribe. On Night Policy, you can leave whenever you want. That's how you know we're real friends."
+  ],
+  [
+   "narrator",
+   "Sleep well. And if anyone ever promises they'll never let you go..."
+  ],
+  [
+   "narrator",
+   "...ask them what happens when you say no."
+  ]
+ ]
+}

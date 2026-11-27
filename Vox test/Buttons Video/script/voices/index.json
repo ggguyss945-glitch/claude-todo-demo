@@ -1,0 +1,902 @@
+{
+ "narrator_parts": [
+  {
+   "file": "narrator_part1.txt",
+   "chars": 1710,
+   "paragraphs": 25
+  },
+  {
+   "file": "narrator_part2.txt",
+   "chars": 1447,
+   "paragraphs": 25
+  },
+  {
+   "file": "narrator_part3.txt",
+   "chars": 1696,
+   "paragraphs": 31
+  },
+  {
+   "file": "narrator_part4.txt",
+   "chars": 1688,
+   "paragraphs": 26
+  },
+  {
+   "file": "narrator_part5.txt",
+   "chars": 1733,
+   "paragraphs": 31
+  },
+  {
+   "file": "narrator_part6.txt",
+   "chars": 1692,
+   "paragraphs": 25
+  },
+  {
+   "file": "narrator_part7.txt",
+   "chars": 423,
+   "paragraphs": 6
+  }
+ ],
+ "mom": 13,
+ "blank": 20,
+ "dunn": 2,
+ "mensah": 1,
+ "kids_adult_take": {
+  "owen": 6,
+  "son": 2,
+  "note": "Owen lines first, then the son; one adult take with the narrator voice"
+ },
+ "order": [
+  [
+   "narrator",
+   "If someone online says, \"Your mom doesn't even see you\"... don't answer."
+  ],
+  [
+   "narrator",
+   "If a present says don't tell your mom, and at three a.m. it stands up in your closet... don't keep quiet."
+  ],
+  [
+   "narrator",
+   "And if your mom holds your coat open at midnight, with two shiny black buttons where her eyes should be..."
+  ],
+  [
+   "blank",
+   "Button up, sweetheart. We're going home."
+  ],
+  [
+   "narrator",
+   "...don't."
+  ],
+  [
+   "narrator",
+   "Your real mom is in the kitchen. Talking to the police."
+  ],
+  [
+   "narrator",
+   "At eight, my mom and I wrote seven rules inside my closet door. Her words in blue pen, my crayon around them. The Brave List."
+  ],
+  [
+   "narrator",
+   "At eleven, I broke four of them in one week."
+  ],
+  [
+   "narrator",
+   "By midnight on my birthday, a police officer stood in our kitchen, my mom was crying my name... and I was standing right next to her."
+  ],
+  [
+   "narrator",
+   "I kept the buttons. In a jar by my headset."
+  ],
+  [
+   "narrator",
+   "Mom worked twelve-hour help-line shifts at our kitchen table. Every caller got the same words."
+  ],
+  [
+   "mom",
+   "Thank you for calling. I'm listening."
+  ],
+  [
+   "narrator",
+   "When I talked, up went one finger."
+  ],
+  [
+   "mom",
+   "One minute."
+  ],
+  [
+   "narrator",
+   "Strangers got \"I'm listening.\" I got one finger."
+  ],
+  [
+   "narrator",
+   "I ate with my tablet propped on the milk carton. Her glasses always caught the laptop's glare. Loose buttons went in a jar on the windowsill."
+  ],
+  [
+   "narrator",
+   "On the fridge: Friday. O's birthday."
+  ],
+  [
+   "narrator",
+   "Monday, in Barlow's window: a red coat with seven black buttons. Mine flapped open. Broken zip. I pointed."
+  ],
+  [
+   "narrator",
+   "Mom, on a call, just lifted her phone."
+  ],
+  [
+   "narrator",
+   "She didn't even look."
+  ],
+  [
+   "narrator",
+   "When I was little, she buttoned my coat to her own song."
+  ],
+  [
+   "mom",
+   "One for warm and two for snug, three for Mama's button hug. Top one up and tucked in tight. Mama sees you. Say goodnight."
+  ],
+  [
+   "narrator",
+   "She hadn't sung it in years."
+  ],
+  [
+   "narrator",
+   "That night, in a game chat, I typed the worst thing I've ever typed."
+  ],
+  [
+   "owen",
+   "I wish I had a different mom."
+  ],
+  [
+   "narrator",
+   "A grey default head. No name."
+  ],
+  [
+   "blank",
+   "Your mom doesn't even see you. I can be her. Tell me about her."
+  ],
+  [
+   "narrator",
+   "With every word, the grey head filled in. Her messy bun. Her cardigan. Our dented car. Saturday pancakes. Our song."
+  ],
+  [
+   "blank",
+   "What color are her eyes?"
+  ],
+  [
+   "owen",
+   "I don't know."
+  ],
+  [
+   "narrator",
+   "Two black buttons clicked onto the face."
+  ],
+  [
+   "blank",
+   "That's okay. I'll see you for both of us."
+  ],
+  [
+   "narrator",
+   "So I named her. The Blank."
+  ],
+  [
+   "narrator",
+   "Her kind hunt one thing: a kid who feels invisible... and tells strangers instead of home."
+  ],
+  [
+   "narrator",
+   "Rule number one."
+  ],
+  [
+   "narrator",
+   "Never tell anyone online where we live. Not even with a picture."
+  ],
+  [
+   "blank",
+   "You're so grown-up. Send me your view, so I can picture you."
+  ],
+  [
+   "narrator",
+   "A photo out my window. Streetlight. Bus stop. Barlow's corner. Send."
+  ],
+  [
+   "narrator",
+   "On my closet door, rule one went pale."
+  ],
+  [
+   "narrator",
+   "That night, a woman stood under that streetlight. Mom's bun. Mom's cardigan, buttoned to the throat. She looked up, and waved. Headlights swept her face. Two black buttons flashed."
+  ],
+  [
+   "narrator",
+   "She was waving at the window next to mine."
+  ],
+  [
+   "blank",
+   "I see you."
+  ],
+  [
+   "narrator",
+   "I ducked."
+  ],
+  [
+   "narrator",
+   "I looked again. She was at our lobby door, palms on the glass, head tilting toward my window sliding shut."
+  ],
+  [
+   "narrator",
+   "I looked again. Gone."
+  ],
+  [
+   "narrator",
+   "She wasn't far away. She was made of everything I'd told her. And she was outside... wearing my mom."
+  ],
+  [
+   "narrator",
+   "Before rule two: one word, in the comments."
+  ],
+  [
+   "narrator",
+   "If a mom who always saw you showed up tonight... would you pick her?"
+  ],
+  [
+   "narrator",
+   "Buttons, or Mom?"
+  ],
+  [
+   "narrator",
+   "Rule number two."
+  ],
+  [
+   "narrator",
+   "If someone gives you a present and says don't tell Mom... tell Mom."
+  ],
+  [
+   "narrator",
+   "Tuesday, a box on our doormat. Mom's name on the label. I opened it anyway."
+  ],
+  [
+   "narrator",
+   "The red coat from Barlow's. And a card."
+  ],
+  [
+   "blank",
+   "Because she never even looked. Don't tell her."
+  ],
+  [
+   "narrator",
+   "I hid it in my closet."
+  ],
+  [
+   "narrator",
+   "Mom frowned at her laptop."
+  ],
+  [
+   "mom",
+   "It says delivered. On the mat."
+  ],
+  [
+   "narrator",
+   "I thought she was talking to a caller."
+  ],
+  [
+   "narrator",
+   "That night, rule two faded. And Mom looked a little grey. Like a photo left in the sun."
+  ],
+  [
+   "narrator",
+   "Three a.m. Inside my closet... click. Click. Click. Like somebody counting. Then our song, slow, like a music box winding down."
+  ],
+  [
+   "narrator",
+   "I opened the closet."
+  ],
+  [
+   "narrator",
+   "The red coat hung there, buttoned to the top. Full. Like somebody was inside it."
+  ],
+  [
+   "narrator",
+   "Then, slowly, it sagged. Empty."
+  ],
+  [
+   "narrator",
+   "Rule number three."
+  ],
+  [
+   "narrator",
+   "Check with Mom before you go anywhere, get in any car, or open the door. Even for somebody you know."
+  ],
+  [
+   "narrator",
+   "Wednesday pickup. Snow. Our car. Our dent. Mom at the wheel in sunglasses, humming our song."
+  ],
+  [
+   "narrator",
+   "The door swung open."
+  ],
+  [
+   "blank",
+   "Get in, sweetheart. I got off early. Pancakes?"
+  ],
+  [
+   "narrator",
+   "Mom never got off early. Pancakes were Saturdays. And I'd typed that."
+  ],
+  [
+   "narrator",
+   "I stepped back. I called my mom."
+  ],
+  [
+   "narrator",
+   "First ring."
+  ],
+  [
+   "mom",
+   "Baby? I'm at the table. Where are you?"
+  ],
+  [
+   "narrator",
+   "She lowered the sunglasses. Buttons."
+  ],
+  [
+   "narrator",
+   "Her arm slid out of the window. And kept coming. Bending where arms don't bend. Fingers tapping the air, reaching for my hood."
+  ],
+  [
+   "narrator",
+   "I ran to Mr. Dunn, the crossing guard."
+  ],
+  [
+   "dunn",
+   "You did right. You checked. Stand with me."
+  ],
+  [
+   "narrator",
+   "His radio was already up."
+  ],
+  [
+   "dunn",
+   "Silver car. Dented bumper. Now."
+  ],
+  [
+   "narrator",
+   "The arm folded back in. Then, just tire tracks."
+  ],
+  [
+   "narrator",
+   "Mom came running. I told her about the car. She called the police. Officer Mensah took notes. Mom checked every lock twice."
+  ],
+  [
+   "narrator",
+   "Rule three stayed blue."
+  ],
+  [
+   "narrator",
+   "But locks don't stop something in your pocket. I never told her about the chat."
+  ],
+  [
+   "narrator",
+   "Half a secret is still a secret."
+  ],
+  [
+   "blank",
+   "Tell her about me, and she'll know you wished for a different mom. Your fault."
+  ],
+  [
+   "narrator",
+   "Rule number four."
+  ],
+  [
+   "narrator",
+   "Surprises are okay. Secrets are not."
+  ],
+  [
+   "narrator",
+   "Two in the morning. Mom's name."
+  ],
+  [
+   "blank",
+   "Come to the kitchen, baby."
+  ],
+  [
+   "narrator",
+   "Mom, awake, wanting me? I went."
+  ],
+  [
+   "narrator",
+   "She sat at her laptop, back to me, reading glasses on. Every key she pressed... my tablet pinged."
+  ],
+  [
+   "narrator",
+   "She turned, and took the glasses off. Buttons."
+  ],
+  [
+   "blank",
+   "Sit. Say something. I like to hear where you are."
+  ],
+  [
+   "narrator",
+   "I glanced at Mom's door. The Blank was in front of it."
+  ],
+  [
+   "blank",
+   "Or I tell her what you wished."
+  ],
+  [
+   "narrator",
+   "So I answered. My school. What time it lets out. Which nights Mom works late."
+  ],
+  [
+   "blank",
+   "It's not a secret. It's a surprise. Your mom finds out when we're gone. On your birthday, you button up... and I take you home."
+  ],
+  [
+   "narrator",
+   "With a surprise, everyone finds out soon, and smiles. \"Your mom finds out when we're gone\" is a secret wearing a bow."
+  ],
+  [
+   "narrator",
+   "I nodded. Rule four faded."
+  ],
+  [
+   "narrator",
+   "After school, Mom sat behind me, eyes on her screen. In the black microwave door, I saw us both."
+  ],
+  [
+   "narrator",
+   "And the Blank. Standing behind me."
+  ],
+  [
+   "narrator",
+   "Mom looked up at me. Gone."
+  ],
+  [
+   "narrator",
+   "Mom looked down. Closer."
+  ],
+  [
+   "narrator",
+   "Up. Down. The Blank's chin was almost on my shoulder."
+  ],
+  [
+   "narrator",
+   "Rule number five."
+  ],
+  [
+   "narrator",
+   "If someone says mean things about our family, they're not your friend."
+  ],
+  [
+   "narrator",
+   "Thursday dinner. Mom had made my favorite. She stood at the window in her headset, watching the front door."
+  ],
+  [
+   "narrator",
+   "She didn't even sit down."
+  ],
+  [
+   "narrator",
+   "In Mom's chair sat the Blank. Taller now. Her bun brushed the lamp."
+  ],
+  [
+   "blank",
+   "Watch. She doesn't even see you."
+  ],
+  [
+   "narrator",
+   "I waved at my mom. She turned, and looked straight through me. Her glasses caught the laptop. Two black, shiny circles."
+  ],
+  [
+   "narrator",
+   "For one second, I couldn't tell my mothers apart."
+  ],
+  [
+   "narrator",
+   "Mom pressed the headset to her ear."
+  ],
+  [
+   "mom",
+   "No... I can't see him anywhere."
+  ],
+  [
+   "narrator",
+   "The Blank leaned in."
+  ],
+  [
+   "blank",
+   "Only I see you."
+  ],
+  [
+   "narrator",
+   "I heard myself."
+  ],
+  [
+   "owen",
+   "Only you."
+  ],
+  [
+   "narrator",
+   "On my closet door, every line but rule three faded. And the headset lady went pencil grey."
+  ],
+  [
+   "narrator",
+   "The Blank stood. Her head set the lamp swinging."
+  ],
+  [
+   "narrator",
+   "That night, Mom sat on my windowsill, head tilted toward my breathing, singing our song. Again. And again."
+  ],
+  [
+   "narrator",
+   "The headset lady was still on the phone."
+  ],
+  [
+   "narrator",
+   "Rule number six."
+  ],
+  [
+   "narrator",
+   "If you feel sad or invisible, say it out loud. Even if I'm busy. Especially then."
+  ],
+  [
+   "narrator",
+   "Two minutes to midnight. Officer Mensah was back, notebook out. The headset lady sat facing the door, shoes on, crying."
+  ],
+  [
+   "mom",
+   "He's eleven. Green coat. Broken zip. It's his birthday."
+  ],
+  [
+   "narrator",
+   "In the microwave door, I could see the headset lady. I could see the officer."
+  ],
+  [
+   "narrator",
+   "I couldn't see me."
+  ],
+  [
+   "narrator",
+   "She wasn't ignoring me. She couldn't see me. Every secret had rubbed me out. Since dinner, the world thought I was missing."
+  ],
+  [
+   "narrator",
+   "I was standing in my own kitchen."
+  ],
+  [
+   "narrator",
+   "The headset lady. Listen to that. Three days, and I'd stopped calling my own mother Mom."
+  ],
+  [
+   "narrator",
+   "So I kept rule six."
+  ],
+  [
+   "owen",
+   "Mom. I'm here. I feel invisible."
+  ],
+  [
+   "narrator",
+   "She turned her head. Like she'd heard a whisper."
+  ],
+  [
+   "narrator",
+   "Midnight. My birthday."
+  ],
+  [
+   "narrator",
+   "Behind the fridge, something unfolded. Up, and up, until her head bent along the ceiling. Long fingers, tapping like buttons on glass. A smile far too wide. Holding open... the red coat."
+  ],
+  [
+   "blank",
+   "Happy birthday. She can't hear you. Only me. Button up. We're going home."
+  ],
+  [
+   "narrator",
+   "Rule number seven."
+  ],
+  [
+   "narrator",
+   "If anyone tries to take you away from us: say no, get away, and tell. Then keep telling."
+  ],
+  [
+   "narrator",
+   "She wrapped the coat around me. The buttons closed themselves, in time with her song."
+  ],
+  [
+   "blank",
+   "One for warm... two for snug... three for Mama's button hug..."
+  ],
+  [
+   "narrator",
+   "Six closed. The song stopped."
+  ],
+  [
+   "narrator",
+   "The top one waited. She held it out to me. Not touching."
+  ],
+  [
+   "blank",
+   "Top one's yours, sweetheart. Mama keeps you. Say goodbye."
+  ],
+  [
+   "narrator",
+   "My fingers rose."
+  ],
+  [
+   "owen",
+   "NO!"
+  ],
+  [
+   "narrator",
+   "As loud as I could. Then not one more word to her. I dropped down out of the coat and ran."
+  ],
+  [
+   "narrator",
+   "She was left holding a red coat with nobody in it."
+  ],
+  [
+   "narrator",
+   "Her head turned toward where my voice had been."
+  ],
+  [
+   "blank",
+   "Tell me where you are."
+  ],
+  [
+   "narrator",
+   "Those buttons were blind. She'd never seen me. She only knew what I told her. So I stopped telling her..."
+  ],
+  [
+   "narrator",
+   "And I told my mom."
+  ],
+  [
+   "narrator",
+   "She couldn't hear me. So I told again, another way."
+  ],
+  [
+   "narrator",
+   "I grabbed the fridge marker. Under Friday, I wrote: Mom, it's Owen. I'm here."
+  ],
+  [
+   "narrator",
+   "The marker squeaked. The Blank lunged at the sound, fingers sweeping the counter."
+  ],
+  [
+   "narrator",
+   "Officer Mensah read it first."
+  ],
+  [
+   "mensah",
+   "Ma'am. The board."
+  ],
+  [
+   "narrator",
+   "My mom pulled off her headset. And her glasses."
+  ],
+  [
+   "mom",
+   "Tell me. I'm listening."
+  ],
+  [
+   "narrator",
+   "So I wrote everything. The chat. The photo. The coat. The car. Two a.m. I wished for a different mom."
+  ],
+  [
+   "narrator",
+   "With every word, I came back. Like a photo developing."
+  ],
+  [
+   "narrator",
+   "The long fingers were an inch from my hood."
+  ],
+  [
+   "narrator",
+   "And my mom's eyes found me."
+  ],
+  [
+   "mom",
+   "There you are."
+  ],
+  [
+   "narrator",
+   "The Blank froze. Mid-reach."
+  ],
+  [
+   "narrator",
+   "Mom stepped between us, her back to that thing. She only looked at me."
+  ],
+  [
+   "narrator",
+   "And I looked into my mother's eyes. Real. Tired. Wet."
+  ],
+  [
+   "owen",
+   "Green."
+  ],
+  [
+   "narrator",
+   "She'd put buttons where I'd never looked. Now I was looking."
+  ],
+  [
+   "narrator",
+   "The Blank folded in on herself, down to a flat, empty cardigan. Two black buttons rolled... and stopped at Mom's slippers."
+  ],
+  [
+   "narrator",
+   "She dropped them in her jar. Lid on tight."
+  ],
+  [
+   "narrator",
+   "From the empty cardigan, four little notes. Our song."
+  ],
+  [
+   "narrator",
+   "Mom pulled out a tiny music box."
+  ],
+  [
+   "mom",
+   "My package. That was a surprise. You'd have had it Friday."
+  ],
+  [
+   "narrator",
+   "Her lock screen was me. Monday. Pointing at Barlow's window."
+  ],
+  [
+   "narrator",
+   "She did look."
+  ],
+  [
+   "narrator",
+   "Mom laid her phone face down."
+  ],
+  [
+   "mom",
+   "No more one finger. But every time I looked up, I saw the back of your tablet."
+  ],
+  [
+   "narrator",
+   "I didn't know her eyes... because I'd been looking at a screen too."
+  ],
+  [
+   "mom",
+   "None of this is your fault. You can always come home."
+  ],
+  [
+   "narrator",
+   "She wound the music box and sang along. The real words. Her voice cracked."
+  ],
+  [
+   "mom",
+   "Mama sees you. Say goodnight."
+  ],
+  [
+   "narrator",
+   "My son is ten now. I work from home, headset on all day."
+  ],
+  [
+   "narrator",
+   "Just like her."
+  ],
+  [
+   "narrator",
+   "Tonight, the lid was off the jar on my desk."
+  ],
+  [
+   "narrator",
+   "The jar was empty."
+  ],
+  [
+   "narrator",
+   "Down the hall, my son's tablet chimed. Four little notes. Our song."
+  ],
+  [
+   "narrator",
+   "I set my headset down. I opened his door."
+  ],
+  [
+   "narrator",
+   "Under the streetlight, someone waved. At the window next to his."
+  ],
+  [
+   "narrator",
+   "On his screen, a grey default head."
+  ],
+  [
+   "blank",
+   "I could be your dad. What color are his eyes?"
+  ],
+  [
+   "narrator",
+   "Under it, my son's answer."
+  ],
+  [
+   "son",
+   "I don't know."
+  ],
+  [
+   "narrator",
+   "\"Look at me. How are you, really?\""
+  ],
+  [
+   "narrator",
+   "He turned the tablet face down, and told me everything. Then he looked right at me."
+  ],
+  [
+   "son",
+   "Brown. Your eyes are brown."
+  ],
+  [
+   "narrator",
+   "Face down on the bed, the tablet pinged. Once. Still waiting."
+  ],
+  [
+   "narrator",
+   "Okay. Breathe. You can turn a light on now."
+  ],
+  [
+   "narrator",
+   "None of this happened. No Blank, no Barlow's, no red coat."
+  ],
+  [
+   "narrator",
+   "The monster is made up. The tricks are real. People who try to take kids from their families don't have button eyes. They have nice profile pictures. Or a friendly face, and a car that looks right."
+  ],
+  [
+   "narrator",
+   "Online, people aren't always who they say they are. Never share your address, school, schedule, or photos. Never meet without a parent."
+  ],
+  [
+   "narrator",
+   "Flattery, gifts, \"your family doesn't care\"? Warning signs. Tell."
+  ],
+  [
+   "narrator",
+   "Surprises are okay. Secrets from your parents are not."
+  ],
+  [
+   "narrator",
+   "Check first before going anywhere, getting in a car, or letting anyone in. Even someone you know."
+  ],
+  [
+   "narrator",
+   "Feel uneasy? Say no, get away, tell a grown-up you trust. If they don't help, tell another. It's never your fault."
+  ],
+  [
+   "narrator",
+   "Families: screens down. Ask, \"How are you, really?\" Kids: feel invisible? Say it out loud. That's brave."
+  ],
+  [
+   "narrator",
+   "Real love never asks for secrets. And it never says you can't come home."
+  ],
+  [
+   "narrator",
+   "Now. Buttons, or Mom?"
+  ],
+  [
+   "narrator",
+   "One word is harmless. But notice how easy that was. Owen's first message was one sentence, too."
+  ],
+  [
+   "narrator",
+   "Give the real answer to your mom's face, tonight. Then reply under your comment: Told her."
+  ],
+  [
+   "narrator",
+   "Looked up from your screen? Leave a like, so I know."
+  ],
+  [
+   "narrator",
+   "And subscribe. On Night Policy, stories come to you... and never ask you to keep a secret."
+  ],
+  [
+   "narrator",
+   "Sleep well. But first, go look at your mom's eyes."
+  ],
+  [
+   "narrator",
+   "You should know what color they are."
+  ]
+ ]
+}

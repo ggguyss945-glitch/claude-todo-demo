@@ -1,0 +1,488 @@
+"""Measure a mix of this film (mix.py output dir; the Doctor film, built on the earlier films' measures) against the final-mix
+targets and list misfires.
+
+    python3 audio/measure_mix.py _work/mix/final [--cues _work/cues] [--mix mix.wav] [--no-cues] [--plot]   (from film/)
+    python3 audio/measure_mix.py --events _work/mix/tests/tests.json [--voice V]   the per-event check alone (below)
+
+THE OWNER'S PER-EVENT CHECK (23 Nov; the Walls film): every event of the effects stem (each one-shot re-rendered as
+mix.py renders it; beds for their edges) is measured on its own: its first and last 10 ms against its own peak (pops
+in: first 10 ms > -20 dB AND still > -14 dB at 50-150 ms, i.e. cut into a sustained sound; stops dead: last 10 ms >
+-40 dB, unless hard_end) and its momentary loudness (400 ms) against the voice's momentary loudness at that moment
+(the voice's integrated level in a gap): everyday foley must stay under it (> 0 LU flagged), a planned scare (a hit
+name, or a cue with scare / boost) must sit +6..+10 LU over it. Rows carry head10_db, tail10_db, L_rel_voice_now;
+reasons go to 'cue_flags' with the rest. The voice is the timeline's baked voice track (fx_baked: no voice FX added).
+
+Reads <dir>/<mix> (mix.wav, else mix_en.wav), <dir>/stems/{voice_en,music,sfx}.wav (float, final gain, before the
+limiter; mix.py writes them unless --no-stems), <dir>/mix_report.json and the cue sheets. Loudness is BS.1770 with
+per-channel K-weighting (sfx.py helpers). "rel voice" = relative to the voice stem's integrated loudness.
+Writes <dir>/measure.json and prints a summary.
+
+Targets (the job, ARCHITECTURE.md, analysis/AUDIO_SPEC.md)
+    master        -14 LUFS integrated (+-0.3), true peak <= -1.0 dBTP (mix.py aims at -1.5)
+    voice clear   during speech the bed (music + SFX) stays under the voice: per 400 ms block, voice minus bed;
+                  also the same margin in the 1-4 kHz intelligibility band. Weak spots are listed with times.
+    music         under the voice the whole time except the authored silences (+ 4 s re-entry) and the last 2 s:
+                  music holes = >= 1.5 s with the music under voice - 32 LU (400 ms, 1 s smoothed) are listed
+    SFX           every one-shot cue is re-rendered exactly as mix.py renders it (same order, seeds, resolve,
+                  spaces) and checked: renders silent, transient off the cue (> 40 ms, slow-onset names excepted),
+                  masked (cue more than 18 LU under the voice + music at its loudest moment, in 400 ms and in 100 ms
+                  windows: a click is flagged only when it is buried in both), over the voice (a
+                  non-hit cue within 1 LU of the narration's integrated loudness while it speaks), thin on a phone (< -15 dB of its
+                  loudness above 300 Hz). Flags go to measure.json 'cue_flags'.
+    events        hits / silences / one-shot cues per minute, hit peak over the voice, silence depth
+    scares        every boosted scare +6..+10 LU momentary over the integrated level, and the words in the 1 s after
+                  it at least 6 LU over the bed (50 ms segments where the voice speaks): 'boosted_scares'
+"""
+import argparse, json, os, sys, time
+import numpy as np, soundfile as sf
+from scipy import signal
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import sfx as SX                                  # noqa: E402
+import mix as MX                                  # noqa: E402
+
+SR = 48000
+HOP = 0.05
+SLOW_ONSET = ('breath', 'mom_breath', 'mom_sob', 'phone_vibrate', 'curtain_flutter', 'cloth_rustle', 'tinnitus', 'riser',
+              'whoosh', 'door_creak', 'box_creak', 'box_scrape', 'van_pull_away', 'window_slide', 'heartbeat', 'car_pass',
+              'typing', 'stylus_scribble', 'clock_tick', 'chain_lock', 'van_door_slide', 'glitch', 'footsteps_porch',
+              'footsteps_wood_inside', 'footsteps_stairs', 'footsteps_hall', 'paper', 'crowd_whisper', 'siren_far',
+              # the dummy film: swells, slides, waves and creaks have no single transient
+              'wood_creak', 'velvet', 'spoon_stir', 'hand_slot', 'studio_laugh', 'applause', 'owen_cry', 'owen_giggle',
+              'tv_on', 'vcr', 'lamp_flicker', 'paper_slide', 'case_lid', 'glove_lift', 'sip', 'snort', 'heart_monitor',
+              'tape_glitch', 'winks_laugh', 'tiny_steps', 'keys_jangle', 'hand_squeeze', 'mom_scream', 'tv_voice',
+              'clock_chime', 'rule_lie', 'monitor_flatline', 'tape_hiss', 'old_clock',
+              # the Bunnyman: gusts, owls, pages, the reverse swell of the trade, a door's sweep, cloth and the ring
+              'wind_gust', 'owl_hoot', 'page_flip', 'swap', 'attic_door', 'ring_hand', 'oven_mitt', 'creek', 'water_tap',
+              'police_radio', 'girl_cry', 'jingle', 'wet_drag', 'paper_under_door', 'doorknob', 'curtain_close',
+              'plastic_melt', 'egg_rattle', 'ring_roll', 'struggle', 'dogs_search', 'sirens_arrive', 'burn_barrel',
+              # grass steps are swishes like the other footsteps above (no single transient; the recipe puts the
+              # -12 dB onset of the dry step on the cue, the woods / memory space moves it 10-60 ms)
+              'footsteps_grass')
+# the Doctor film: beds, rings, slides, peels and swells with no single transient
+SLOW_ONSET = SLOW_ONSET + ('house_night', 'landline_ring', 'line_hiss', 'pen_scratch', 'paper_burn', 'rain_house',
+                           'halverson_car', 'waiting_room', 'pulse_count', 'tape_peel', 'drive_rain', 'er_doors',
+                           'er_bustle', 'wheelchair', 'sit_down', 'now_serving', 'typewriter', 'office_3am', 'streetlight',
+                           'chair_rock', 'carry_child', 'medicine_cabinet', 'lamp_flicker', 'paper_under_door', 'hold_music',
+                           'ambience_dawn', 'phone_connect', 'rotary_dial')
+HIT_NAMES = ('impact_hit', 'stinger', 'braam', 'sub_drop', 'goodnight_hit', 'window_smash', 'door_crash', 'swap')
+# THIS film (the Ice Cream film): its beds, glides and scuttles have no single transient; its hits
+SLOW_ONSET = SLOW_ONSET + ('cold_night', 'frozen_still', 'house_hum', 'house_cold', 'truck_idle', 'truck_glide',
+                           'plow_pass', 'shovel_morning', 'radio_static', 'frost_creep', 'attic_crawl', 'scuttle',
+                           'ambulance', 'skin_stretch', 'uniform_tear', 'boot_stuck', 'leg_tip_tile', 'snow_run',
+                           'snow_walk', 'snow_deep', 'street_wakes', 'plow_horn', 'furnace_die', 'window_crack',
+                           'curtain_yank', 'serving_window', 'radio_bells', 'radio_squelch', 'frost_wipe', 'blanket_yank',
+                           'shovel_scrape')   # a long push: its knock comes after the scrape
+HIT_NAMES = HIT_NAMES + ('cone_shatter', 'power_cut', 'jaw_drop', 'leg_punch', 'hatch_drop', 'bone_crack', 'door_slam')
+
+
+def lev(x, win=0.4, hop=HOP):
+    return -0.691 + 10 * np.log10(SX._blocks(x, win, hop) + 1e-20)
+
+
+def pw(L):
+    return 10 ** (np.asarray(L) / 10)
+
+
+def runs(mask, hop, min_len):
+    """[(t0, t1)] of True runs at least min_len s long."""
+    out = []; i = 0; n = len(mask)
+    while i < n:
+        if mask[i]:
+            j = i
+            while j < n and mask[j]: j += 1
+            if (j - i) * hop >= min_len: out.append((round(i * hop, 2), round(j * hop, 2)))
+            i = j
+        else:
+            i += 1
+    return out
+
+
+def band_db(x, lo, hi, win=0.4, hop=HOP):
+    sos = signal.butter(4, [lo, hi], 'bandpass', fs=SR, output='sos')
+    y = signal.sosfilt(sos, x.mean(1) if x.ndim > 1 else x).astype(np.float64) ** 2
+    k, h = int(win * SR), int(hop * SR)
+    c = np.concatenate([[0.0], np.cumsum(y)])
+    i = np.arange(0, len(y) - k + 1, h)
+    return 10 * np.log10((c[i + k] - c[i]) / k + 1e-20)
+
+
+# ---------------- the owner's per-event check (23 Nov): no sound pops in or stops dead; everyday foley under the
+# voice; only the planned scare hits +6..+10 LU momentary over it. Every event in the effects stem is re-rendered as
+# mix.py renders it (cue_pass) or read from a file (--events) and measured on its own.
+EDGE_S = 0.010                                    # the edge windows: the first and the last 10 ms
+POP_HEAD_DB, POP_BODY_DB = -20.0, -14.0          # pops in: a loud first 10 ms AND still loud 50-150 ms later (a cut
+                                                  # into a sustained sound; a knock's own attack decays, it is not one)
+DEAD_TAIL_DB = -40.0                              # stops dead: the last 10 ms still within 40 dB of the peak
+SCARE_LU = (6.0, 10.0)                            # a planned scare hit, momentary LU over the voice at that moment
+FOLEY_MAX_LU = 0.0                                # everything else stays under the voice
+
+
+def _gain(c, name):
+    """A cue's gain as mix.py applies it: its gain_db, else (Obsession) the cast's level sfx.DEFAULT_GAIN[name]."""
+    g = c.get('gain_db')
+    if g is None:
+        return float(getattr(SX, 'DEFAULT_GAIN', {}).get(name, 0.0))
+    return float(g or 0.0)
+
+
+def edges(y):
+    """(head_db, tail_db, body_db): RMS of the first and the last 10 ms, and of 50-150 ms in, against the peak."""
+    m = np.abs(SX.mono(SX.st(y))).astype(np.float64); pk = float(m.max()) + 1e-12; k = max(1, int(EDGE_S * SR))
+    r = lambda x: float(20 * np.log10(np.sqrt(np.mean(x ** 2)) / pk + 1e-12)) if len(x) else -120.0
+    return r(m[:k]), r(m[-k:]), r(m[int(0.05 * SR):int(0.15 * SR)])
+
+
+def event_check(y, t, pre, voice_m, Lv, speaking_at, gdb=0.0, scare=False, hard_end=False):
+    """One event placed at film time t (its audio starts at t - pre): its edges against its own peak, and its loudest
+    400 ms momentary loudness against the voice's momentary loudness at that same moment (when the voice speaks
+    there), else against the voice's integrated level. Returns (fields, reasons)."""
+    head, tail, body = edges(y)
+    b = lev(y); k = int(np.argmax(b)); Lc = float(b[k]) + gdb
+    tl = t - pre + k * HOP; j = int(round(tl / HOP))
+    Lvh = float(voice_m[j]) if 0 <= j < len(voice_m) else -70.0
+    sp = bool(speaking_at(tl)) and Lvh > -60
+    rel = Lc - (Lvh if sp else Lv)
+    why = []
+    if head > POP_HEAD_DB and body > POP_BODY_DB:
+        why.append(f'pops in (first 10 ms {head:.0f} dB re peak, still {body:.0f} dB at 50-150 ms)')
+    if tail > DEAD_TAIL_DB and not hard_end:
+        why.append(f'stops dead (last 10 ms {tail:.0f} dB re peak)')
+    if scare and not (SCARE_LU[0] <= rel <= SCARE_LU[1]):
+        why.append(f'scare {rel:+.1f} LU over the voice (planned +{SCARE_LU[0]:.0f}..+{SCARE_LU[1]:.0f})')
+    if not scare and rel > FOLEY_MAX_LU:
+        why.append(f'jumps out: {rel:+.1f} LU over the voice ' + ('speaking there' if sp else '(integrated: a gap)'))
+    return dict(head10_db=round(head, 1), tail10_db=round(tail, 1), body_db=round(body, 1),
+                L_rel_voice_now=round(rel, 1), voice_ref='momentary' if sp else 'integrated'), why
+
+
+def cue_pass(sfx_cues, voice_m, mus_m, sfx_m, Lv, gdb, n_blocks, line_spans, short=None):
+    """Re-render every cue as mix.py does; return per-cue checks and flags."""
+    SX.reset()
+    order = sorted(range(len(sfx_cues)), key=lambda k: (sfx_cues[k]['t'], k))
+    rows, flags = [], []
+    g = 10 ** (gdb / 10)                              # power gain of the master on the stems' calibration
+    for rank, k in enumerate(order):
+        c = sfx_cues[k]; name0 = c.get('name', '?')
+        name, params, note = SX.resolve(name0, c.get('params') or {})
+        if name is None:
+            flags.append(dict(t=c['t'], name=name0, why='unknown name: skipped by the mix')); continue
+        space = c.get('space') or params.pop('space', None); params.pop('space', None)
+        if space is not None: space = SX.resolve_space(space, name)
+        if name in SX.TIMED: params.setdefault('cue_t', float(c['t']))
+        bed = name in SX.BED_BUS or (name in SX.DUR_BEDS and params.get('dur'))
+        hard_end = bool(params.get('hard_end'))
+        if bed:                                          # a bed: its edges only (the owner's check)
+            try:
+                yb, _p = SX.render_event(name, seed=int(c.get('seed', rank)), space=space, **params)
+                hb, tb, bb = edges(yb)
+                if (hb > POP_HEAD_DB and bb > POP_BODY_DB) or (tb > DEAD_TAIL_DB and not hard_end):
+                    flags.append(dict(t=c['t'], name=name, why=f'bed edge: first / last 10 ms {hb:.0f} / {tb:.0f} dB re peak'))
+            except Exception as e:
+                flags.append(dict(t=c['t'], name=name, why=f'bed render failed: {e!r}'[:120]))
+            continue
+        try:
+            y, pre = SX.render_event(name, seed=int(c.get('seed', rank)), space=space, **params)
+        except Exception as e:
+            flags.append(dict(t=c['t'], name=name, why=f'render failed: {e!r}'[:120])); continue
+        y = y * 10 ** (_gain(c, name) / 20)
+        t = float(c['t'])
+        pk = float(np.abs(y).max()) if len(y) else 0.0
+        row = dict(t=round(t, 3), name=name, space=space, gain_db=c.get('gain_db', 0.0))
+        if pk < 10 ** (-60 / 20):
+            row['silent'] = True; rows.append(row)
+            flags.append(dict(t=t, name=name, why=f'renders silent (peak {20 * np.log10(pk + 1e-12):.0f} dBFS)')); continue
+        b = lev(y)                                       # the cue's own 400 ms blocks
+        kmax = int(np.argmax(b)); Lc = float(b[kmax]) + gdb
+        tl = t - pre + kmax * HOP                        # film time of the cue's loudest block
+        j = int(round(tl / HOP))
+        if not (0 <= j < n_blocks):
+            continue
+        Lvh = float(voice_m[j]); Lmh = float(mus_m[j])
+        Lmask = 10 * np.log10(pw(Lvh) + pw(Lmh) + 1e-20)
+        vs_mask = Lc - Lmask
+        if short is not None:                            # clicks / taps: the same in 100 ms windows (a tap just
+            vs_, ms_ = short                             # before a line stands out of the gap, not of the line)
+            b1 = lev(y, 0.1); k1 = int(np.argmax(b1)); j1 = int(round((t - pre + k1 * HOP) / HOP))
+            if 0 <= j1 < len(vs_):
+                m1 = 10 * np.log10(pw(vs_[j1]) + pw(ms_[j1]) + 1e-20)
+                vs_mask = max(vs_mask, float(b1[k1]) + gdb - m1)
+        on = SX.onset_s(y, -12) - pre
+        ph = SX.mom_max(SX.hp(SX.hp(y, 300, 2), 300, 2)) - SX.mom_max(y)
+        speaking = any(a - 0.05 <= tl <= e_ + 0.05 for a, e_ in line_spans)
+        row.update(L_rel_voice=round(Lc - Lv, 1), voice_here=round(Lvh - Lv, 1), music_here=round(Lmh - Lv, 1),
+                   vs_mask=round(vs_mask, 1), onset_ms=round(1000 * on), phone_db=round(ph, 1), speaking=speaking)
+        scare = (name in HIT_NAMES and not (name == 'door_slam' and params.get('soft'))) or bool(c.get('scare')) or \
+            bool(params.get('boost'))
+        ev, why_ev = event_check(y, t, pre, voice_m, Lv, lambda x: any(a - 0.05 <= x <= e_ + 0.05 for a, e_ in line_spans),
+                                 gdb, scare, hard_end)
+        row.update(ev)
+        rows.append(row)
+        why = list(why_ev)
+        if abs(on) > 0.04 and name not in SLOW_ONSET and not (params.get('dur') or 0) > 1.0 \
+                and not params.get('jingle'):                # keys_drop jingle=True: the hand jingle comes first
+            why.append(f'transient {1000 * on:+.0f} ms off the cue')
+        if vs_mask < -18:
+            why.append(f'masked: {vs_mask:.1f} LU under voice + music there')
+        if speaking and name not in HIT_NAMES and Lc - Lv > -1.0:
+            why.append(f'{Lc - Lv:+.1f} LU rel the narration (integrated) while it speaks')
+        if ph < -15 and name != 'sub_drop':              # a sub drop is sub by design (its impact carries the phone)
+            why.append(f'thin on a phone ({ph:.1f} dB above 300 Hz)')
+        if why:
+            flags.append(dict(t=round(t, 3), name=name, space=space, gain_db=c.get('gain_db', 0.0), why='; '.join(why)))
+    return rows, flags
+
+
+def plot(path, dur, Lv, vm, mm, sm, sil, hits, rules, row_s=110.0):
+    """Loudness map (cv2): one row per row_s seconds; voice white, music blue, SFX orange (400 ms momentary, LU rel the
+    voice's integrated level, -40..+10), authored silences shaded red, hits as yellow ticks, rule cards as green ticks."""
+    import cv2
+    W_, H_ = 1800, 150; rows = int(np.ceil(dur / row_s))
+    img = np.full((rows * H_ + 30, W_ + 60, 3), 18, np.uint8)
+    y_of = lambda L: int(np.clip((10 - L) / 50.0, 0, 1) * (H_ - 20)) + 10
+    for r in range(rows):
+        oy = 30 + r * H_; t0 = r * row_s
+        x_of = lambda t: 50 + int((t - t0) / row_s * W_)
+        for a, b in sil:
+            if b > t0 and a < t0 + row_s:
+                cv2.rectangle(img, (x_of(max(a, t0)), oy + 10), (x_of(min(b, t0 + row_s)), oy + H_ - 10), (40, 30, 90), -1)
+        for L, c in ((0, (90, 90, 90)), (-13, (60, 60, 60)), (-32, (60, 60, 60))):
+            cv2.line(img, (50, oy + y_of(L)), (50 + W_, oy + y_of(L)), c, 1)
+        for x_, c in ((hits, (0, 220, 255)), (rules, (60, 220, 60))):
+            for h in x_:
+                if t0 <= h < t0 + row_s:
+                    cv2.line(img, (x_of(h), oy + 8), (x_of(h), oy + 22), c, 2)
+        for arr, c in ((mm, (255, 150, 60)), (sm, (40, 140, 255)), (vm, (235, 235, 235))):
+            i0, i1 = int(t0 / HOP), min(len(arr), int((t0 + row_s) / HOP))
+            if i1 <= i0: continue
+            pts = np.array([[x_of(i * HOP), oy + y_of(arr[i] - Lv)] for i in range(i0, i1)], np.int32)
+            cv2.polylines(img, [pts], False, c, 1, cv2.LINE_AA)
+        cv2.putText(img, f'{int(t0)}s', (4, oy + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (200, 200, 200), 1)
+    cv2.putText(img, 'voice white / music blue / SFX orange (LU rel voice, +10..-40; lines at 0, -13, -32); silences red; '
+                'hits yellow; rule cards green', (50, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (220, 220, 220), 1)
+    cv2.imwrite(path, img)
+
+
+def events_main(path, voice=None, timeline=None):
+    """The owner's per-event check without a mix: every event of `path` (a JSON list of {t, file | name [params,
+    space, seed], gain_db, scare, hard_end, label}) against the voice track (W/narration/narration_en.wav, calibrated
+    to sfx.REF: the level sfx.py's LEVEL_LU are relative to) at its film time t. Writes <path>_measure.json."""
+    W = os.path.normpath(os.path.join(HERE, '..', '_work'))
+    v = sf.read(voice or os.path.join(W, 'narration', 'narration_en.wav'), dtype='float32', always_2d=True)[0]
+    v = SX.st(v.mean(1)) * np.float32(10 ** ((SX.REF - SX.lufs_int(SX.st(v.mean(1)))) / 20))
+    Lv = SX.lufs_int(v); vm = lev(v)
+    tl = json.load(open(timeline or os.path.join(W, 'align', 'timeline.json')))
+    spans = [(l['t'], l['end']) for l in tl['lines']]
+    out, nflag = [], 0
+    for k, e in enumerate(json.load(open(path))):
+        if e.get('file'):
+            fp = e['file'] if os.path.isabs(e['file']) else os.path.join(os.path.dirname(path), e['file'])
+            y = sf.read(fp, dtype='float32', always_2d=True)[0]; pre = float(e.get('pre', 0.0))
+        else:
+            y, pre = SX.render_event(e['name'], seed=int(e.get('seed', k)), space=e.get('space'), **(e.get('params') or {}))
+        y = SX.st(y) * np.float32(10 ** (_gain(e, e.get('name')) / 20))
+        f, why = event_check(y, float(e['t']), pre, vm, Lv, lambda x: any(a - 0.05 <= x <= b + 0.05 for a, b in spans),
+                             0.0, bool(e.get('scare')), bool(e.get('hard_end')))
+        f.update(label=e.get('label') or e.get('name') or e.get('file'), t=e['t'], flags='; '.join(why))
+        nflag += bool(why); out.append(f)
+        print(f"{f['label'][:24]:24s} t={float(e['t']):7.2f}  edges {f['head10_db']:6.1f} / {f['tail10_db']:6.1f} dB  "
+              f"{f['L_rel_voice_now']:+5.1f} LU vs voice ({f['voice_ref']})  {f['flags'] or 'ok'}")
+    json.dump(out, open(os.path.splitext(path)[0] + '_measure.json', 'w'), indent=1)
+    print(f'{len(out)} events, {nflag} flagged ->', os.path.splitext(path)[0] + '_measure.json')
+    return out
+
+
+def main():
+    if '--events' in sys.argv:                     # the per-event check alone (no mix): --events tests.json [--voice V]
+        a = sys.argv
+        events_main(a[a.index('--events') + 1], a[a.index('--voice') + 1] if '--voice' in a else None)
+        return
+    ap = argparse.ArgumentParser()
+    ap.add_argument('dir'); ap.add_argument('--cues', default=None); ap.add_argument('--mix', default=None)
+    ap.add_argument('--timeline', default=None); ap.add_argument('--no-cues', action='store_true')
+    ap.add_argument('--plot', action='store_true', help='also write <dir>/measure_plot.png (loudness map)')
+    A = ap.parse_args()
+    T0 = time.time()
+    W = os.path.normpath(os.path.join(HERE, '..', '_work'))
+    cues_dir = A.cues or os.path.join(W, 'cues')
+    # the sheets as mixed (mix.py --plan full writes them: music_plan.py's score events, sfx_plan.py's pass over the
+    # picture's SFX); the picture's own sheets are still the ones the sha1 check compares with
+    used = os.path.join(A.dir, 'cues_used')
+    ev_dir = used if (A.cues is None and os.path.exists(os.path.join(used, 'sfx_cues.json'))) else cues_dir
+    tl = json.load(open(A.timeline or os.path.join(W, 'align', 'timeline.json')))
+    mixname = A.mix or ('mix.wav' if os.path.exists(os.path.join(A.dir, 'mix.wav')) else 'mix_en.wav')
+    rd = lambda p: sf.read(p, dtype='float32', always_2d=True)[0]
+    mix = rd(os.path.join(A.dir, mixname))
+    v = rd(os.path.join(A.dir, 'stems', 'voice_en.wav')); m = rd(os.path.join(A.dir, 'stems', 'music.wav'))
+    s = rd(os.path.join(A.dir, 'stems', 'sfx.wav'))
+    rep = json.load(open(os.path.join(A.dir, 'mix_report.json')))
+    gdb = float(rep['langs']['en']['master_gain_db'])
+    n = min(len(mix), len(v), len(m), len(s)); mix, v, m, s = mix[:n], v[:n], m[:n], s[:n]
+    bed = m + s
+    dur = n / SR; mins = dur / 60
+    Lv = SX.lufs_int(v); Lmix = SX.lufs_int(mix)
+    R = {'file': os.path.join(A.dir, mixname), 'duration_s': round(dur, 2),
+         'mix_lufs': round(Lmix, 2), 'true_peak_dbtp': round(MX.true_peak(mix), 2),
+         'sample_peak_dbfs': round(float(20 * np.log10(np.abs(mix).max() + 1e-12)), 2),
+         'voice_rel_mix': round(Lv - Lmix, 2), 'music_rel_voice': round(SX.lufs_int(m) - Lv, 2),
+         'sfx_rel_voice': round(SX.lufs_int(s) - Lv, 2), 'bed_rel_voice': round(SX.lufs_int(bed) - Lv, 2),
+         'cues_sha1_match': rep.get('cues_sha1') == MX.cue_hashes(cues_dir), 'cues_measured': ev_dir}
+    st3 = lev(mix, 3.0, 1.0); st3 = st3[st3 > -70]
+    R['mix_lra_lu'] = round(float(np.percentile(st3, 95) - np.percentile(st3, 10)), 1)
+    mi = lev(mix) - Lmix
+    R['mix_momentary_max_over_int'] = round(float(mi.max()), 1)
+    R['mix_momentary_max_at_s'] = round(float(np.argmax(mi) * HOP), 2)
+
+    # ---------------- voice clarity: per 400 ms block during speech, voice minus bed
+    vm, mm, sm, bm = lev(v), lev(m), lev(s), lev(bed)
+    nb = min(len(vm), len(mm), len(sm), len(bm)); vm, mm, sm, bm = vm[:nb], mm[:nb], sm[:nb], bm[:nb]
+    tb = np.arange(nb) * HOP + 0.2
+    lines = [(l['t'], l['end']) for l in tl['lines']]
+    inline = np.zeros(nb, bool)
+    for a, e in lines:
+        inline |= (tb >= a + 0.1) & (tb <= e - 0.1)
+    speech = inline & (vm > Lv - 18)
+    marg = vm - bm
+    R['narration_share_pct'] = round(100 * float(speech.mean()), 1)
+    R['voice_minus_bed_speech_LU'] = {'p1': round(float(np.percentile(marg[speech], 1)), 1),
+                                      'p5': round(float(np.percentile(marg[speech], 5)), 1),
+                                      'p50': round(float(np.median(marg[speech])), 1),
+                                      'under_6LU_pct': round(100 * float((marg[speech] < 6).mean()), 2),
+                                      'under_3LU_pct': round(100 * float((marg[speech] < 3).mean()), 2),
+                                      'under_0LU_pct': round(100 * float((marg[speech] < 0).mean()), 2)}
+    vb, bb = band_db(v, 1000, 4000), band_db(bed, 1000, 4000)
+    k = min(len(vb), nb); mb = (vb[:k] - bb[:k])[speech[:k]]
+    R['voice_minus_bed_1k4k_speech_dB'] = {'p1': round(float(np.percentile(mb, 1)), 1), 'p5': round(float(np.percentile(mb, 5)), 1),
+                                           'p50': round(float(np.median(mb)), 1), 'under_6dB_pct': round(100 * float((mb < 6).mean()), 2)}
+    weak = runs(speech & (marg < 4), HOP, 0.15)
+    wk = []
+    for a, b in weak:
+        i0, i1 = int(a / HOP), int(b / HOP)
+        who = 'music' if np.max(mm[i0:i1]) >= np.max(sm[i0:i1]) else 'sfx'
+        wk.append({'t0': a + 0.2, 't1': b + 0.2, 'min_margin_LU': round(float(marg[i0:i1].min()), 1), 'louder_part': who})
+    R['voice_weak_spots'] = sorted(wk, key=lambda x: x['min_margin_LU'])[:25]
+
+    # ---------------- music presence outside the authored silences
+    mc = json.load(open(os.path.join(ev_dir, 'music_cues.json')))
+    sil = [e for e in mc['events'] if e['type'] == 'silence']
+    insil = np.zeros(nb, bool)
+    for e in sil:
+        insil |= (tb >= e['t'] - 0.2) & (tb <= e['t'] + float(e.get('len', 1.4)) + 4.0)
+    tail = tb > dur - 2.5
+    ms = np.convolve(mm, np.ones(20) / 20, 'same') - Lv           # 1 s smoothed
+    out_ = ~insil & ~tail & (tb > 0.5)
+    for thr in (-26, -32, -38):
+        R[f'music_over_{-thr}LU_under_voice_pct_outside_silences'] = round(100 * float((ms[out_] > thr).mean()), 1)
+    holes = runs(out_ & (ms < -32), HOP, 1.5)
+    R['music_holes'] = [{'t0': a + 0.2, 't1': b + 0.2,
+                         'music_min_rel_voice': round(float(ms[int(a / HOP):int(b / HOP)].min()), 1)} for a, b in holes]
+    R['music_present_pct_K400'] = {f'>{r}LU': round(100 * float((ms > r).mean()), 1) for r in (-20, -26, -32)}
+    # silences: music depth vs the 1.5 s before
+    dep = []
+    for e in sil:
+        a, b = int(e['t'] / HOP), int((e['t'] + float(e.get('len', 1.4))) / HOP)
+        if a > 40 and b > a + 4 and b < nb:
+            dep.append(round(float(np.mean(mm[a - 35:a - 5]) - np.mean(mm[a + 2:b])), 1))
+    R['silences'] = {'n': len(sil), 'per_min': round(len(sil) / mins, 2),
+                     'depth_db_p50': round(float(np.median(dep)), 1) if dep else None,
+                     'shallow_lt8dB': [round(e['t'], 2) for e, d_ in zip(sil, dep) if d_ < 8]}
+
+    # ---------------- bed shape
+    b3 = lev(bed, 3.0, 1.0) - Lv; live = b3[b3 > -60]
+    R['bed_st3_p10_p50_p90'] = [round(float(np.percentile(live, q)), 1) for q in (10, 50, 90)]
+    R['bed_lra'] = round(float(np.percentile(live, 95) - np.percentile(live, 10)), 1)
+    q = n // 4
+    R['music_by_quarter_rel_voice'] = [round(SX.lufs_int(m[i * q:(i + 1) * q]) - Lv, 1) for i in range(4)]
+    R['bed_by_quarter_rel_voice'] = [round(SX.lufs_int(bed[i * q:(i + 1) * q]) - Lv, 1) for i in range(4)]
+    R['loudest_10s_bed_at_s'] = int(np.argmax(lev(bed, 10.0, 1.0)))
+    x = bed.mean(1)[::2]
+    f, P = signal.welch(x, SR / 2, nperseg=8192); tot = P.sum()
+    R['bed_spectrum_pct'] = {'<250': round(100 * P[f < 250].sum() / tot, 1),
+                             '250-4k': round(100 * P[(f >= 250) & (f < 4000)].sum() / tot, 1),
+                             '>4k': round(100 * P[f >= 4000].sum() / tot, 1)}
+    try:
+        import music_plan as MP
+        tm = MP.track_map(tl['lines'])
+        secs = []
+        for i_, x_ in enumerate(tm):
+            a = float(x_['t0']); b = float(tm[i_ + 1]['t0']) if i_ + 1 < len(tm) else dur
+            ia, ib = int(a * SR), int(min(dur, b) * SR)
+            secs.append([round(a, 1), round(b, 1), str(x_.get('slug', x_.get('track', '?')))[:24],
+                         round(SX.lufs_int(m[ia:ib]) - Lv, 1), round(SX.lufs_int(bed[ia:ib]) - Lv, 1)])
+        R['sections_music_bed_rel_voice'] = secs
+    except Exception as e:
+        R['sections_music_bed_rel_voice'] = repr(e)[:120]
+
+    # ---------------- events
+    sc = json.load(open(os.path.join(ev_dir, 'sfx_cues.json')))
+    hits = sorted({round(c['t'], 2) for c in sc if c['name'] in HIT_NAMES} |
+                  {round(e['t'], 2) for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop')})
+    hp_ = []
+    for h in hits:
+        i = int(h / HOP)
+        if i + 12 < nb:
+            hp_.append(float(bm[i:i + 12].max() - Lv))
+    R['events'] = {'hits_per_min': round(len(hits) / mins, 2),
+                   'hit_peak_rel_voice_p50_max': [round(float(np.median(hp_)), 1), round(float(np.max(hp_)), 1)] if hp_ else None,
+                   'one_shot_cues_per_min': round(sum(1 for c in sc if c['name'] not in SX.BED_BUS) / mins, 1),
+                   'rule_stings': sum(1 for e in mc['events'] if e['type'] == 'rule')}
+
+    # ---------------- sound fix round (critic B1): every boosted scare: its peak momentary over the mix's integrated
+    # level (+6..+10 LU), and the words after it: voice minus bed on the 50 ms segments where the voice speaks (within
+    # 12 dB of its loudest) from 0.06 to 1.0 s after the hit (>= 6 LU)
+    pv = SX.seg_power(v)[0]; pb = SX.seg_power(bed)[0]
+    sc_rows, sc_bad = [], []
+    for e in sorted((e for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop')
+                     and float(e.get('boost') or 0) > 0), key=lambda e: e['t']):
+        h = float(e['t']); i0, i1 = int(max(0.0, h - 0.1) / HOP), int((h + 1.5) / HOP)
+        if i1 >= len(mi):
+            continue
+        pk = float(mi[i0:i1].max())
+        a_, b_ = int((h + 0.06) / SX.SEG), int((h + 1.0) / SX.SEG)
+        vs = 10 * np.log10(pv[a_:b_] + 1e-20); bs = 10 * np.log10(pb[a_:b_] + 1e-20)
+        ok = vs > vs.max() - 12 if len(vs) else np.zeros(0, bool)
+        wm = float((vs - bs)[ok].min()) if ok.any() else None
+        row = {'t': round(h, 2), 'peak_over_int_LU': round(pk, 1), 'words_after_min_LU': None if wm is None else round(wm, 1)}
+        sc_rows.append(row)
+        if not (6.0 <= pk <= 10.5) or (wm is not None and wm < 6.0):
+            sc_bad.append(row)
+    R['boosted_scares'] = {'n': len(sc_rows), 'peak_min_max': [min(r['peak_over_int_LU'] for r in sc_rows),
+                                                                max(r['peak_over_int_LU'] for r in sc_rows)] if sc_rows else None,
+                           'words_after_min_LU': min((r['words_after_min_LU'] for r in sc_rows
+                                                      if r['words_after_min_LU'] is not None), default=None),
+                           'off_target': sc_bad}
+
+    # ---------------- every SFX cue, re-rendered as mix.py renders it
+    if not A.no_cues:
+        tc = time.time()
+        rows, flags = cue_pass(sc, vm, mm, sm, Lv, gdb, nb, lines, short=(lev(v, 0.1), lev(m, 0.1)))
+        R['cues_checked'] = len(rows)
+        R['cue_flags'] = flags
+        R['cue_seconds'] = round(time.time() - tc, 1)
+        json.dump(rows, open(os.path.join(A.dir, 'measure_cues.json'), 'w'), indent=0)
+    if A.plot:
+        plot(os.path.join(A.dir, 'measure_plot.png'), dur, Lv, vm, mm, sm,
+             [(e['t'], e['t'] + float(e.get('len', 1.4))) for e in sil], hits,
+             [e['t'] for e in mc['events'] if e['type'] == 'rule'])
+    R['seconds'] = round(time.time() - T0, 1)
+    json.dump(R, open(os.path.join(A.dir, 'measure.json'), 'w'), indent=1, default=float)
+    for k_, v_ in R.items():
+        if k_ in ('cue_flags', 'voice_weak_spots', 'sections_music_bed_rel_voice', 'music_holes'):
+            continue
+        print(f'{k_:44s} {v_}')
+    print('music holes (>= 1.5 s under voice - 32 LU, outside silences):', R['music_holes'] or 'none')
+    print('voice weak spots (bed within 4 LU of the voice during speech), worst first:')
+    for w_ in R['voice_weak_spots'][:12]:
+        print('   ', w_)
+    print('sections [t0, t1, track, music, bed] rel voice:')
+    for r in R['sections_music_bed_rel_voice'] if isinstance(R['sections_music_bed_rel_voice'], list) else []:
+        print('   ', r)
+    if not A.no_cues:
+        print(f'cue flags ({len(R["cue_flags"])} of {R["cues_checked"]} one-shot cues):')
+        for f_ in R['cue_flags']:
+            print('   ', f_)
+
+
+if __name__ == '__main__':
+    main()

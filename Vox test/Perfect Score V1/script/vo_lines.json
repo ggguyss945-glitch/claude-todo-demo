@@ -1,0 +1,206 @@
+[
+ {
+  "beat": "HOOK",
+  "text": "Imagine you scored a perfect hundred on every single exam.",
+  "start": 0.05,
+  "end": 3.043
+ },
+ {
+  "beat": "HOOK",
+  "text": "This is how fast it would take for your school to accuse you of cheating.",
+  "start": 3.23,
+  "end": 6.253
+ },
+ {
+  "beat": "RISING ACTION",
+  "text": "Your first perfect score, nobody notices.",
+  "start": 6.678,
+  "end": 8.81
+ },
+ {
+  "beat": "RISING ACTION",
+  "text": "Anyone can have a good day.",
+  "start": 8.963,
+  "end": 10.293
+ },
+ {
+  "beat": "RISING ACTION",
+  "text": "But after your second and third hundred, your teacher starts to notice.",
+  "start": 10.548,
+  "end": 13.596
+ },
+ {
+  "beat": "RISING ACTION",
+  "text": "He doesn't say a word.",
+  "start": 13.834,
+  "end": 15.033
+ },
+ {
+  "beat": "RISING ACTION",
+  "text": "He just keeps an eye on you.",
+  "start": 15.169,
+  "end": 16.459
+ },
+ {
+  "beat": "CONFLICT",
+  "text": "By your fifth in a row, your desk gets moved to the front, right next to his.",
+  "start": 16.799,
+  "end": 20.251
+ },
+ {
+  "beat": "CONFLICT",
+  "text": "Every time you look up, he's already watching.",
+  "start": 20.421,
+  "end": 22.535
+ },
+ {
+  "beat": "CONFLICT",
+  "text": "Then comes the hardest exam of the year, with a bonus question nobody has ever solved.",
+  "start": 22.875,
+  "end": 26.942
+ },
+ {
+  "beat": "CONFLICT",
+  "text": "You solve it.",
+  "start": 27.197,
+  "end": 28.029
+ },
+ {
+  "beat": "CONFLICT",
+  "text": "And now, this can't be ignored.",
+  "start": 28.411,
+  "end": 29.94
+ },
+ {
+  "beat": "CONFLICT",
+  "text": "You're called to the principal's office.",
+  "start": 30.297,
+  "end": 31.931
+ },
+ {
+  "beat": "CONFLICT",
+  "text": "They search your bag, your pencil case, even the label on your water bottle.",
+  "start": 32.101,
+  "end": 35.419
+ },
+ {
+  "beat": "CONFLICT",
+  "text": "They replay the classroom camera, and compare your answers with the smartest kid in class.",
+  "start": 35.606,
+  "end": 39.459
+ },
+ {
+  "beat": "CONFLICT",
+  "text": "Nothing.",
+  "start": 39.714,
+  "end": 40.29
+ },
+ {
+  "beat": "CONFLICT",
+  "text": "No notes, no signals, no copying.",
+  "start": 40.545,
+  "end": 42.409
+ },
+ {
+  "beat": "COMEBACK (the dip)",
+  "text": "But nobody believes you.",
+  "start": 42.834,
+  "end": 44.217
+ },
+ {
+  "beat": "COMEBACK (the dip)",
+  "text": "Your parents get a phone call.",
+  "start": 44.514,
+  "end": 45.983
+ },
+ {
+  "beat": "COMEBACK (the dip)",
+  "text": "Your score gets cancelled.",
+  "start": 46.111,
+  "end": 47.5
+ },
+ {
+  "beat": "COMEBACK (the dip)",
+  "text": "By lunch, the whole school is whispering one word.",
+  "start": 47.67,
+  "end": 49.989
+ },
+ {
+  "beat": "COMEBACK (the dip)",
+  "text": "Cheater.",
+  "start": 50.286,
+  "end": 50.852
+ },
+ {
+  "beat": "COMEBACK (the dip)",
+  "text": "So the principal makes a decision.",
+  "start": 51.362,
+  "end": 52.962
+ },
+ {
+  "beat": "COMEBACK (the dip)",
+  "text": "A brand new exam, taken alone in his office, with three teachers watching your every move.",
+  "start": 53.174,
+  "end": 57.227
+ },
+ {
+  "beat": "RISING ACTION",
+  "text": "You pick up your pencil.",
+  "start": 57.61,
+  "end": 58.745
+ },
+ {
+  "beat": "RISING ACTION",
+  "text": "Twenty minutes later, you put it down.",
+  "start": 59.0,
+  "end": 60.754
+ },
+ {
+  "beat": "RISING ACTION",
+  "text": "They grade it right in front of you.",
+  "start": 61.009,
+  "end": 62.579
+ },
+ {
+  "beat": "PAYOFF",
+  "text": "One hundred.",
+  "start": 64.364,
+  "end": 65.278
+ },
+ {
+  "beat": "PAYOFF",
+  "text": "The room goes silent.",
+  "start": 65.83,
+  "end": 67.05
+ },
+ {
+  "beat": "PAYOFF",
+  "text": "Because you were never cheating.",
+  "start": 67.347,
+  "end": 68.786
+ },
+ {
+  "beat": "PAYOFF",
+  "text": "You were just studying every single night, while everyone else was on their phones.",
+  "start": 68.913,
+  "end": 72.364
+ },
+ {
+  "beat": "PAYOFF",
+  "text": "The principal apologizes, and puts your name on the wall of honor.",
+  "start": 72.704,
+  "end": 75.673
+ },
+ {
+  "beat": "PAYOFF",
+  "text": "And your desk gets moved again, to the very back.",
+  "start": 75.928,
+  "end": 78.13
+ },
+ {
+  "beat": "PAYOFF",
+  "text": "This time, so nobody can copy you.",
+  "start": 78.317,
+  "end": 80.204
+ }
+]
