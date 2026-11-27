@@ -498,7 +498,7 @@ def _neck3(c, sp, B, skin, skin_sh):
 
 
 # ====================================================================================================== mouth: the chalk smile
-def _ev_chalk_smile(c, hm, sp, P, det, t):
+def _ev_chalk_smile(c, hm, sp, P, det, t, skin=None):
     """The smile from rule 2 on: a smooth white chalk line drawn over her mouth (the real mouth is gone), wider each
     night: e_chalk 0.25 just past the corners, 0.42 mid-cheek, 0.58 wider, 0.8 almost at her ears, 1.0 ear to ear, ends
     curling up a little. Never a cut: no red, no teeth. Talking (m_open) parts the line in the middle like a drawn mouth."""
@@ -506,7 +506,7 @@ def _ev_chalk_smile(c, hm, sp, P, det, t):
     my = sp['mouth_y']
     # (the width stays on the front of the face, so the ends curl UP the cheeks toward the ears instead of wrapping round
     # the jaw like an outline)
-    phm = float(np.interp(w, [0, 0.25, 0.42, 0.58, 0.8, 1.0], [0.14, 0.28, 0.46, 0.64, 0.88, 1.1]))
+    phm = float(np.interp(w, [0, 0.25, 0.42, 0.58, 0.8, 1.0], [0.14, 0.27, 0.40, 0.52, 0.66, 0.78]))
     rise = float(np.interp(w, [0, 0.25, 0.42, 0.58, 0.8, 1.0], [2, 6, 12, 18, 27, 36]))
     sag = 6.0 + 4.0 * w
     q = np.linspace(-1.0, 1.0, 41)
@@ -519,49 +519,43 @@ def _ev_chalk_smile(c, hm, sp, P, det, t):
     X, Y, V = _sph(hm, ph, ys, 1.2)
     m = V > -0.02
     if m.sum() < 3: return
-    # Owner, 27 Nov: one flat line read as strange, not scary. Now a drawn chalk GRIN: a crescent of dark void that
-    # opens wider every night, a row of blunt square chalk teeth like a child's drawing (no points, no red), chalk
-    # creases where the corners curl up into her cheeks. Talking opens it a little more.
-    lw_ = 5.0 + 2.6 * w
+    # Owner, 27 Nov (second note): like Mister Winks's painted grin and Grandpa's too-still smile, not a drawing on top:
+    # her own lips stretched far too wide and tight, thin and pale, closed, the corners pulled up into the cheeks with
+    # creases hooking up from them; wider every night and dead still. Talking parts the lips on a strip of teeth.
+    skin = skin or sp.get('skin', '#f3d2bd')
+    lipc = mix('#9a3f48', skin, 0.32)
+    line_c = mix('#3a2226', skin, 0.12)
+    crease_c = mix(sp.get('skin_dp', '#88645c'), '#3a2226', 0.25)
     o = clamp(P.m_open) * 0.75 + 0.25 * clamp(P.m_wide) * clamp(P.m_open)
-    cv = c.pen.cv
     qq = np.concatenate([np.full(2, -1.1), q, np.full(2, 1.1)])
-    env = np.clip(1.0 - qq ** 2, 0, None) ** 1.15             # open in the middle, closed at the curled corners
-    depth = (6.0 + 30.0 * w + 20.0 * o) * hm.cp
-    Y2 = Y + depth * env
-    up = _pts_path(X[m], Y[m], False, 0.8)
-    lo = _pts_path(X[m], Y2[m], False, 0.8)
+    env = np.clip(1.0 - qq ** 2, 0, None) ** 0.6          # the lips thin out toward the stretched corners
+    tu = (4.4 - 1.0 * w) * hm.cp                            # stretched tight: thinner the wider it gets
+    tl = (6.4 - 1.2 * w) * hm.cp
+    Yl = Y + 16.0 * o * env * hm.cp
     mm = np.where(m)[0]
-    # the dark under-shadow so the chalk reads on her pale night skin
-    cv.drawPath(c.P(_pts_path(X[m], Y2[m] + 3.0, False, 0.8)), _chalk_paint('#2c3040', 150, lw_ * c.s * 1.8, blur=lw_ * c.s * 0.3))
-    if len(mm) > 2:
-        gap = _pts_path(np.concatenate([X[mm], X[mm][::-1]]), np.concatenate([Y[mm], Y2[mm][::-1]]), True, 0.8)
-        c.fill(gap, '#15121a', 248)
-        # blunt square chalk teeth hanging from the upper line (gaps between them show the void)
-        nt = int(round(6 + 8 * w))
-        for j in range(nt):
-            qj = -0.8 + 1.6 * (j + 0.5) / nt
-            i = int(round((qj + 1.0) / 2.0 * 40)) + 2
-            if i < 1 or i >= len(X) - 1 or not (m[i] and m[i - 1] and m[i + 1]): continue
-            hgt = (Y2[i] - Y[i]) * 0.46
-            if hgt < 1.5: continue
-            pitch = abs(X[min(i + 2, len(X) - 1)] - X[max(i - 2, 0)]) * (40.0 / nt) / 4.0
-            cv.drawPath(c.P(_pts_path(np.array([X[i], X[i]]), np.array([Y[i] + 0.6 * lw_, Y[i] + hgt]), False, 0.8)),
-                        _chalk_paint(CHALK, 225, max(1.0, 0.62 * pitch) * c.s))
-    # creases where the corners curl up into the cheeks
-    for e_ in ((0, 1, 2), (-1, -2, -3)):
-        ii = [i for i in e_ if m[i]]
-        if len(ii) >= 2:
-            sx = np.sign(X[ii[0]] - X[len(X) // 2])
-            cv.drawPath(c.P(_pts_path(X[ii] - 1.5 * sx, Y[ii] + 3.5, False, 0.8)), _chalk_paint('#2c3040', 120, lw_ * c.s * 1.2, blur=lw_ * c.s * 0.3))
-            x0, y0 = X[ii[0]], Y[ii[0]]
-            for d_ in (0.0, 1.0):
-                cv.drawPath(c.P(_pts_path(np.array([x0 + sx * (2 + 3 * d_), x0 + sx * (7 + 4 * d_)]),
-                                          np.array([y0 - 2 - 4 * d_, y0 - 9 - 6 * d_]), False, 0.8)),
-                            _chalk_paint(CHALK, 170 * w, lw_ * c.s * 0.45))
-    _chalk_stroke(cv, c.P(lo), lw_ * c.s * 0.85, 1.0, CHALK, 2)
-    _chalk_stroke(cv, c.P(up), lw_ * c.s, 1.0, CHALK, 1)
-    cv.drawPath(c.P(up), _chalk_paint(CHALK, 235, lw_ * c.s * 0.55))
+    if len(mm) < 3: return
+    Xm = X[mm]
+    def band(top, bot):
+        return _pts_path(np.concatenate([Xm, Xm[::-1]]), np.concatenate([top[mm], bot[mm][::-1]]), True, 0.8)
+    if o > 0.03:
+        c.fill(band(Y, Yl), '#24161a', 240)
+        c.fill(band(Y, Y + 0.42 * (Yl - Y)), '#efe9e0', 225)  # a strip of teeth, like the dummy's when his jaw dropped
+    c.fill(band(Y - tu * env, Y), lipc, 200)
+    c.fill(band(Yl, Yl + tl * env), lipc, 215)
+    c.line(_pts_path(Xm, (Yl + 0.45 * tl * env)[mm], False, 0.8), 0.9, mix(lipc, '#ffffff', 0.4), 90)
+    c.line(_pts_path(Xm, Y[mm], False, 0.8), 2.0 + 0.8 * w, line_c, 240)
+    if o > 0.03: c.line(_pts_path(Xm, Yl[mm], False, 0.8), 1.2, line_c, 200)
+    # creases hooking up from the corners (Winks's painted creases), deeper each night, and a dimple shadow
+    k = (1.2 + 1.3 * w) * hm.cp
+    mid = X[len(X) // 2]
+    for e_ in (mm[0], mm[-1]):
+        xc, yc = X[e_], Y[e_]
+        sx = 1.0 if xc > mid else -1.0
+        cr = _pts_path(np.array([xc + sx * 1.0 * k, xc + sx * 4.5 * k, xc + sx * 6.0 * k, xc + sx * 4.8 * k]),
+                       np.array([yc + 1.5 * k, yc - 2.0 * k, yc - 8.0 * k, yc - 13.0 * k]), False, 0.8)
+        c.line(cr, 1.8 + 0.8 * w, crease_c, 150 + 90 * w)
+        c.fill(_pts_path(np.array([xc - 1.6 * k, xc + 1.6 * k, xc + 1.6 * k, xc - 1.6 * k]) + sx * 1.2 * k,
+                         np.array([yc - 1.2 * k, yc - 1.2 * k, yc + 1.6 * k, yc + 1.6 * k]), True, 0.8), crease_c, 70 * w)
 
 
 _mouth_ev_prev = _mouth
@@ -569,7 +563,7 @@ _mouth_ev_prev = _mouth
 
 def _mouth(c, hm, sp, P, det, t, skin, sh):
     if sp.get('evie') and getattr(P, 'e_chalk', 0.0) > 0.01:
-        return _ev_chalk_smile(c, hm, sp, P, det, t)
+        return _ev_chalk_smile(c, hm, sp, P, det, t, skin)
     return _mouth_ev_prev(c, hm, sp, P, det, t, skin, sh)
 
 
