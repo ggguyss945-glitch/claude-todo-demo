@@ -519,29 +519,47 @@ def _ev_chalk_smile(c, hm, sp, P, det, t):
     X, Y, V = _sph(hm, ph, ys, 1.2)
     m = V > -0.02
     if m.sum() < 3: return
+    # Owner, 27 Nov: one flat line read as strange, not scary. Now a drawn chalk GRIN: a crescent of dark void that
+    # opens wider every night, a row of blunt square chalk teeth like a child's drawing (no points, no red), chalk
+    # creases where the corners curl up into her cheeks. Talking opens it a little more.
     lw_ = 5.0 + 2.6 * w
     o = clamp(P.m_open) * 0.75 + 0.25 * clamp(P.m_wide) * clamp(P.m_open)
     cv = c.pen.cv
+    qq = np.concatenate([np.full(2, -1.1), q, np.full(2, 1.1)])
+    env = np.clip(1.0 - qq ** 2, 0, None) ** 1.15             # open in the middle, closed at the curled corners
+    depth = (6.0 + 30.0 * w + 20.0 * o) * hm.cp
+    Y2 = Y + depth * env
     up = _pts_path(X[m], Y[m], False, 0.8)
-    if o > 0.03:
-        qq = np.concatenate([np.full(2, -1.1), q, np.full(2, 1.1)])
-        env = np.clip(1.0 - (qq / 0.55) ** 2, 0, None) ** 1.5
-        Y2 = Y + 22.0 * o * env * hm.cp
-        lo = _pts_path(X[m], Y2[m], False, 0.8)
-        mm = np.where(m & (env > 0.01))[0]
-        if len(mm) > 2:
-            gap = _pts_path(np.concatenate([X[mm], X[mm][::-1]]), np.concatenate([Y[mm], Y2[mm][::-1]]), True, 0.8)
-            c.fill(gap, '#2b2630', 235)
-        cv.drawPath(c.P(_pts_path(X[m], Y2[m] + 2.0, False, 0.8)), _chalk_paint('#2c3040', 150, lw_ * c.s * 1.5, blur=lw_ * c.s * 0.25))
-        _chalk_stroke(cv, c.P(lo), lw_ * c.s * 0.8, 1.0, CHALK, 2)
-    # the dark under-stroke (a shadow line just below the chalk, with small shadow curls at the ends) so the white line
-    # reads on her pale night skin
-    cv.drawPath(c.P(_pts_path(X[m], Y[m] + 2.0, False, 0.8)), _chalk_paint('#2c3040', 150, lw_ * c.s * 1.8, blur=lw_ * c.s * 0.3))
+    lo = _pts_path(X[m], Y2[m], False, 0.8)
+    mm = np.where(m)[0]
+    # the dark under-shadow so the chalk reads on her pale night skin
+    cv.drawPath(c.P(_pts_path(X[m], Y2[m] + 3.0, False, 0.8)), _chalk_paint('#2c3040', 150, lw_ * c.s * 1.8, blur=lw_ * c.s * 0.3))
+    if len(mm) > 2:
+        gap = _pts_path(np.concatenate([X[mm], X[mm][::-1]]), np.concatenate([Y[mm], Y2[mm][::-1]]), True, 0.8)
+        c.fill(gap, '#15121a', 248)
+        # blunt square chalk teeth hanging from the upper line (gaps between them show the void)
+        nt = int(round(6 + 8 * w))
+        for j in range(nt):
+            qj = -0.8 + 1.6 * (j + 0.5) / nt
+            i = int(round((qj + 1.0) / 2.0 * 40)) + 2
+            if i < 1 or i >= len(X) - 1 or not (m[i] and m[i - 1] and m[i + 1]): continue
+            hgt = (Y2[i] - Y[i]) * 0.46
+            if hgt < 1.5: continue
+            pitch = abs(X[min(i + 2, len(X) - 1)] - X[max(i - 2, 0)]) * (40.0 / nt) / 4.0
+            cv.drawPath(c.P(_pts_path(np.array([X[i], X[i]]), np.array([Y[i] + 0.6 * lw_, Y[i] + hgt]), False, 0.8)),
+                        _chalk_paint(CHALK, 225, max(1.0, 0.62 * pitch) * c.s))
+    # creases where the corners curl up into the cheeks
     for e_ in ((0, 1, 2), (-1, -2, -3)):
         ii = [i for i in e_ if m[i]]
         if len(ii) >= 2:
-            cv.drawPath(c.P(_pts_path(X[ii] - 1.5 * np.sign(X[ii[0]] - X[len(X) // 2]), Y[ii] + 3.5, False, 0.8)),
-                        _chalk_paint('#2c3040', 120, lw_ * c.s * 1.2, blur=lw_ * c.s * 0.3))
+            sx = np.sign(X[ii[0]] - X[len(X) // 2])
+            cv.drawPath(c.P(_pts_path(X[ii] - 1.5 * sx, Y[ii] + 3.5, False, 0.8)), _chalk_paint('#2c3040', 120, lw_ * c.s * 1.2, blur=lw_ * c.s * 0.3))
+            x0, y0 = X[ii[0]], Y[ii[0]]
+            for d_ in (0.0, 1.0):
+                cv.drawPath(c.P(_pts_path(np.array([x0 + sx * (2 + 3 * d_), x0 + sx * (7 + 4 * d_)]),
+                                          np.array([y0 - 2 - 4 * d_, y0 - 9 - 6 * d_]), False, 0.8)),
+                            _chalk_paint(CHALK, 170 * w, lw_ * c.s * 0.45))
+    _chalk_stroke(cv, c.P(lo), lw_ * c.s * 0.85, 1.0, CHALK, 2)
     _chalk_stroke(cv, c.P(up), lw_ * c.s, 1.0, CHALK, 1)
     cv.drawPath(c.P(up), _chalk_paint(CHALK, 235, lw_ * c.s * 0.55))
 

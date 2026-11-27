@@ -1959,7 +1959,8 @@ def _om_card(pen, t, show=7, words=None, hl=None, backlit=0.0, crossed=True, bg=
     btext(pen, 'For when someone holds on too tight.', cw / 2 - 90, ny, 'caveat', 40, OM_PURPLE, 200, 'right')
     y = -ch / 2 + 205
     for (n, txt) in OM_RULES:
-        if n > show: break
+        # rule n being written (words=(n, k)) is drawn even though show = n - 1
+        if n > show and not (words is not None and words[0] == n): break
         ws = txt.split(' ')
         if words is not None and words[0] == n:
             k = words[1](t) if callable(words[1]) else words[1]
